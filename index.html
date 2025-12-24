@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PakoraAutomations v19.1 (Dashboard & Logo Fix)</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        /* --- DESIGN SYSTEM (MOBILE FIRST OPTIMIZED) --- */
+        :root { 
+            --primary: #2563eb; 
+            --primary-dark: #1e40af; 
+            --secondary: #64748b; 
+            --accent: #f59e0b; 
+            --bg: #f8fafc; 
+            --surface: #ffffff; 
+            --text: #0f172a; 
+            --border: #e2e8f0; 
+            --radius: 16px; 
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            display: flex; 
+            height: 100vh; 
+            background: var(--bg); 
+            color: var(--text); 
+            overflow: hidden; 
+        }
+
+        /* SIDEBAR DESIGN */
+        .sidebar { 
+            width: 280px; 
+            background: #0f172a; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 25px 20px; 
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            z-index: 1000; 
+            flex-shrink: 0;
+            height: 100%;
+        }
+        
+        .logo { 
+            display: flex; 
+            align-items: center; 
+            gap: 30px; 
+            margin-bottom: 100px; 
+            color: #fff; 
+        }
+
+        /* Logo Bild Steuerung */
+        .logo img {
+            max-width: 100%;
+            height: auto;
+            max-height: 150px; /* Begrenzt die Höhe damit es nicht riesig wird */
+            object-fit: contain;
+        }
+        
+        .nav-item { 
+            padding: 14px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            color: #94a3b8; 
+            font-weight: 500; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            transition: 0.2s; 
+            margin-bottom: 5px; 
+            font-size: 15px;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.1); color: white; }
+        .nav-item.active { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(37,99,235,0.4); }
+
+        /* MAIN AREA */
+        .main { 
+            flex: 1; 
+            padding: 30px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            position: relative;
+            -webkit-overflow-scrolling: touch; 
+        }
+
+        .section { display: none; animation: fadeIn 0.3s ease-out; padding-bottom: 60px; }
+        .section.active { display: block; }
+
+        h2 { margin-top: 0; font-weight: 800; color: var(--text); font-size: 24px; margin-bottom: 10px; letter-spacing: -0.5px; }
+        .subtitle { font-size: 14px; color: var(--secondary); margin-top: 0; margin-bottom: 25px; line-height: 1.5; }
+
+        /* DASHBOARD GRID SYSTEM (MODERNISIERT) */
+        .dashboard-header {
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .dashboard-welcome {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text);
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+        .dashboard-date {
+            color: var(--secondary);
+            font-size: 14px;
+            background: #f1f5f9;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .dash-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); /* Responsive Grid */
+            gap: 25px;
+        }
+
+        .dash-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 25px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 200px;
+            position: relative;
+            overflow: hidden;
+            border-top: 4px solid transparent; /* Platzhalter für Farbe */
+        }
+
+        .dash-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px -5px rgba(0,0,0,0.1);
+        }
+
+        /* Farb-Varianten für die Karten */
+        .card-blue { border-top-color: #2563eb; }
+        .card-blue:hover .dash-icon { background: #2563eb; color: white; }
+        
+        .card-green { border-top-color: #16a34a; }
+        .card-green:hover .dash-icon { background: #16a34a; color: white; }
+        
+        .card-purple { border-top-color: #7c3aed; }
+        .card-purple:hover .dash-icon { background: #7c3aed; color: white; }
+        
+        .card-orange { border-top-color: #f59e0b; }
+        .card-orange:hover .dash-icon { background: #f59e0b; color: white; }
+
+        .dash-icon {
+            font-size: 28px;
+            background: #f8fafc;
+            width: 55px;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            color: var(--secondary);
+            margin-bottom: 20px;
+            transition: 0.3s;
+        }
+
+        .dash-content { flex: 1; }
+
+        .dash-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+        
+        .dash-desc {
+            font-size: 13px;
+            color: var(--secondary);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .dash-footer {
+            margin-top: auto;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-badge {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+        
+        /* Subtile Hintergrund-Deko */
+        .bg-icon {
+            position: absolute;
+            right: -20px;
+            bottom: -20px;
+            font-size: 120px;
+            opacity: 0.03;
+            pointer-events: none;
+            color: #000;
+        }
+
+
+        /* CARDS & INPUTS */
+        .card { 
+            background: var(--surface); 
+            padding: 25px; 
+            border-radius: var(--radius); 
+            border: 1px solid var(--border); 
+            box-shadow: var(--shadow); 
+            margin-bottom: 20px; 
+        }
+        
+        .card-header { 
+            font-weight: 700; 
+            border-bottom: 1px solid var(--border); 
+            padding-bottom: 15px; 
+            margin-bottom: 15px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-size: 16px;
+        }
+
+        label { display: block; font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        input, select, textarea { 
+            width: 100%; 
+            padding: 14px; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 10px; 
+            font-size: 16px; 
+            transition: 0.2s; 
+            background: #fff; 
+            margin-bottom: 20px; 
+            appearance: none; 
+        }
+        input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,0.1); }
+
+        /* BUTTONS */
+        .btn { 
+            width: 100%; 
+            padding: 16px; 
+            border: none; 
+            border-radius: 10px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            font-size: 16px; 
+            transition: 0.2s; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 10px; 
+            touch-action: manipulation; 
+        }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(37,99,235,0.25); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-offer { background: var(--accent); color: white; box-shadow: 0 4px 12px rgba(245,158,11,0.25); }
+        .btn-delete { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+        .btn-big { padding: 20px; font-size: 18px; }
+
+        /* GRIDS & LAYOUTS */
+        .grid-offer { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .result-box { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .res-card { background: #f8fafc; padding: 20px 15px; border-radius: var(--radius); text-align: center; border: 2px solid transparent; cursor: pointer; transition: 0.2s; }
+        .res-card:hover { background: #e2e8f0; }
+        .res-card.selected { border-color: var(--primary); background: #eff6ff; color: var(--primary-dark); }
+        .res-val { font-size: 24px; font-weight: 800; display: block; margin-top: 5px; }
+        .res-sub { font-size: 12px; color: #64748b; margin-top: 5px; display: block; }
+        
+        /* EXTRAS */
+        .info-bar { background: #eff6ff; color: #1e40af; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px; border: 1px solid #bfdbfe; line-height: 1.4; }
+        
+        /* STOCK & SCANNER */
+        .stock-control { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+        .stock-btn { width: 36px; height: 36px; border: 1px solid #cbd5e1; background: #fff; border-radius: 8px; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+        .stock-input { width: 50px !important; margin: 0 !important; height: 36px; padding: 5px !important; text-align: center; }
+        .stock-status { font-size: 11px; padding: 4px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
+        .status-ok { background: #dcfce7; color: #166534; }
+        .status-low { background: #fee2e2; color: #991b1b; }
+        
+        .scan-box { text-align: center; padding: 30px 20px; background: white; border-radius: 12px; border: 2px dashed #cbd5e1; margin-bottom: 20px; }
+        .scan-input { font-size: 20px; letter-spacing: 1px; max-width: 100%; text-align: center; }
+        .scan-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .scan-result { display: none; margin-top: 20px; animation: slideUp 0.3s ease-out; }
+
+        /* MODAL */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 2000; justify-content: center; align-items: flex-end; backdrop-filter: blur(4px); animation: fadeIn 0.2s; }
+        .modal-content { background: white; width: 100%; max-width: 600px; border-radius: 20px 20px 0 0; padding: 25px; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; }
+        .modal-title { font-size: 20px; font-weight: 800; }
+        .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b; }
+        
+        .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+        .detail-label { color: #64748b; font-size: 14px; }
+        .detail-val { font-weight: 600; text-align: right; }
+        .temp-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-right: 5px; }
+        .temp-nk { background: #dbeafe; color: #1e40af; }
+        .temp-tk { background: #e0e7ff; color: #3730a3; }
+
+        /* MOBILE RESPONSIVE LOGIC */
+        .mobile-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 2000; background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 50%; box-shadow: 0 4px 12px rgba(37,99,235,0.4); font-size: 20px; cursor: pointer; }
+        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 900; }
+
+        @media (min-width: 901px) {
+            .modal-content { border-radius: 12px; width: 90%; max-width: 500px; align-self: center; }
+            .modal-overlay { align-items: center; }
+        }
+
+        @media (max-width: 900px) {
+            .sidebar { position: fixed; height: 100%; transform: translateX(-100%); width: 85%; max-width: 320px; box-shadow: 10px 0 30px rgba(0,0,0,0.2); }
+            .sidebar.open { transform: translateX(0); }
+            .mobile-toggle { display: flex; align-items: center; justify-content: center; }
+            .mobile-overlay.active { display: block; }
+            
+            .main { padding: 80px 15px 30px 15px; }
+            
+            .grid-offer { grid-template-columns: 1fr; }
+            .grid-2 { grid-template-columns: 1fr; } 
+            .dash-grid { grid-template-columns: 1fr; gap: 15px; }
+            .dash-card { height: auto; min-height: 140px; }
+            
+            .result-box { gap: 10px; }
+            .res-val { font-size: 20px; }
+            
+            h2 { font-size: 20px; }
+            
+            /* TABELLEN FIXES */
+            body, .main, .card, .section { max-width: 100vw !important; overflow-x: hidden !important; }
+            
+            .result-box { display: flex !important; flex-direction: column !important; gap: 15px; width: 100%; }
+            .res-card { width: 100% !important; margin: 0 !important; }
+            
+            .grid-2, .grid-offer { display: flex !important; flex-direction: column !important; width: 100% !important; gap: 15px !important; }
+            
+            .offer-table thead { display: none !important; }
+            .offer-table, .offer-table tbody, .offer-table tr, .offer-table td { display: block !important; width: 100% !important; box-sizing: border-box !important; }
+            
+            .offer-table tr { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+            .offer-table td { padding: 4px 0 !important; border: none !important; text-align: left !important; }
+            
+            .offer-table td:nth-child(1) { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.5px; }
+            .offer-table td:nth-child(2) { font-size: 15px; font-weight: 600; color: #0f172a; margin-bottom: 5px; }
+            
+            #db .offer-table td:nth-child(2) { font-size: 12px; color: #94a3b8; font-weight: 400; margin-bottom: 0; }
+            #db .offer-table td:nth-child(3) { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 5px; }
+
+            .offer-table .price-col { display: block !important; visibility: visible !important; opacity: 1 !important; color: #2563eb !important; text-align: right !important; font-size: 18px !important; font-weight: 800 !important; margin-top: 10px !important; padding-top: 10px !important; border-top: 1px dashed #cbd5e1 !important; }
+            
+            .offer-table td[colspan="6"] { background: transparent !important; color: #0f172a !important; font-size: 18px !important; padding-left: 0 !important; margin-top: 20px; border: none !important; }
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        /* SCHÖNERER ANGEBOTS-BEREICH */
+        .offer-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 15px; font-size: 14px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+        .offer-table th { text-align: left; padding: 12px 15px; background: #f1f5f9; color: #475569; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; }
+        .offer-table td { padding: 12px 15px; border-bottom: 1px solid #e2e8f0; color: #334155; }
+        .offer-table tr:last-child td { border-bottom: none; }
+        .price-col { text-align: right; font-family: 'Inter', monospace; font-weight: 600; color: #0f172a; }
+
+        .totals-area { margin-top: 25px; padding-top: 15px; display: flex; flex-direction: column; gap: 8px; border-top: 2px dashed #cbd5e1; }
+        .total-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #64748b; }
+        .total-row span:last-child { font-weight: 600; font-family: monospace; font-size: 15px; }
+        .discount-text { color: #dc2626; } 
+        .total-final { margin-top: 10px; padding-top: 15px; border-top: 1px solid #e2e8f0; font-size: 20px; font-weight: 800; color: var(--primary); display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body> 
+    <div class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+
+   <nav class="sidebar">
+        <div class="logo">
+            <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+            <span style="display:none; font-size: 24px; font-weight:800;">Pakora</span>
+        </div>
+        
+        <div class="nav-item active" onclick="nav('dashboard'); toggleSidebar(false)">🏠 Übersicht</div>
+        
+        <div class="nav-item" onclick="nav('calc'); toggleSidebar(false)">❄️ Smart-Kalkulation</div>
+
+        <div class="nav-item" onclick="window.location.href='konfigurator.html'">📐 Kühlzellen Kalkulator</div>
+        <div class="nav-item" onclick="nav('db'); toggleSidebar(false)">⚙️ Produkt-Datenbank</div>
+        <div class="nav-item" onclick="nav('stock'); toggleSidebar(false)">📦 Lagerbestand</div>
+        <div class="nav-item" onclick="nav('scanner'); toggleSidebar(false)">📟 Scanner / Preis-Check</div>
+    </nav>
+
+    <main class="main">
+
+        <div id="dashboard" class="section active">
+            <div class="dashboard-header">
+                <h1 class="dashboard-welcome">Willkommen zurück, Chef!</h1>
+                <div class="dashboard-date" id="currentDate">Lade System...</div>
+            </div>
+
+            <div class="dash-grid">
+                <div class="dash-card" onclick="nav('calc')">
+                    <div>
+                        <div class="dash-icon">❄️</div>
+                        <div class="dash-title">Smart Kalkulation</div>
+                        <div class="dash-desc">Erstelle Angebote basierend auf Raumvolumen & Temperatur.</div>
+                    </div>
+                    <div class="dash-stat">
+                        <span class="stat-badge badge-blue">Kühllast Berechnung</span>
+                    </div>
+                </div>
+<div class="dash-card card-purple" onclick="window.location.href='konfigurator.html'">
+                    <div class="bg-icon">📐</div>
+                    <div class="dash-icon">📐</div>
+                    <div class="dash-content">
+                        <div class="dash-title">Zellen-Konfigurator</div>
+                        <div class="dash-desc">Individuelle Planung und Maßeingabe für Kühlzellen.</div>
+                    </div>
+                    <div class="dash-footer">
+                        <span style="font-size:12px; color:#94a3b8;">Externe App</span>
+                        <span style="color:#7c3aed;">➔</span>
+                    </div>
+                </div>
+
+                <div class="dash-card" onclick="nav('stock')">
+                    <div>
+                        <div class="dash-icon">📦</div>
+                        <div class="dash-title">Lagerverwaltung</div>
+                        <div class="dash-desc">Überblick über den aktuellen Bestand und Fehlteile.</div>
+                    </div>
+                    <div class="dash-stat" id="dashStockStat">
+                        <span class="stat-badge badge-green">Lager OK</span>
+                    </div>
+                </div>
+
+                <div class="dash-card" onclick="nav('db')">
+                    <div>
+                        <div class="dash-icon">⚙️</div>
+                        <div class="dash-title">Produkte</div>
+                        <div class="dash-desc">Preise, Artikelnummern und technische Daten verwalten.</div>
+                    </div>
+                    <div class="dash-stat" id="dashDbStat">
+                        <span class="stat-badge badge-blue">0 Artikel</span>
+                    </div>
+                </div>
+
+                <div class="dash-card" onclick="nav('scanner')">
+                    <div>
+                        <div class="dash-icon">📟</div>
+                        <div class="dash-title">Scanner</div>
+                        <div class="dash-desc">Schneller Preis-Check und Lagerbuchung via Barcode.</div>
+                    </div>
+                    <div class="dash-stat">
+                        <span class="stat-badge badge-blue">Bereit zum Scannen</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="calc" class="section">
+            <h2>Präzisions-Kalkulation</h2>
+            <p class="subtitle">Automatische Wahl: Normal (≥ 0°C) oder Tief (< 0°C).</p>
+
+            <div class="grid-offer">
+                <div>
+                    <div class="card">
+                        <div class="card-header">1. Technische Daten</div>
+                        
+                        <label>Raumvolumen (m³)</label>
+                        <input type="number" inputmode="decimal" id="calcVol" placeholder="z.B. 150" onchange="resetOffer()">
+                        <div style="font-size:12px; color:#15803d; margin-top:-15px; margin-bottom:15px;">✅ Datenbank aktiv: 100% Exakt bis 250m³</div>
+                        
+                        <label>Außentemperatur (°C)</label>
+                        <input type="number" inputmode="decimal" id="calcAmb" value="35" onchange="resetOffer()">
+                        
+                        <label>Raumtemperatur</label>
+                        <select id="calcTemp" onchange="resetOffer()">
+                            <option value="16">+16 °C</option>
+                            <option value="15">+15 °C</option>
+                            <option value="12">+12 °C</option>
+                            <option value="10">+10 °C</option>
+                            <option value="5">+5 °C</option>
+                            <option value="4">+4 °C</option>
+                            <option value="2">+2 °C</option>
+                            <option value="0">0 °C (Normalkühlung)</option>
+                            <option value="-1">-1 °C (Tiefkühlung)</option>
+                            <option value="-2">-2 °C</option>
+                            <option value="-5">-5 °C</option>
+                            <option value="-10">-10 °C</option>
+                            <option value="-15">-15 °C</option>
+                            <option value="-18" selected>-18 °C (Tiefkühlung)</option>
+                            <option value="-20">-20 °C</option>
+                            <option value="-21">-21 °C</option>
+                            <option value="-25">-25 °C</option>
+                        </select>
+                        
+                        <button class="btn btn-primary" onclick="calculateWatts()">
+                            ⚡ Exakt Berechnen
+                        </button>
+                    </div>
+                </div>
+
+                <div id="resultSection" style="display:none;">
+                    
+                    <div class="info-bar" id="calcInfo">
+                        ℹ️ Datenquelle: Interne DB
+                    </div>
+
+                    <div class="result-box">
+                        <div class="res-card" id="resNormal" onclick="selectMode('normal')">
+                            <span class="res-label">Normaler Betrieb</span>
+                            <span class="res-val" id="valNormal">0 W</span>
+                            <span class="res-sub" id="baseNormal">Basis 35°C: 0 W</span>
+                        </div>
+                        <div class="res-card" id="resHeavy" onclick="selectMode('heavy')">
+                            <span class="res-label">Starker Betrieb</span>
+                            <span class="res-val" id="valHeavy">0 W</span>
+                            <span class="res-sub" id="baseHeavy">Basis 35°C: 0 W</span>
+                        </div>
+                    </div>
+
+                    <div id="offerCard" class="card" style="display:none;">
+                        <div class="card-header">
+                            <span>2. Angebot erstellen</span>
+                            <span style="background:#dcfce7; color:#166534; padding:4px 8px; border-radius:4px; font-size:11px;">Auto-Match Aktiv</span>
+                        </div>
+
+                        <div class="grid-2">
+                            <div>
+                                <label>Kunde / Firma</label>
+                                <input type="text" id="clientName" placeholder="Kundenname">
+                            </div>
+                            <div>
+                                <label>Rabatt (%)</label>
+                                <input type="number" inputmode="decimal" id="discountPercent" value="0" min="0" max="100" oninput="updateTotals()">
+                            </div>
+                        </div>
+
+                        <div style="overflow-x:auto;">
+                            <table class="offer-table">
+                                <thead>
+                                    <tr>
+                                        <th>Komponente</th>
+                                        <th>Artikel</th>
+                                        <th class="price-col">Preis</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="offerTableBody"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="totals-area">
+                            <div class="total-row">
+                                <span>Zwischensumme (Netto)</span>
+                                <span id="subTotal">0,00 €</span>
+                            </div>
+                            <div class="total-row discount-text">
+                                <span>Rabatt (<span id="dispDisc">0</span>%)</span>
+                                <span id="discAmount">-0,00 €</span>
+                            </div>
+                            <div class="total-row total-final">
+                                <span>GESAMTBETRAG</span>
+                                <span id="finalTotal">0,00 €</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:20px;">
+                            <button class="btn btn-offer" onclick="generatePDF()">
+                                📄 PDF Erstellen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="db" class="section">
+            <h2>Produkt-Datenbank</h2>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <span>Katalog</span>
+                        <span style="font-size:12px; color:#64748b;" id="dbCount">0 Artikel</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="openAddModal()" style="width:auto; padding: 8px 15px; font-size:14px;">
+                        + Neu
+                    </button>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="offer-table">
+                        <thead>
+                            <tr>
+                                <th>Kategorie</th>
+                                <th>Art.Nr.</th>
+                                <th>Bezeichnung</th>
+                                <th>Leistung</th>
+                                <th class="price-col">Preis</th>
+                                <th class="action-col"></th> 
+                            </tr>
+                        </thead>
+                        <tbody id="dbTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="stock" class="section">
+            <h2>Lagerverwaltung</h2>
+            <div class="info-bar">
+                💾 Änderungen werden automatisch gespeichert.
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <span>Bestand</span>
+                    <input type="text" id="stockSearch" placeholder="🔍 Suchen..." onkeyup="renderStock()" style="margin:0; padding: 10px; font-size:14px; width:150px;">
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="offer-table">
+                        <thead>
+                            <tr>
+                                <th>Artikel</th>
+                                <th>Status</th>
+                                <th style="text-align:right;">Menge</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stockTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="scanner" class="section">
+            <h2>Scanner & Check</h2>
+            <p class="subtitle">Klicke ins Feld und scanne.</p>
+
+            <div class="scan-box" id="scanContainer">
+                <input type="text" id="scanInput" class="scan-input" placeholder="Barcode scannen..." onkeydown="handleScan(event)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                <div style="margin-top:10px; font-size:13px; color:#94a3b8;">Scanner drücken automatisch Enter</div>
+            </div>
+
+            <div id="scanResult" class="scan-result card">
+                <div style="text-align:center;">
+                    <div id="resEan" style="font-family:monospace; color:#64748b; font-size:14px;">EAN: -</div>
+                    <div id="resName" class="scan-name">Produkt</div>
+                    <div id="resPrice" class="scan-price">0,00 €</div>
+                    <div id="resStock" class="scan-stock">Bestand: 0</div>
+                    
+                    <div class="scan-actions">
+                        <button class="btn btn-delete btn-big" onclick="updateScannedStock(-1)">- Entnahme</button>
+                        <button class="btn btn-primary btn-big" onclick="updateScannedStock(1)">+ Einlagern</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="productModal" class="modal-overlay" onclick="if(event.target === this) closeProductModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Details</div>
+                <button class="close-btn" onclick="closeProductModal()">×</button>
+            </div>
+            <div id="modalBody"></div>
+            <div style="margin-top: 20px;">
+                <button class="btn btn-primary" onclick="closeProductModal()">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Neues Produkt</div>
+                <button class="close-btn" onclick="closeAddModal()">×</button>
+            </div>
+            
+            <label>Barcode / EAN</label>
+            <input type="text" id="newEan" placeholder="Scannen..." style="font-weight:bold;" autocomplete="off">
+            
+            <label>Kategorie</label>
+            <select id="newCat">
+                <option value="compressor">Kompressor (Nur Lager)</option>
+                <option value="condensing_unit" selected>Verflüssigungssatz</option>
+                <option value="cp_box">CP-Box (Gehäuse)</option>
+                <option value="evaporator">Verdampfer</option>
+            </select>
+
+            <div class="grid-2">
+                <div>
+                    <label>Art.Nr.</label>
+                    <input type="text" id="newId" placeholder="ID-123">
+                </div>
+                <div>
+                    <label>Preis (€)</label>
+                    <input type="number" inputmode="decimal" id="newPrice" placeholder="0.00">
+                </div>
+            </div>
+
+            <label>Bezeichnung</label>
+            <input type="text" id="newName" placeholder="Produktname">
+
+            <div class="grid-2">
+                <div>
+                    <label>Leistung NK</label>
+                    <input type="number" inputmode="decimal" id="newNK" placeholder="Watt">
+                </div>
+                <div>
+                    <label>Leistung TK</label>
+                    <input type="number" inputmode="decimal" id="newTK" placeholder="Watt">
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="saveNewProduct()">💾 Speichern</button>
+        </div>
+    </div>
+
+   <script>
+        // --- MOBILE MENÜ STEUERUNG (NEU) ---
+        function toggleSidebar(forceOpen) {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.mobile-overlay');
+            
+            if (forceOpen === undefined) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+            } else {
+                if(forceOpen) {
+                    sidebar.classList.add('open');
+                    overlay.classList.add('active');
+                } else {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            }
+        }
+
+        // =========================================================================
+        // --- 1. DIE UNANTASTBARE SMART-KALKULATION (DATEN) ---
+        // =========================================================================
+        const db = {
+            5:[139,201,148,215,192,279,222,322,444,644,454,658,494,717,528,766,499,716,456,642,496,699,536,777,577,836,604,876,618,897,676,980],
+            6:[156,227,167,242,217,314,250,362,500,725,512,742,558,809,596,865,564,809,515,725,557,786,600,870,647,938,678,984,695,1007,759,1101],
+            7:[174,252,185,269,241,349,278,403,556,806,569,825,621,901,665,964,628,902,574,809,619,872,664,963,717,1040,753,1092,771,1118,842,1221],
+            8:[191,277,204,296,265,384,306,444,612,887,626,908,685,993,733,1063,693,995,632,892,680,959,728,1056,788,1142,827,1199,847,1228,926,1342],
+            9:[209,303,223,323,289,420,334,484,668,968,684,992,748,1085,802,1162,758,1087,691,975,742,1046,792,1148,858,1244,902,1307,923,1338,1009,1463],
+            10:[226,328,241,350,314,455,362,525,724,1049,741,1075,811,1177,870,1262,822,1180,750,1058,803,1133,856,1241,928,1346,976,1415,999,1449,1092,1583],
+            15:[312,453,333,483,433,628,499,724,999,1448,1023,1483,1119,1623,1200,1740,1132,1625,1031,1453,1033,1457,1036,1502,1127,1634,1188,1723,1218,1767,1340,1943],
+            20:[401,582,428,621,556,807,642,931,1284,1862,1315,1907,1440,2088,1544,2239,1456,2090,1324,1867,1302,1836,1280,1856,1398,2027,1476,2140,1514,2195,1664,2413],
+            25:[482,700,515,746,669,970,772,1119,1544,2239,1582,2294,1734,2514,1860,2697,1754,2518,1596,2250,1554,2191,1512,2192,1651,2394,1744,2529,1790,2596,1976,2865],
+            30:[550,798,587,851,763,1106,880,1276,1760,2552,1804,2615,1978,2869,2124,3080,2002,2874,1819,2565,1696,2391,1572,2279,1723,2499,1824,2645,1874,2717,2072,3004],
+            35:[621,901,663,961,861,1249,994,1441,1988,2883,2037,2954,2235,3241,2400,3480,2261,3245,2051,2892,1904,2684,1756,2546,1926,2793,2040,2958,2097,3040,2324,3370],
+            40:[659,956,703,1020,914,1326,1055,1530,2110,3060,2163,3137,2374,3443,2550,3698,2402,3448,2181,3075,2046,2885,1912,2772,2102,3047,2228,3231,2291,3322,2544,3689],
+            45:[766,1111,817,1185,1063,1541,1226,1778,2452,3555,2513,3644,2759,4001,2964,4298,2792,4007,2533,3572,2319,3269,2104,3051,2313,3354,2452,3555,2522,3656,2800,4060],
+            50:[768,1113,819,1188,1065,1544,1229,1782,2457,3563,2519,3652,2765,4009,2970,4307,2796,4014,2535,3575,2410,3398,2284,3312,2512,3642,2664,3863,2741,3974,3048,4420],
+            60:[880,1275,938,1360,1220,1768,1407,2041,2815,4081,2886,4185,3172,4599,3410,4945,3209,4607,2908,4101,2654,3742,2400,3480,2652,3845,2820,4089,2904,4211,3240,4698],
+            70:[974,1413,1039,1507,1351,1959,1559,2260,3117,4520,3197,4635,3515,5097,3780,5481,3558,5107,3224,4546,2974,4193,2724,3950,3014,4371,3208,4652,3305,4792,3692,5353],
+            80:[1031,1494,1099,1594,1429,2072,1649,2391,3298,4782,3382,4904,3719,5393,4000,5800,3764,5403,3410,4808,3225,4547,3040,4408,3366,4881,3584,5197,3694,5356,4132,5991],
+            90:[1159,1681,1236,1793,1607,2330,1854,2689,3709,5378,3804,5516,4184,6066,4500,6525,4234,6078,3835,5407,3593,5066,3352,4860,3717,5389,3960,5742,4081,5917,4564,6618],
+            100:[1266,1835,1350,1958,1755,2545,2025,2937,4051,5874,4136,6032,4476,6663,4760,7190,4476,6599,4051,5711,3727,5256,3404,4936,3786,5489,4040,5858,4167,6042,4676,6780],
+            102:[1287,1866,1373,1990,1784,2587,2059,2985,4117,5970,4204,6130,4550,6770,4838,7304,4550,6705,4117,5805,3788,5341,3452,5005,3840,5568,4099,5942,4228,6130,4745,6880],
+            110:[1372,1988,1463,2121,1901,2756,2194,3181,4389,6363,4481,6533,4850,7217,5156,7785,4850,7147,4389,6188,4037,5693,3680,5335,4093,5934,4369,6333,4507,6533,5058,7334],
+            120:[1478,2142,1577,2284,2048,2969,2363,3426,4726,6853,4825,7037,5223,7772,5553,8384,5223,7696,4726,6665,4347,6130,3963,5746,4407,6391,4704,6820,4853,7037,5447,7898],
+            130:[1584,2295,1690,2448,2195,3181,2532,3670,5064,7343,5170,7540,5597,8327,5951,8983,5597,8246,5064,7142,4658,6568,4245,6157,4722,6847,5040,7308,5200,7540,5835,8461],
+            140:[1690,2448,1803,2611,2341,3394,2701,3915,5401,7833,5515,8043,5971,8882,6348,9582,5971,8795,5401,7619,4969,7005,4528,6568,5036,7304,5375,7795,5547,8043,6224,9024],
+            150:[1796,2602,1917,2774,2488,3606,2870,4160,5738,8323,5859,8546,6344,9437,6746,10180,6344,9344,5738,8096,5280,7443,4811,6979,5351,7760,5711,8283,5894,8546,6612,9588],
+            175:[2061,2985,2200,3183,2854,4137,3293,4772,6582,9548,6721,9804,7278,10825,7739,11679,7278,10719,6582,9289,6057,8537,5518,8006,6137,8902,6550,9501,6761,9804,7584,10997],
+            200:[2326,3369,2484,3591,3221,4668,3715,5385,7426,10773,7582,11062,8212,12214,8733,13177,8212,12093,7426,10482,6835,9632,6226,9034,6924,10043,7389,10720,7627,11062,8555,12406],
+            225:[2592,3753,2767,4000,3587,5199,4138,5997,8270,11998,8443,12320,9146,13602,9726,14675,9146,13467,8270,11675,7612,10727,6933,10061,7710,11185,8228,11938,8494,12320,9527,13815],
+            250:[2857,4137,3051,4409,3954,5730,4561,6610,9113,13223,9304,13578,10080,14991,10720,16174,10080,14842,9113,12868,8390,11822,7641,11088,8497,12326,9067,13156,9360,13578,10499,15224]
+        };
+
+        const tempIndices = {
+            "16":0, "15":2, "12":4, "10":6, "5":8, "4":10, "2":12, "0":14, "-1":14, // -1 als Fallback für Index, wird aber logisch behandelt
+            "-2":16, "-5":18, "-10":20, "-15":22, "-18":24, "-20":26, "-21":28, "-25":30
+        };
+
+        // =========================================================================
+        // --- 2. DIE PRODUKT-DATENBANK (MANUELLER BEREICH) ---
+        // =========================================================================
+
+        // TEIL 1: KOMPRESSOREN
+        const LISTE_VERDICHTER = [
+            { id: "04.01.032", name: "Embraco EMT 2130 GK", capacityNK: 0, capacityTK: 380, price: 216.00, category: 'compressor' },
+            { id: "04.01.025", name: "Embraco EMT 6170 Z", capacityNK: 448, capacityTK: 0, price: 178.00, category: 'compressor' },
+            { id: "04.01.034", name: "Embraco EMT 6152 GK", capacityNK: 422, capacityTK: 0, price: 188.00, category: 'compressor' },
+            { id: "32.02.049", name: "Embraco NEU 6187 Z", capacityNK: 601, capacityTK: 0, price: 201.00, category: 'compressor' },
+            { id: "04.01.035", name: "Embraco EMT 6165 GK", capacityNK: 482, capacityTK: 0, price: 192.00, category: 'compressor' },
+            { id: "4663", name: "Embraco NEU 2155 GK", capacityNK: 0, capacityTK: 645, price: 215.00, category: 'compressor' },
+            { id: "5599", name: "Embraco FFI 12 HBK", capacityNK: 671, capacityTK: 0, price: 210.00, category: 'compressor' },
+            { id: "2906212u", name: "Embraco NEU 6212 U", capacityNK: 731, capacityTK: 0, price: 220.00, category: 'compressor' },
+            { id: "32.03.077", name: "Embraco NEU 6212 Z", capacityNK: 765, capacityTK: 0, price: 222.00, category: 'compressor' },
+            { id: "32.02.65", name: "Embraco NEU 6212 GK", capacityNK: 890, capacityTK: 0, price: 240.50, category: 'compressor' },
+            { id: "32.03.078", name: "Embraco NEU 6214 Z", capacityNK: 912, capacityTK: 0, price: 236.00, category: 'compressor' },
+            { id: "32.03.018", name: "Embraco NT 2192 GK", capacityNK: 0, capacityTK: 1066, price: 398.50, category: 'compressor' },
+            { id: "4722", name: "Embraco NT 6217 Z", capacityNK: 1052, capacityTK: 0, price: 349.50, category: 'compressor' },
+            { id: "32.02.067", name: "Embraco NEU 6215 GK", capacityNK: 1108, capacityTK: 0, price: 211.50, category: 'compressor' },
+            { id: "03.02.030", name: "Embraco NT 6220 Z", capacityNK: 1112, capacityTK: 0, price: 414.00, category: 'compressor' },
+            { id: "47683", name: "Embraco NT 6220 GK", capacityNK: 1263, capacityTK: 0, price: 265.50, category: 'compressor' },
+            { id: "2906220U", name: "Embraco NEU 6220 U", capacityNK: 1284, capacityTK: 0, price: 300.00, category: 'compressor' },
+            { id: "4704", name: "Embraco NEK 6217 GK", capacityNK: 1315, capacityTK: 0, price: 310.00, category: 'compressor' },
+            { id: "32.03.017", name: "Embraco NT 6222 GK", capacityNK: 1558, capacityTK: 0, price: 357.00, category: 'compressor' },
+            { id: "4768", name: "Embraco NJ 2212 GK", capacityNK: 0, capacityTK: 1554, price: 600.00, category: 'compressor' },
+            { id: "47681", name: "Embraco NJ 6226 Z", capacityNK: 1778, capacityTK: 0, price: 623.00, category: 'compressor' },
+            { id: "32.03.029", name: "Embraco NT 6226 GK", capacityNK: 0, capacityTK: 1753, price: 410.00, category: 'compressor' },
+            { id: "32.02.043", name: "Embraco NJ 9232 GK", capacityNK: 1911, capacityTK: 0, price: 460.00, category: 'compressor' },
+            { id: "32.02.044", name: "Embraco NJ 9238 GK", capacityNK: 2878, capacityTK: 0, price: 483.00, category: 'compressor' },
+            { id: "54612", name: "Embraco NJX 2219 GK", capacityNK: 0, capacityTK: 2018, price: 695.00, category: 'compressor' },
+            { id: "45461", name: "Embraco NJX 6250 GK", capacityNK: 3772, capacityTK: 0, price: 788.00, category: 'compressor' },
+            { id: "SE2008GS", name: "Embraco SE 2008 GS", capacityNK: 0, capacityTK: 2672, price: 1200.00, category: 'compressor' },
+            { id: "MRS000206", name: "Embraco SE 2012 GS", capacityNK: 0, capacityTK: 3532, price: 1500.00, category: 'compressor' },
+            { id: "49876", name: "Embraco SE 6015 GS", capacityNK: 3664, capacityTK: 0, price: 1100.00, category: 'compressor' },
+            { id: "MRS00097", name: "Embraco SE 2014 GS", capacityNK: 0, capacityTK: 4117, price: 1800.00, category: 'compressor' },
+            { id: "49877", name: "Embraco SE 6018 GS", capacityNK: 4445, capacityTK: 0, price: 1300.00, category: 'compressor' },
+            { id: "MRS00155", name: "Embraco SE 2017 GS", capacityNK: 0, capacityTK: 4815, price: 1950.00, category: 'compressor' },
+            { id: "MRS00231", name: "Embraco SE 6021 GS", capacityNK: 5003, capacityTK: 0, price: 950.00, category: 'compressor' },
+            { id: "MRS00088", name: "Embraco SE 2020 GS", capacityNK: 0, capacityTK: 5623, price: 2000.00, category: 'compressor' },
+            { id: "49865", name: "Embraco SE 6026 GS", capacityNK: 6317, capacityTK: 0, price: 1100.00, category: 'compressor' },
+            { id: "MRS00089", name: "Embraco SE 6036 GS", capacityNK: 8793, capacityTK: 0, price: 1200.00, category: 'compressor' },
+            { id: "MRS00091", name: "Embraco SE 6043 GS", capacityNK: 10446, capacityTK: 0, price: 1300.00, category: 'compressor' },
+            { id: "SE6053GS", name: "Embraco SE 6053 GS", capacityNK: 12685, capacityTK: 0, price: 1750.00, category: 'compressor' },
+            { id: "6056GS", name: "Embraco SE 6056 GS", capacityNK: 13327, capacityTK: 0, price: 2400.00, category: 'compressor' },
+            { id: "49878", name: "Embraco SE 6078 GS", capacityNK: 18489, capacityTK: 0, price: 2600.00, category: 'compressor' }
+        ];
+
+        // TEIL 2: VERFLÜSSIGUNGSSÄTZE (Außeneinheiten)
+        const LISTE_AGGREGATE = [
+            { id: "80.94.072", name: "Embraco EMT 6170 Z (R134a)", capacityNK: 417, capacityTK: 0, price: 385.00, category: 'condensing_unit' },
+            { id: "80.94.073", name: "Embraco FFI 12 HBK (R134a)", capacityNK: 588, capacityTK: 0, price: 420.00, category: 'condensing_unit' },
+            { id: "80.94.082", name: "Embraco NEU 6187 Z (R134a)", capacityNK: 508, capacityTK: 0, price: 400.00, category: 'condensing_unit' },
+            { id: "80.94.083", name: "Embraco NEU 2155 GK (R404A)", capacityNK: 0, capacityTK: 540, price: 490.00, category: 'condensing_unit' },
+            { id: "80.94.074", name: "Embraco NEU 6214 Z (R134a)", capacityNK: 954, capacityTK: 0, price: 500.00, category: 'condensing_unit' },
+            { id: "80.60.052", name: "Embraco NT 6217 Z (R134a)", capacityNK: 964, capacityTK: 0, price: 920.00, category: 'condensing_unit' },
+            { id: "80.94.075", name: "Embraco NEU 6215 GK (R404A)", capacityNK: 1067, capacityTK: 0, price: 850.00, category: 'condensing_unit' },
+            { id: "80.94.076", name: "Embraco NT 2212 GK (R404A)", capacityNK: 0, capacityTK: 1127, price: 1250.00, category: 'condensing_unit' },
+            { id: "80.94.077", name: "Embraco NT 6220 Z (R134a)", capacityNK: 1100, capacityTK: 0, price: 1100.00, category: 'condensing_unit' },
+            { id: "80.94.078", name: "Embraco NT 6220 GK (R404A)", capacityNK: 1200, capacityTK: 0, price: 900.00, category: 'condensing_unit' },
+            { id: "80.94.279", name: "Embraco NJ 6226 GK (R404A)", capacityNK: 1700, capacityTK: 0, price: 1300.00, category: 'condensing_unit' },
+            { id: "80.94.079", name: "Embraco NJ 6226 Z (R134a)", capacityNK: 1500, capacityTK: 0, price: 1490.00, category: 'condensing_unit' },
+            { id: "NT.6224.GK", name: "Embraco NT 6224 GK (R404A)", capacityNK: 1574, capacityTK: 0, price: 1350.00, category: 'condensing_unit' },
+            { id: "80.94.080", name: "Embraco NJ 9232 GK (R404A)", capacityNK: 1900, capacityTK: 0, price: 1490.00, category: 'condensing_unit' },
+            { id: "80.94.081", name: "Embraco NJ 9238 GK (R404A)", capacityNK: 2428, capacityTK: 0, price: 1500.00, category: 'condensing_unit' }
+        ];
+
+        // TEIL 3: VERDAMPFER (Inneneinheiten)
+        const LISTE_VERDAMPFER = [
+            // --- GÜNAY ---
+            { id: "GNKF650Yan", name: "Günay GNKF 650 YAN", capacityNK: 500, capacityTK: 0, price: 195.00, category: 'evaporator' },
+            { id: "GNKF650Orta", name: "Günay GNKF 650 ORTA", capacityNK: 500, capacityTK: 0, price: 195.00, category: 'evaporator' },
+            { id: "GNKF850Yan", name: "Günay GNKF 850 YAN", capacityNK: 600, capacityTK: 0, price: 215.00, category: 'evaporator' },
+            { id: "GNKF850Orta", name: "Günay GNKF 850 ORTA", capacityNK: 600, capacityTK: 0, price: 215.00, category: 'evaporator' },
+            { id: "GKE120", name: "Günay GKE 120", capacityNK: 705, capacityTK: 0, price: 280.00, category: 'evaporator' },
+            { id: "GKE220", name: "Günay GKE 220", capacityNK: 1393, capacityTK: 0, price: 400.00, category: 'evaporator' },
+            { id: "CP-GNKY 750", name: "Günay GNKY 750", capacityNK: 436, capacityTK: 0, price: 220.00, category: 'evaporator' },
+            { id: "CP-GNK 1800-1", name: "Günay GNK 1800-1", capacityNK: 1400, capacityTK: 0, price: 350.00, category: 'evaporator' },
+            { id: "GYE130-6B", name: "Günay GYE 130-6B", capacityNK: 1200, capacityTK: 0, price: 500.00, category: 'evaporator' },
+            { id: "GYE130-6C", name: "Günay GYE 130-6C", capacityNK: 1419, capacityTK: 871, price: 580.00, category: 'evaporator' },
+            { id: "GNE-130.8B", name: "Günay GNE 130.8B", capacityNK: 2299, capacityTK: 1308, price: 645.00, category: 'evaporator' },
+            { id: "GNE-135.8B", name: "Günay GNE 135.8B", capacityNK: 2900, capacityTK: 1800, price: 730.00, category: 'evaporator' },
+            { id: "GYE230-6C", name: "Günay GYE 230-6C", capacityNK: 2604, capacityTK: 1568, price: 720.00, category: 'evaporator' },
+            { id: "GEO225-5A", name: "Günay GEO 225-5A", capacityNK: 3060, capacityTK: 0, price: 920.00, category: 'evaporator' },
+            { id: "GND1.250-1", name: "Günay GND 1.250-1", capacityNK: 2550, capacityTK: 1540, price: 730.00, category: 'evaporator' },
+            { id: "GYE330-6C", name: "Günay GYE 330-6C", capacityNK: 4014, capacityTK: 0, price: 950.00, category: 'evaporator' },
+            { id: "GND3.000-2", name: "Günay GND 3.000-2", capacityNK: 5440, capacityTK: 3390, price: 1230.00, category: 'evaporator' },
+            { id: "GND4.000-2", name: "Günay GND 4.000-2", capacityNK: 7280, capacityTK: 4580, price: 1599.00, category: 'evaporator' },
+            { id: "GND6.000-2", name: "Günay GND 6.000-2", capacityNK: 11050, capacityTK: 6978, price: 2010.00, category: 'evaporator' },
+            { id: "GND7.000-3", name: "Günay GND 7.000-3", capacityNK: 13040, capacityTK: 8120, price: 2399.00, category: 'evaporator' },
+            { id: "GND8.000-3", name: "Günay GND 8.000-3", capacityNK: 14980, capacityTK: 9290, price: 2599.00, category: 'evaporator' },
+            { id: "GND12.000-3", name: "Günay GND 12.000-3", capacityNK: 22170, capacityTK: 13960, price: 3160.00, category: 'evaporator' },
+            { id: "GND17.000-4", name: "Günay GND 17.000-4", capacityNK: 31840, capacityTK: 19320, price: 4900.00, category: 'evaporator' },
+
+            // --- EVACOND ---
+            { id: "EPA-120-64", name: "Evacond EPA-120-64", capacityNK: 476, capacityTK: 0, price: 275.00, category: 'evaporator' },
+            { id: "EPA-220-64", name: "Evacond EPA-220-64", capacityNK: 955, capacityTK: 0, price: 450.00, category: 'evaporator' },
+            { id: "ESA-130-56", name: "Evacond ESA-130-56", capacityNK: 1325, capacityTK: 1085, price: 650.00, category: 'evaporator' },
+            { id: "ESA-230-46", name: "Evacond ESA-230-46", capacityNK: 2295, capacityTK: 1891, price: 950.00, category: 'evaporator' },
+            { id: "EEA-135-58", name: "Evacond EEA-135-58", capacityNK: 2183, capacityTK: 1761, price: 710.00, category: 'evaporator' },
+            { id: "EEA-135-68", name: "Evacond EEA-135-68", capacityNK: 2475, capacityTK: 2004, price: 825.00, category: 'evaporator' },
+            { id: "EEA-230-58", name: "Evacond EEA-230-58", capacityNK: 3723, capacityTK: 2934, price: 1200.00, category: 'evaporator' },
+            { id: "EEA-230-68", name: "Evacond EEA-230-68", capacityNK: 4177, capacityTK: 3241, price: 1160.00, category: 'evaporator' },
+            { id: "EEA-235-68", name: "Evacond EEA-235-68", capacityNK: 5106, capacityTK: 3942, price: 1350.00, category: 'evaporator' },
+            { id: "EEA-235-68-E2", name: "Evacond EEA-235-68-E2", capacityNK: 6914, capacityTK: 4117, price: 1300.00, category: 'evaporator' },
+            { id: "EEA-240-48", name: "Evacond EEA-240-48", capacityNK: 5616, capacityTK: 4453, price: 1200.00, category: 'evaporator' },
+            { id: "EEA-335-58", name: "Evacond EEA-335-58", capacityNK: 6747, capacityTK: 5427, price: 1536.00, category: 'evaporator' },
+            { id: "EEA-245-38", name: "Evacond EEA-245-38", capacityNK: 7463, capacityTK: 4833, price: 1500.00, category: 'evaporator' },
+            { id: "EEA-335-68", name: "Evacond EEA-335-68", capacityNK: 7659, capacityTK: 5913, price: 1850.00, category: 'evaporator' },
+            { id: "EEA-335-48-E2", name: "Evacond EEA-335-48-E2", capacityNK: 7842, capacityTK: 6176, price: 1900.00, category: 'evaporator' },
+            { id: "EEA-340-68", name: "Evacond EEA-340-68", capacityNK: 11123, capacityTK: 8798, price: 2200.00, category: 'evaporator' },
+            { id: "EEA-345-48", name: "Evacond EEA-345-48", capacityNK: 13941, capacityTK: 11094, price: 3000.00, category: 'evaporator' },
+            { id: "EEA-350-38", name: "Evacond EEA-350-38", capacityNK: 13020, capacityTK: 10368, price: 2700.00, category: 'evaporator' },
+            { id: "EEA-350-48", name: "Evacond EEA-350-48", capacityNK: 16530, capacityTK: 13061, price: 3250.00, category: 'evaporator' },
+            { id: "EEA-350-58", name: "Evacond EEA-350-58", capacityNK: 19476, capacityTK: 15380, price: 3750.00, category: 'evaporator' },
+
+            // --- SONKAR ---
+            { id: "TEA35-114-8", name: "Sonkar TEA 35 114 8", capacityNK: 1977, capacityTK: 0, price: 710.00, category: 'evaporator' },
+            { id: "TEA35-116-8", name: "Sonkar TEA 35 116 8", capacityNK: 2521, capacityTK: 2036, price: 710.00, category: 'evaporator' },
+            { id: "TEA30-125-8", name: "Sonkar TEA 30 125 8", capacityNK: 3734, capacityTK: 2970, price: 1000.00, category: 'evaporator' },
+            { id: "TEA35-126-8", name: "Sonkar TEA 35 126 8", capacityNK: 5221, capacityTK: 4019, price: 1200.00, category: 'evaporator' },
+            { id: "TEA35-124-8-T2", name: "Sonkar TEA 35 124 8 T2", capacityNK: 5538, capacityTK: 4212, price: 1200.00, category: 'evaporator' },
+            { id: "TEA30-136-8", name: "Sonkar TEA 30 136 8", capacityNK: 6399, capacityTK: 5045, price: 1400.00, category: 'evaporator' },
+            { id: "TEA40-123-8-T2", name: "Sonkar TEA 40 123 8 T2", capacityNK: 7017, capacityTK: 5359, price: 1500.00, category: 'evaporator' },
+            { id: "TEA35-134-8-T2", name: "Sonkar TEA 35 134 8 T2", capacityNK: 8085, capacityTK: 6524, price: 1750.00, category: 'evaporator' },
+            { id: "TEA45-124-8", name: "Sonkar TEA 45 124 8", capacityNK: 9515, capacityTK: 7518, price: 2100.00, category: 'evaporator' },
+            { id: "TEA35-135-8-T2", name: "Sonkar TEA 35 135 8 T2", capacityNK: 9738, capacityTK: 7566, price: 2200.00, category: 'evaporator' },
+            { id: "TEA40-134-8-T2", name: "Sonkar TEA 40 134 8 T2", capacityNK: 13207, capacityTK: 10148, price: 2400.00, category: 'evaporator' },
+            { id: "TEA50-134-8", name: "Sonkar TEA 50 134 8", capacityNK: 17490, capacityTK: 13370, price: 3000.00, category: 'evaporator' },
+            { id: "TEA45-135-8", name: "Sonkar TEA 45 135 8", capacityNK: 17421, capacityTK: 13418, price: 2900.00, category: 'evaporator' }
+        ];
+
+        // TEIL 4: CP-BOXEN
+        const LISTE_CP_BOXEN = [
+            // --- NK (Normalkühlung) ---
+            { id: "CN.10.215", name: "CP-Box Embraco 9232 GK (R404/R449)", capacityNK: 1800, capacityTK: 0, price: 1850.00, category: 'cp_box' },
+            { id: "CN.10.220", name: "CP-Box Embraco 9238 GK (R404/R449)", capacityNK: 2300, capacityTK: 0, price: 2100.00, category: 'cp_box' },
+            { id: "FH4524Z", name: "CP-Box Tecumseh FH4524 Z (R404/R449)", capacityNK: 2700, capacityTK: 0, price: 2500.00, category: 'cp_box' },
+            { id: "FN.30.270", name: "CP-Box Danfoss MLZ 015 (R404/R449)", capacityNK: 3200, capacityTK: 0, price: 3000.00, category: 'cp_box' },
+            { id: "FN.10.234", name: "CP-Box Embraco SE 6015 GK (R404/R449)", capacityNK: 3500, capacityTK: 0, price: 2750.00, category: 'cp_box' },
+            { id: "FN.30.275", name: "CP-Box Danfoss MLZ 019 (R404/R449)", capacityNK: 4200, capacityTK: 0, price: 3250.00, category: 'cp_box' },
+            { id: "FN.10.239", name: "CP-Box Embraco SE 6018 GK (R404/R449)", capacityNK: 4200, capacityTK: 0, price: 3100.00, category: 'cp_box' },
+            { id: "FN.30.284", name: "CP-Box Danfoss MLZ 021 (R404/R449)", capacityNK: 4300, capacityTK: 0, price: 3500.00, category: 'cp_box' },
+            { id: "80.10.099", name: "CP-Box Danfoss MTZ 036 (R404/R449)", capacityNK: 4600, capacityTK: 0, price: 3200.00, category: 'cp_box' },
+            { id: "80.10.109", name: "CP-Box Danfoss MTZ 040 (R404/R449)", capacityNK: 5300, capacityTK: 0, price: 3500.00, category: 'cp_box' },
+            { id: "M100-K04.SZ4145", name: "CP-Box Danfoss MLZ 026 (R404/R449)", capacityNK: 5500, capacityTK: 0, price: 3750.00, category: 'cp_box' },
+            { id: "SE6026GS-0", name: "CP-Box Embraco SE6026 GS (R404/R449)", capacityNK: 6300, capacityTK: 0, price: 3800.00, category: 'cp_box' },
+            { id: "4779", name: "CP-Box FRIO WR 42 KE (R404/R449)", capacityNK: 6600, capacityTK: 0, price: 3900.00, category: 'cp_box' },
+            { id: "FN.030.300", name: "CP-Box Danfoss MLZ 030 (R404/R449)", capacityNK: 6700, capacityTK: 0, price: 4200.00, category: 'cp_box' },
+            { id: "M135-K05.SZ4240", name: "CP-Box Danfoss MLZ 038 (R404/R449)", capacityNK: 8000, capacityTK: 0, price: 4800.00, category: 'cp_box' },
+            { id: "80.10.150", name: "CP-Box Danfoss MTZ 064 (R404/R449)", capacityNK: 8000, capacityTK: 0, price: 4800.00, category: 'cp_box' },
+            { id: "MRS00089", name: "CP-Box Embraco SE 6036 GS (R404/R449)", capacityNK: 8500, capacityTK: 0, price: 5000.00, category: 'cp_box' },
+            { id: "4715", name: "CP-Box FRIO WB 40 KE (R404/R449)", capacityNK: 9700, capacityTK: 0, price: 5500.00, category: 'cp_box' },
+            { id: "FN.10.309", name: "CP-Box Embraco SE6056 GS (R404/R449)", capacityNK: 11700, capacityTK: 0, price: 5800.00, category: 'cp_box' },
+            { id: "4785", name: "CP-Box FRIO WB 48 KE (R404/R449)", capacityNK: 11900, capacityTK: 0, price: 5800.00, category: 'cp_box' },
+            { id: "4711", name: "CP-Box Embraco SE 6067 GS (R404/R449)", capacityNK: 17600, capacityTK: 0, price: 7000.00, category: 'cp_box' },
+            { id: "FN.10.319", name: "CP-Box Embraco SE 6078 GS (R404/R449)", capacityNK: 18500, capacityTK: 0, price: 8500.00, category: 'cp_box' },
+
+            // --- TK (Tiefkühlung) ---
+            { id: "WIN2446Z", name: "CP-Box Tecumseh WIN 2446 Z (R404)", capacityNK: 0, capacityTK: 1000, price: 2400.00, category: 'cp_box' },
+            { id: "80.15.049", name: "CP-Box Danfoss NTZ 048 (R404)", capacityNK: 0, capacityTK: 1500, price: 2200.00, category: 'cp_box' },
+            { id: "L013-K01.SC4135", name: "CP-Box Embraco NJX 2219 GS (R404)", capacityNK: 0, capacityTK: 1700, price: 2500.00, category: 'cp_box' },
+            { id: "L013-K02.SC4140", name: "CP-Box Embraco SE 2006 GS (R404)", capacityNK: 0, capacityTK: 1700, price: 3300.00, category: 'cp_box' },
+            { id: "L024-K02.SZ4140", name: "CP-Box Danfoss NTZ 068 (R404)", capacityNK: 0, capacityTK: 2400, price: 3200.00, category: 'cp_box' },
+            { id: "L018-K02.SC4140", name: "CP-Box Embraco SE 2008 GS (R404)", capacityNK: 0, capacityTK: 2400, price: 3400.00, category: 'cp_box' },
+            { id: "SE2012GS-0", name: "CP-Box Embraco SE 2012 GS (R404)", capacityNK: 0, capacityTK: 3500, price: 3950.00, category: 'cp_box' },
+            { id: "L036-K03.SZ4145", name: "CP-Box Embraco SE 2014 GS (R404)", capacityNK: 0, capacityTK: 3900, price: 4050.00, category: 'cp_box' },
+            { id: "80.15.090", name: "CP-Box Danfoss NTZ 136 (R404)", capacityNK: 0, capacityTK: 4500, price: 4350.00, category: 'cp_box' },
+            { id: "SE2017GS-0", name: "CP-Box Embraco SE 2017 GS (R404)", capacityNK: 0, capacityTK: 4800, price: 4500.00, category: 'cp_box' },
+            { id: "CN.15.294", name: "CP-Box Embraco SE2020 GS (R404)", capacityNK: 0, capacityTK: 5400, price: 5000.00, category: 'cp_box' },
+            { id: "FN.15.299", name: "CP-Box Embraco SE2023 GS (R404)", capacityNK: 0, capacityTK: 7000, price: 6900.00, category: 'cp_box' },
+            { id: "80.85.007", name: "CP-Box Dorin H 505 CS (R404)", capacityNK: 0, capacityTK: 7000, price: 7000.00, category: 'cp_box' },
+            { id: "80.85.008", name: "CP-Box Dorin H 705 CS (R404)", capacityNK: 0, capacityTK: 8000, price: 8000.00, category: 'cp_box' },
+            { id: "80.81.530", name: "CP-Box Frascold S10-52Y (R404)", capacityNK: 0, capacityTK: 13500, price: 11500.00, category: 'cp_box' }
+        ];
+
+        // =========================================================================
+        // --- LOGIK FÜR BENUTZERDEFINIERTE PRODUKTE ---
+        // =========================================================================
+        
+        let customProducts = JSON.parse(localStorage.getItem('pakoraCustomProducts')) || [];
+
+        function saveNewProduct() {
+            const cat = document.getElementById('newCat').value;
+            const id = document.getElementById('newId').value;
+            const name = document.getElementById('newName').value;
+            const ean = document.getElementById('newEan').value.trim(); 
+            const price = parseFloat(document.getElementById('newPrice').value) || 0;
+            const nk = parseFloat(document.getElementById('newNK').value) || 0;
+            const tk = parseFloat(document.getElementById('newTK').value) || 0;
+
+            if(!id || !name) return alert("Bitte ID und Name eingeben!");
+
+            const newProd = {
+                id: id,
+                name: name,
+                ean: ean,
+                capacityNK: nk,
+                capacityTK: tk,
+                price: price,
+                category: cat,
+                isCustom: true 
+            };
+
+            customProducts.push(newProd);
+            localStorage.setItem('pakoraCustomProducts', JSON.stringify(customProducts));
+            
+            closeAddModal();
+            location.reload(); 
+        }
+
+        function deleteCustomProduct(id) {
+            if(!confirm("Möchtest du dieses Produkt wirklich löschen?")) return;
+            customProducts = customProducts.filter(p => p.id !== id);
+            localStorage.setItem('pakoraCustomProducts', JSON.stringify(customProducts));
+            location.reload();
+        }
+
+        function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
+        function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
+
+        // AUTOMATISCHE ZUSAMMENFÜHRUNG
+        const customUnits = customProducts.filter(p => ['compressor', 'condensing_unit', 'cp_box'].includes(p.category));
+        const customEvaps = customProducts.filter(p => p.category === 'evaporator');
+
+        const products = {
+            units: [...LISTE_VERDICHTER, ...LISTE_AGGREGATE, ...LISTE_CP_BOXEN, ...customUnits], 
+            evaporators: [...LISTE_VERDAMPFER, ...customEvaps]
+        };
+
+        // =========================================================================
+        // --- 3. DIE LOGIK (CALCULATION & UI) ---
+        // =========================================================================
+        
+        let calculatedValues = { normal: 0, heavy: 0, baseNormal: 0, baseHeavy: 0 };
+        let currentMode = 'normal';
+        let currentOffer = { items: [], subTotal: 0, discount: 0, total: 0, watts: 0 };
+
+        function calculateWatts() {
+            const vol = parseFloat(document.getElementById('calcVol').value);
+            const amb = parseFloat(document.getElementById('calcAmb').value) || 35;
+            const temp = document.getElementById('calcTemp').value;
+
+            if(!vol || vol < 5) return alert("Volumen zu klein (min 5m³)!");
+
+            let baseNormal = 0, baseHeavy = 0, infoText = "";
+            
+            // Logik-Fallback für -1 Grad (wird nicht im Index gefunden, aber behandelt)
+            let lookupTemp = temp;
+            if(temp == -1) lookupTemp = 0; // Wir nutzen die 0-Grad Spalte als Basis, Anpassung über Faktor
+
+            const idx = tempIndices[lookupTemp] !== undefined ? tempIndices[lookupTemp] : 14; // Default 0 Grad
+            
+            const keys = Object.keys(db).map(Number).sort((a,b)=>a-b);
+            let lower = keys[0], upper = keys[keys.length-1];
+            
+            for(let k of keys) {
+                if (k <= vol) lower = k;
+                if (k >= vol) { upper = k; break; }
+            }
+
+            if (vol <= 250) {
+                if (lower === upper) {
+                    baseNormal = db[lower][idx];
+                    baseHeavy = db[lower][idx+1];
+                    infoText = "ℹ️ Datenquelle: Interne DB (Exakter Treffer)";
+                } else {
+                    const ratio = (vol - lower) / (upper - lower);
+                    baseNormal = db[lower][idx] + (db[upper][idx] - db[lower][idx]) * ratio;
+                    baseHeavy = db[lower][idx+1] + (db[upper][idx+1] - db[lower][idx+1]) * ratio;
+                    infoText = `ℹ️ Datenquelle: Interne DB (Interpoliert zw. ${lower}-${upper}m³)`;
+                }
+            } else {
+                const slopeN = (db[250][idx] - db[225][idx]) / 25;
+                const slopeH = (db[250][idx+1] - db[225][idx+1]) / 25;
+                baseNormal = db[250][idx] + (vol - 250) * slopeN;
+                baseHeavy = db[250][idx+1] + (vol - 250) * slopeH;
+                infoText = "ℹ️ Datenquelle: Extrapolation (Linearer Trend > 250m³)";
+            }
+
+            const tRoom = parseFloat(temp);
+            let factor = (Math.abs(35 - tRoom) > 1) ? (amb - tRoom) / (35 - tRoom) : 1.0;
+            if(factor < 0) factor = 1.0;
+
+            calculatedValues.baseNormal = Math.round(baseNormal);
+            calculatedValues.baseHeavy = Math.round(baseHeavy);
+            calculatedValues.normal = Math.round(baseNormal * factor);
+            calculatedValues.heavy = Math.round(baseHeavy * factor);
+
+            document.getElementById('valNormal').innerText = calculatedValues.normal.toLocaleString() + " W";
+            document.getElementById('baseNormal').innerText = `Basis 35°C: ${calculatedValues.baseNormal.toLocaleString()} W`;
+            document.getElementById('valHeavy').innerText = calculatedValues.heavy.toLocaleString() + " W";
+            document.getElementById('baseHeavy').innerText = `Basis 35°C: ${calculatedValues.baseHeavy.toLocaleString()} W`;
+            document.getElementById('calcInfo').innerText = infoText;
+            
+            document.getElementById('resultSection').style.display = 'block';
+            document.querySelectorAll('.res-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById('offerCard').style.display = 'none';
+        }
+
+        function selectMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.res-card').forEach(c => c.classList.remove('selected'));
+            if(mode === 'normal') document.getElementById('resNormal').classList.add('selected');
+            else document.getElementById('resHeavy').classList.add('selected');
+
+            const watts = mode === 'normal' ? calculatedValues.normal : calculatedValues.heavy;
+            const tempVal = parseFloat(document.getElementById('calcTemp').value);
+            matchProducts(watts, tempVal);
+            document.getElementById('offerCard').style.display = 'block';
+        }
+
+        function matchProducts(watts, temp) {
+            const items = [];
+            let subTotal = 0;
+            
+            // --- DIE NEUE LOGIK ---
+            // 0 Grad und wärmer -> NK (Normalkühlung) -> Suche Verflüssigungssatz/CP-Box
+            // Unter 0 Grad (also -1 abwärts) -> TK (Tiefkühlung) -> Suche TK-Aggregat
+            const type = temp >= 0 ? 'NK' : 'TK';
+
+            // Filter
+            let units = products.units.filter(u => {
+                let cap = type === 'NK' ? u.capacityNK : u.capacityTK;
+                
+                // 1. Hat das Gerät überhaupt Leistung für diesen Bereich?
+                if(cap <= 0) return false; 
+                
+                // 2. Reicht die Leistung aus? (Puffer -5% Toleranz)
+                if(cap < watts * 0.95) return false;
+                
+                // 3. Für Normalkühlung (>=0 Grad) wollen wir Aggregate oder CP-Boxen
+                //    Der Filter 'compressor' wird sowieso ausgeschlossen, da dies Rohkompressoren sind.
+                if (u.category === 'compressor') return false; 
+
+                return true;
+            });
+
+            units.sort((a,b) => {
+                let capA = type === 'NK' ? a.capacityNK : a.capacityTK;
+                let capB = type === 'NK' ? b.capacityNK : b.capacityTK;
+                return capA - capB;
+            });
+            
+            let unit = units[0];
+            let usedCap = 0;
+            
+            if(!unit) {
+                if(products.units.length === 0) items.push({ type: "Hinweis", name: "⚠️ Keine Produkte in DB", price: 0 });
+                else items.push({ type: "Warnung", name: `⚠️ Keine passende Außeneinheit (${type}) gefunden`, price: 0 });
+            } else {
+                usedCap = type === 'NK' ? unit.capacityNK : unit.capacityTK;
+                
+                let catLabel = unit.category === 'cp_box' ? 'CP-Box' : 'Verflüssigungssatz';
+                
+                items.push({ 
+                    type: catLabel, 
+                    name: `${unit.name} (${usedCap}W @ ${type==='NK'?'-10':'-25'}°C)`, 
+                    price: unit.price 
+                });
+                subTotal += unit.price;
+
+                const evaps = products.evaporators.filter(e => {
+                    let cap = type === 'NK' ? e.capacityNK : e.capacityTK;
+                    return cap >= (usedCap * 1.10); 
+                }).sort((a,b) => {
+                    let capA = type === 'NK' ? a.capacityNK : a.capacityTK;
+                    let capB = type === 'NK' ? b.capacityNK : b.capacityTK;
+                    return capA - capB;
+                });
+
+                let evap = evaps[0];
+                if(evap) {
+                    items.push({ type: "Verdampfer", name: evap.name, price: evap.price });
+                    subTotal += evap.price;
+                } else {
+                    items.push({ type: "Warnung", name: "⚠️ Kein passender Verdampfer gefunden", price: 0 });
+                }
+            }
+
+            // Standard-Zubehör
+            items.push({ type: "Zubehör", name: "Expansionsventil & Düse", price: 120.00 });
+            subTotal += 120.00;
+            items.push({ type: "Zubehör", name: "Kälteanlagensteuerung", price: 200.00 });
+            subTotal += 200.00;
+
+            currentOffer.items = items;
+            currentOffer.subTotal = subTotal;
+            currentOffer.watts = watts;
+            renderOfferTable();
+        }
+
+        function renderOfferTable() {
+            const tbody = document.getElementById('offerTableBody');
+            tbody.innerHTML = "";
+            
+            currentOffer.items.forEach(item => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-weight:500; color:#64748b;">${item.type}</td>
+                        <td>${item.name}</td>
+                        <td class="price-col">${item.price.toFixed(2)} €</td>
+                    </tr>`;
+            });
+            updateTotals();
+        }
+
+        function updateTotals() {
+            const discPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+            const discAmount = currentOffer.subTotal * (discPercent / 100);
+            const final = currentOffer.subTotal - discAmount;
+            currentOffer.discount = discAmount;
+            currentOffer.total = final;
+            document.getElementById('subTotal').innerText = currentOffer.subTotal.toFixed(2) + " €";
+            document.getElementById('dispDisc').innerText = discPercent;
+            document.getElementById('discAmount').innerText = "-" + discAmount.toFixed(2) + " €";
+            document.getElementById('finalTotal').innerText = final.toFixed(2) + " €";
+        }
+
+        function resetOffer() {
+            document.getElementById('resultSection').style.display = 'none';
+        }
+
+       function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const client = document.getElementById('clientName').value || "Kunde";
+            
+            const logoImg = document.querySelector('.logo img');
+            
+            // Blauer Header-Hintergrund
+            doc.setFillColor(37, 99, 235);
+            doc.rect(0, 0, 210, 40, 'F'); 
+
+            try {
+               if(logoImg && logoImg.src && logoImg.style.display !== 'none') {
+                   doc.addImage(logoImg, 'PNG', 160, 5, 30, 30); 
+               }
+            } catch (e) { console.warn("Logo Fehler", e); }
+
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(22);
+            doc.text("ANGEBOT", 15, 25);
+            
+            doc.setFontSize(10);
+            doc.text("PakoraAutomations", 160, 38);
+
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Kunde: ${client}`, 15, 55);
+            doc.text(`Datum: ${new Date().toLocaleDateString()}`, 160, 55);
+            
+            const temp = document.getElementById('calcTemp').value;
+            const vol = document.getElementById('calcVol').value;
+            const amb = document.getElementById('calcAmb').value;
+            doc.text(`Projekt: Kühlraum ${vol}m³ bei ${temp}°C (Außen: ${amb}°C)`, 15, 62);
+            doc.text(`Berechnete Last: ${currentOffer.watts.toLocaleString()} W (${currentMode === 'normal' ? 'Normal' : 'Stark'})`, 15, 68);
+
+            const body = currentOffer.items.map(i => ["Position", i.name, i.price.toFixed(2) + " €"]);
+            body.push(["", "Zwischensumme", currentOffer.subTotal.toFixed(2) + " €"]);
+            
+            if(currentOffer.discount > 0) {
+                const percent = document.getElementById('discountPercent').value;
+                body.push(["", `Rabatt (${percent}%)`, "-" + currentOffer.discount.toFixed(2) + " €"]);
+            }
+            body.push(["", "GESAMTSUMME (Netto)", currentOffer.total.toFixed(2) + " €"]);
+
+            doc.autoTable({
+                startY: 75,
+                head: [['Typ', 'Beschreibung', 'Preis']],
+                body: body,
+                theme: 'grid',
+                headStyles: { fillColor: [37, 99, 235] },
+                columnStyles: { 2: { halign: 'right' } },
+                didParseCell: function(data) {
+                    if (data.row.index === body.length - 1) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.fillColor = [240, 249, 255];
+                    }
+                }
+            });
+
+            doc.save(`Angebot_${client}.pdf`);
+        }
+
+        function renderDatabase() {
+            const tbody = document.getElementById('dbTableBody');
+            tbody.innerHTML = "";
+            let total = 0;
+
+            const addSection = (title, list) => {
+                if(list.length === 0) return;
+                tbody.innerHTML += `<tr><td colspan="6" style="background:#f8fafc; font-weight:800; padding-top:20px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; color:#0f172a; text-transform:uppercase; letter-spacing:1px;">${title} (${list.length})</td></tr>`;
+                
+                list.forEach(item => {
+                    let capDisplay = "";
+                    if(item.capacityNK > 0) capDisplay += `<div class="temp-badge temp-nk">-10°C</div> ${item.capacityNK} W<br>`;
+                    if(item.capacityTK > 0) capDisplay += `<div class="temp-badge temp-tk">-25°C</div> ${item.capacityTK} W`;
+                    if(capDisplay === "") capDisplay = "-";
+
+                    const isDeepFreeze = (item.capacityTK > 0 && item.capacityNK === 0);
+                    let rowStyle = "";
+                    let namePrefix = "";
+                    let nameStyle = "";
+
+                    if (isDeepFreeze) {
+                        rowStyle = "background-color: #eff6ff; border-left: 4px solid #2563eb;";
+                        namePrefix = "❄️ "; 
+                        nameStyle = "color: #1e40af;";
+                    }
+
+                    let actionHtml = "";
+                    if(item.isCustom) {
+                        actionHtml = `<button class="btn-delete" onclick="deleteCustomProduct('${item.id}')">🗑️</button>`;
+                    } else {
+                        actionHtml = `<span style="color:#cbd5e1; font-size:10px;">Standard</span>`;
+                    }
+
+                    let row = `<tr style="${rowStyle}">
+                        <td style="font-size:11px; color:#64748b">${title}</td>
+                        <td><span style="font-family:monospace; color:#64748b">${item.id}</span></td>
+                        <td><strong style="${nameStyle}">${namePrefix}${item.name}</strong></td>
+                        <td>${capDisplay}</td>
+                        <td class="price-col">${item.price.toFixed(2)} €</td>
+                        <td class="action-col">${actionHtml}</td>
+                    </tr>`;
+                    tbody.innerHTML += row;
+                });
+                total += list.length;
+            };
+
+            const compressors = products.units.filter(u => u.category === 'compressor');
+            const condUnits = products.units.filter(u => u.category === 'condensing_unit');
+            const cpBoxes = products.units.filter(u => u.category === 'cp_box');
+            
+            addSection("Kompressoren", compressors);
+            addSection("Verflüssigungssätze", condUnits);
+            addSection("CP-Boxen", cpBoxes);
+            addSection("Verdampfer", products.evaporators);
+
+            document.getElementById('dbCount').innerText = `${total} Artikel`;
+            if(total === 0) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#94a3b8;">Datenbank ist leer.</td></tr>`;
+        }
+
+        function nav(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            // Alte Highlights entfernen
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            // Sidebar Highlight finden
+            const sidebarLinks = document.querySelectorAll('.nav-item');
+            
+            // HIER IST DIE KORREKTUR DER ZAHLEN:
+            if(id === 'dashboard') sidebarLinks[0].classList.add('active'); // Home
+            if(id === 'calc') sidebarLinks[1].classList.add('active');      // Smart-Kalk
+            
+            // Index 2 ist jetzt der Kühlzellen-Kalkulator (wird hier übersprungen, da externe Seite)
+            
+            if(id === 'db') sidebarLinks[3].classList.add('active');        // Datenbank (jetzt 3)
+            if(id === 'stock') sidebarLinks[4].classList.add('active');     // Lager (jetzt 4)
+            if(id === 'scanner') sidebarLinks[5].classList.add('active');   // Scanner (jetzt 5)
+            
+            // Logik ausführen
+            if(id === 'db') renderDatabase();
+            if(id === 'stock') renderStock();
+            if(id === 'scanner') {
+                setTimeout(() => document.getElementById('scanInput').focus(), 100);
+            }
+            if(id === 'dashboard') updateDashboardStats();
+        }
+
+        // --- POPUP LOGIK ---
+        function showProductDetails(id) {
+            const allProducts = [...products.units, ...products.evaporators];
+            const item = allProducts.find(p => p.id === id);
+            if(!item) return;
+
+            document.getElementById('modalTitle').innerText = item.name;
+            
+            let detailsHtml = `
+                <div class="detail-row">
+                    <span class="detail-label">Artikel-Nummer</span>
+                    <span class="detail-val" style="font-family:monospace">${item.id}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Kategorie</span>
+                    <span class="detail-val">${item.category.toUpperCase()}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Preis (Netto)</span>
+                    <span class="detail-val">${item.price.toFixed(2)} €</span>
+                </div>
+                <div style="margin-top:15px; background:#f8fafc; padding:10px; border-radius:8px;">
+                    <div style="font-size:11px; font-weight:bold; color:#64748b; margin-bottom:5px; text-transform:uppercase;">Technische Leistung</div>
+            `;
+
+            if(item.capacityNK > 0) {
+                detailsHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span>Normalkühlung (-10°C)</span>
+                    <span style="font-weight:bold; color:#1e40af">${item.capacityNK} Watt</span>
+                </div>`;
+            }
+            if(item.capacityTK > 0) {
+                 detailsHtml += `<div style="display:flex; justify-content:space-between;">
+                    <span>Tiefkühlung (-25°C)</span>
+                    <span style="font-weight:bold; color:#3730a3">${item.capacityTK} Watt</span>
+                </div>`;
+            }
+            
+            detailsHtml += `</div>`; 
+
+            document.getElementById('modalBody').innerHTML = detailsHtml;
+            document.getElementById('productModal').style.display = 'flex';
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').style.display = 'none';
+        }
+
+        // =========================================================================
+        // --- 4. LAGERVERWALTUNG & SCANNER ---
+        // =========================================================================
+
+        let stockData = JSON.parse(localStorage.getItem('pakoraStockData')) || {};
+
+        function saveStock() {
+            localStorage.setItem('pakoraStockData', JSON.stringify(stockData));
+            updateDashboardStats(); // Update Dashboard wenn sich was ändert
+        }
+
+        function changeStock(id, delta) {
+            if (!stockData[id]) stockData[id] = 0;
+            stockData[id] += delta;
+            if (stockData[id] < 0) stockData[id] = 0;
+            saveStock();
+            renderStock();
+        }
+
+        function setStock(id, val) {
+            let num = parseInt(val);
+            if (isNaN(num) || num < 0) num = 0;
+            stockData[id] = num;
+            saveStock();
+            renderStock();
+        }
+
+        function renderStock() {
+            const tbody = document.getElementById('stockTableBody');
+            const search = document.getElementById('stockSearch').value.toLowerCase();
+            tbody.innerHTML = "";
+
+            const allProducts = [...products.units, ...products.evaporators];
+
+            allProducts.forEach(item => {
+                if (search && !item.name.toLowerCase().includes(search) && !item.id.toLowerCase().includes(search)) return;
+
+                const qty = stockData[item.id] || 0;
+                let statusBadge = qty > 0 
+                    ? `<span class="stock-status status-ok">Lagernd</span>` 
+                    : `<span class="stock-status status-low">Leer</span>`;
+                
+                let namePrefix = "";
+                let nameStyle = "cursor: pointer; color: var(--primary); text-decoration: underline; text-decoration-color: rgba(37,99,235,0.3);";
+                
+                if (item.capacityTK > 0 && item.capacityNK === 0) {
+                      namePrefix = "❄️ ";
+                      nameStyle += " color: #1e40af;";
+                }
+
+                let row = `<tr>
+                    <td onclick="showProductDetails('${item.id}')" style="cursor:pointer"> 
+                        <div style="font-weight:600; font-size:14px; ${nameStyle}">${namePrefix}${item.name}</div>
+                        <div style="font-size:11px; color:#64748b;">${item.id}</div>
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <div class="stock-control">
+                            <button class="stock-btn" onclick="changeStock('${item.id}', -1)">−</button>
+                            <input type="number" class="stock-input" value="${qty}" onchange="setStock('${item.id}', this.value)">
+                            <button class="stock-btn" onclick="changeStock('${item.id}', 1)">+</button>
+                        </div>
+                    </td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+            
+            if(tbody.innerHTML === "") {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8">Keine Artikel gefunden.</td></tr>`;
+            }
+        }
+
+        let currentScannedItem = null;
+
+        function handleScan(event) {
+            if (event.key === 'Enter') {
+                const code = document.getElementById('scanInput').value.trim();
+                if(!code) return;
+                
+                const allProducts = [...products.units, ...products.evaporators];
+                const item = allProducts.find(p => p.id === code || (p.ean && p.ean === code));
+
+                if (item) {
+                    showScanResult(item);
+                    document.getElementById('scanInput').value = ""; 
+                } else {
+                    alert("❌ Produkt nicht gefunden!\nDu kannst es unter 'Produktdatenbank' neu anlegen.");
+                    document.getElementById('scanInput').value = "";
+                }
+            }
+        }
+
+        function showScanResult(item) {
+            currentScannedItem = item;
+            const qty = stockData[item.id] || 0;
+            
+            document.getElementById('scanResult').style.display = 'block';
+            document.getElementById('resName').innerText = item.name;
+            document.getElementById('resEan').innerText = item.ean ? "EAN: " + item.ean : "Art.Nr: " + item.id;
+            document.getElementById('resPrice').innerText = item.price.toFixed(2) + " €";
+            
+            const stockColor = qty > 0 ? '#166534' : '#dc2626';
+            document.getElementById('resStock').innerHTML = `<span style="color:${stockColor}">📦 Lagerbestand: <b>${qty}</b> Stück</span>`;
+        }
+
+        function updateScannedStock(delta) {
+            if(!currentScannedItem) return;
+            changeStock(currentScannedItem.id, delta);
+            showScanResult(currentScannedItem);
+        }
+
+        // --- DASHBOARD HELPER ---
+        function updateDashboardStats() {
+            // Datum Update
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDate').innerText = new Date().toLocaleDateString('de-DE', options);
+
+            // DB Count
+            const totalProducts = products.units.length + products.evaporators.length;
+            document.getElementById('dashDbStat').innerHTML = `<span class="stat-badge badge-blue">${totalProducts} Artikel aktiv</span>`;
+
+            // Stock Alert
+            let lowStockCount = 0;
+            // Wir prüfen nur Artikel, die jemals im Lager waren (im stockData existieren)
+            Object.keys(stockData).forEach(key => {
+                if(stockData[key] <= 0) lowStockCount++;
+            });
+
+            const stockStat = document.getElementById('dashStockStat');
+            if(lowStockCount > 0) {
+                stockStat.innerHTML = `<span class="stat-badge badge-red">⚠️ ${lowStockCount} Artikel leer</span>`;
+            } else {
+                stockStat.innerHTML = `<span class="stat-badge badge-green">Alles OK</span>`;
+            }
+        }
+        
+        // INITIALISIERUNG
+        window.onload = function() {
+            renderDatabase();
+            updateDashboardStats();
+            // Optional: Sicherstellen, dass das Dashboard beim Neuladen aktiv ist
+            nav('dashboard');
+        };
+    </script>
+</body>
+</html>

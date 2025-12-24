@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#222">
+    
+    <link rel="apple-touch-icon" href="logo.png">
+
+    <title>INTERN | Kalkulator</title>
+    <style>
+        /* --- DESIGN (Chef-Modus) --- */
+        :root {
+            --primary-color: #2c3e50; /* Dunkelblau */
+            --accent-color: #27ae60;  /* Geld-Grün */
+            --light-bg: #eef2f5;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 0;
+            background-color: var(--light-bg);
+            color: #333;
+            overscroll-behavior-y: none; 
+        }
+
+        header {
+            background: #222; color: white; padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 1000;
+        }
+        .logo-text { font-weight: bold; font-size: 1.2rem; color: #fff; }
+        .back-link { text-decoration: none; color: #ccc; font-size: 0.9rem; }
+
+        .config-wrapper {
+            max-width: 800px; margin: 20px auto;
+            background: white; border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            min-height: 500px; overflow: hidden;
+        }
+
+        .step-content { padding: 30px; display: none; }
+        .step-content.active { display: block; }
+
+        h2 { text-align: center; color: var(--primary-color); margin-bottom: 20px; font-size: 1.5rem; }
+
+        /* KARTEN */
+        .selection-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .selection-card {
+            border: 2px solid #eee; border-radius: 12px; padding: 30px 10px;
+            text-align: center; cursor: pointer; transition: 0.2s;
+        }
+        .selection-card:hover {
+            border-color: var(--primary-color); background-color: #f0f4f8; transform: translateY(-2px);
+        }
+        .icon { font-size: 3rem; display: block; margin-bottom: 10px; }
+        .card-title { font-weight: bold; font-size: 1.1rem; }
+
+        /* INPUTS */
+        .section-label { 
+            font-weight: bold; color: var(--primary-color); margin-top: 25px; margin-bottom: 10px; display: block; border-bottom: 1px solid #eee; padding-bottom: 5px;
+        }
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        
+        .input-group label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.85rem; color: #666; }
+        .input-group input, .input-group select {
+            width: 100%; box-sizing: border-box; padding: 12px;
+            border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;
+            background: #fff;
+            transition: all 0.3s;
+        }
+
+        /* PREIS FELDER */
+        .price-input {
+            border-color: var(--accent-color) !important;
+            background-color: #f0fff4 !important;
+            font-weight: bold; color: #1e7e34;
+        }
+
+        /* INFO BOX */
+        .status-badge {
+            background: #eee; text-align: center; padding: 10px; border-radius: 8px;
+            font-weight: bold; margin-bottom: 20px; color: #555;
+            display: flex; justify-content: center; align-items: center; gap: 10px;
+        }
+
+        /* ERGEBNIS */
+        .summary-box {
+            background: #f9f9f9; padding: 20px; border-radius: 10px; margin-top: 30px; font-size: 0.9rem;
+            border: 1px solid #eee;
+        }
+        .sum-title { font-weight: bold; margin-bottom: 10px; display: block; color: #333; }
+        .summary-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #e0e0e0; }
+        .summary-row:last-child { border-bottom: none; }
+        
+        .result-bar {
+            background: var(--primary-color); color: white; padding: 25px;
+            border-radius: 10px; text-align: center; margin-top: 20px;
+        }
+        .price-big { font-size: 2.5rem; font-weight: bold; color: #2ecc71; margin: 5px 0; }
+        
+        .btn-calc {
+            width: 100%; padding: 15px; background: var(--accent-color); color: white;
+            border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
+            margin-top: 10px; margin-bottom: 10px;
+        }
+
+        @media (max-width: 600px) { .selection-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <span class="logo-text">INTERN | Kalkulator</span>
+        <a href="index.html" class="back-link">Exit</a>
+    </header>
+
+    <div class="config-wrapper">
+
+        <div id="step-1" class="step-content active">
+            <h2>Kühlhaus konfigurieren</h2>
+            <p style="text-align: center; color: #777; margin-bottom: 30px;">Bitte wählen Sie die Bauart:</p>
+            
+            <div class="selection-grid">
+                <div class="selection-card" onclick="startConfig(false)">
+                    <span class="icon">🏠</span>
+                    <span class="card-title">Ohne Boden</span>
+                    <div style="font-size:0.8rem; color:#888; margin-top:5px;">Standard Kühlung</div>
+                </div>
+                
+                <div class="selection-card" onclick="startConfig(true)">
+                    <span class="icon">📦</span>
+                    <span class="card-title">Mit Boden</span>
+                    <div style="font-size:0.8rem; color:#888; margin-top:5px;">Inkl. Siebdruckplatte</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="step-2" class="step-content">
+            <button style="background:none; border:none; color:#999; cursor:pointer; margin-bottom:10px;" onclick="goToStep(1)">← Zurück zur Auswahl</button>
+            
+            <div class="status-badge">
+                <span id="badge-icon"></span>
+                <span id="badge-text"></span>
+            </div>
+
+            <div class="section-label">1. Maße (Außen)</div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Länge (m)</label>
+                    <input type="number" id="inp-laenge" placeholder="3.00" step="0.01" oninput="berechnePreis()">
+                </div>
+                <div class="input-group">
+                    <label>Breite (m)</label>
+                    <input type="number" id="inp-breite" placeholder="2.50" step="0.01" oninput="berechnePreis()">
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label>Höhe (m)</label>
+                <input type="number" id="inp-hoehe" placeholder="z.B. 2.20" step="0.01" oninput="berechnePreis()">
+            </div>
+
+            <div class="section-label">2. Ihre Kalkulation (€/m²)</div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label style="color:var(--accent-color);">Paneel Preis:</label>
+                    <input type="number" id="inp-preis-qm" class="price-input" value="55.00" oninput="berechnePreis()">
+                </div>
+                
+                <div class="input-group" id="div-siebdruck">
+                    <label style="color:var(--accent-color);">Siebdruckplatten:</label>
+                    <input type="number" id="inp-preis-siebdruck" class="price-input" value="50.00" oninput="berechnePreis()">
+                </div>
+            </div>
+
+            <div class="section-label">3. Tür & Position</div>
+            <div class="input-group">
+                <label>Türgröße:</label>
+                <select id="inp-tuer" onchange="berechnePreis()">
+                    <option value="0" selected>Keine Tür [0 €]</option>
+                    <option value="550">Drehtür 75 x 175 cm [550 €]</option>
+                    <option value="580">Drehtür 75 x 190 cm [580 €]</option>
+                    <option value="600">Drehtür 80 x 190 cm [600 €]</option>
+                    <option value="650">Drehtür 90 x 190 cm [650 €]</option>
+                    <option value="700">Drehtür 110 x 190 cm [700 €]</option>
+                    <option value="800">Drehtür 100 x 200 cm [800 €]</option>
+                    <option value="900">Drehtür 120 x 200 cm [900 €]</option>
+                    <option value="1000">Drehtür 120 x 220 cm [1.000 €]</option>
+                    <option value="0">Schiebetür (Auf Anfrage)</option>
+                </select>
+            </div>
+
+            <button class="btn-calc" onclick="berechnePreis()">⟳ Preis Aktualisieren</button>
+
+            <div class="summary-box" id="summary-area" style="display:none;">
+                <span class="sum-title">Details zur Berechnung:</span>
+                
+                <div class="summary-row">
+                    <span>Hülle (Wand+Decke) <small id="val-huelle-qm">(0 m²)</small></span>
+                    <span id="val-huelle-eur">0,00 €</span>
+                </div>
+                
+                <div class="summary-row" id="row-boden-details">
+                    <span>Boden Paneel <small id="val-boden-qm">(0 m²)</small></span>
+                    <span id="val-boden-eur">0,00 €</span>
+                </div>
+                
+                <div class="summary-row" id="row-siebdruck-details">
+                    <span>Boden Siebdruck <small>Aufpreis</small></span>
+                    <span id="val-siebdruck-eur">0,00 €</span>
+                </div>
+
+                <div class="summary-row">
+                    <span>Tür</span>
+                    <span id="val-tuer-eur">0,00 €</span>
+                </div>
+            </div>
+
+            <div class="result-bar">
+                <div style="font-size:0.9rem; opacity:0.8;">Gesamtpreis (Netto):</div>
+                <div class="price-big" id="preis-ausgabe">0,00 €</div>
+            </div>
+            
+            <br><br>
+        </div>
+
+    </div>
+
+    <script>
+        let hatBoden = false; 
+
+        function goToStep(stepNumber) {
+            document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('step-' + stepNumber).classList.add('active');
+        }
+
+        function startConfig(mitBoden) {
+            hatBoden = mitBoden;
+            
+            // UI anpassen
+            if(hatBoden) {
+                document.getElementById('badge-icon').innerText = "📦";
+                document.getElementById('badge-text').innerText = "Kühlzelle MIT Boden";
+                
+                // Details anzeigen
+                document.getElementById('row-boden-details').style.display = 'flex';
+                document.getElementById('row-siebdruck-details').style.display = 'flex';
+            } else {
+                document.getElementById('badge-icon').innerText = "🏠";
+                document.getElementById('badge-text').innerText = "Kühlzelle OHNE Boden";
+                
+                // Details ausblenden
+                document.getElementById('row-boden-details').style.display = 'none';
+                document.getElementById('row-siebdruck-details').style.display = 'none';
+            }
+
+            goToStep(2); 
+            setTimeout(berechnePreis, 100);
+        }
+
+        function berechnePreis() {
+            let L = parseFloat(document.getElementById('inp-laenge').value) || 0;
+            let B = parseFloat(document.getElementById('inp-breite').value) || 0;
+            // HIER GEÄNDERT: Höhe wird jetzt als Input (Zahl) gelesen, nicht mehr als Select
+            let H = parseFloat(document.getElementById('inp-hoehe').value) || 0;
+            let tuerPreis = parseFloat(document.getElementById('inp-tuer').value);
+
+            let preisPaneel = parseFloat(document.getElementById('inp-preis-qm').value) || 0;
+            let preisSiebdruck = parseFloat(document.getElementById('inp-preis-siebdruck').value) || 0;
+            
+            let wandFlaeche = (L + B) * 2 * H;
+            let deckenFlaeche = L * B;
+            let bodenFlaeche = L * B;
+
+            let kostenHuelle = 0;   
+            let kostenBodenPaneel = 0; 
+            let kostenSiebdruck = 0;
+
+            if (hatBoden) {
+                // MIT BODEN
+                kostenHuelle = (wandFlaeche + deckenFlaeche) * preisPaneel;
+                kostenBodenPaneel = bodenFlaeche * preisPaneel;
+                kostenSiebdruck = bodenFlaeche * preisSiebdruck;
+            } else {
+                // OHNE BODEN
+                kostenHuelle = (wandFlaeche + deckenFlaeche) * preisPaneel;
+                kostenBodenPaneel = 0;
+                kostenSiebdruck = 0;
+            }
+
+            let gesamt = kostenHuelle + kostenBodenPaneel + kostenSiebdruck + tuerPreis;
+
+            // UI UPDATES
+            document.getElementById('summary-area').style.display = 'block';
+
+            let flaecheHuelle = wandFlaeche + deckenFlaeche;
+            document.getElementById('val-huelle-qm').innerText = "(" + flaecheHuelle.toFixed(2) + " m²)";
+            document.getElementById('val-huelle-eur').innerText = kostenHuelle.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
+
+            if(hatBoden) {
+                document.getElementById('val-boden-qm').innerText = "(" + bodenFlaeche.toFixed(2) + " m²)";
+                document.getElementById('val-boden-eur').innerText = kostenBodenPaneel.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
+                document.getElementById('val-siebdruck-eur').innerText = kostenSiebdruck.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
+            }
+
+            document.getElementById('val-tuer-eur').innerText = tuerPreis.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
+            document.getElementById('preis-ausgabe').innerText = gesamt.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+        }
+    </script>
+</body>
+</html>
