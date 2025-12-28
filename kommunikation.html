@@ -692,7 +692,7 @@
         form.addEventListener('submit', (event) => {
             event.preventDefault();
             error.textContent = '';
-            const user = userInput.value.trim();
+            const user = userInput.value.trim().toLowerCase();
             const pass = passInput.value;
 
             if (ACCOUNTS[user] && ACCOUNTS[user].pass === pass) {
@@ -714,7 +714,7 @@
             });
         }
 
-        const storedUser = localStorage.getItem(AUTH_KEY);
+        const storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
         if (storedUser && ACCOUNTS[storedUser]) {
             setCurrentUser(storedUser);
             hideAuth();
