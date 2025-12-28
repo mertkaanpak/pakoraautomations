@@ -145,6 +145,23 @@
             animation: pulse 2s infinite;
         }
 
+        .push-status {
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #cbd5f5;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.6);
+            margin-left: 10px;
+        }
+
+        .push-status.active {
+            color: #bbf7d0;
+            border-color: rgba(34, 197, 94, 0.35);
+            background: rgba(34, 197, 94, 0.18);
+        }
+
         .chat-shell {
             flex: 1;
             display: grid;
@@ -485,7 +502,10 @@
                 <h1>Team Chat</h1>
                 <p>WhatsApp-Stil fuer Pakora Automation</p>
             </div>
-            <div class="presence"><span></span>Verbunden</div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div class="presence"><span></span>Verbunden</div>
+                <div id="pushStatus" class="push-status">Push: aus</div>
+            </div>
         </div>
 
         <section class="chat-shell">
@@ -584,6 +604,7 @@
         const participantsList = document.getElementById('participantsList');
         const lastMessage = document.getElementById('lastMessage');
         const activeUser = document.getElementById('activeUser');
+        const pushStatus = document.getElementById('pushStatus');
 
         function showAuth() {
             overlay.hidden = false;
@@ -740,6 +761,11 @@
                     userLabel: ACCOUNTS[currentUser]?.label || currentUser,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
+
+                if (pushStatus) {
+                    pushStatus.textContent = 'Push: aktiv';
+                    pushStatus.classList.add('active');
+                }
             } catch (error) {
                 console.error('Push Registrierung fehlgeschlagen:', error);
             }
@@ -748,7 +774,14 @@
         if (messaging) {
             messaging.onMessage((payload) => {
                 console.log('Push erhalten:', payload);
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    const title = payload?.notification?.title || 'Neue Nachricht';
+                    const body = payload?.notification?.body || '';
+                    new Notification(title, { body, icon: '/logo.png' });
+                }
             });
+        } else if (pushStatus) {
+            pushStatus.textContent = 'Push: nicht verfuegbar';
         }
 
         const storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
