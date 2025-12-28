@@ -604,7 +604,7 @@
 
         <div id="dashboard" class="section active">
             <div class="dashboard-header">
-                <h1 class="dashboard-welcome">Willkommen zurück, Chef!</h1>
+                <h1 class="dashboard-welcome">Willkommen zurOck, <span id="welcomeName">Chef</span>!</h1>
                 <div class="dashboard-date" id="currentDate">Lade System...</div>
             </div>
 
@@ -1633,58 +1633,76 @@ const CURRENT_NEWS_VERSION = 1;
     </div>\n
     <script>
         (function () {
-            const AUTH_USER = "pakoraadmin";
-            const AUTH_PASS = "admin";
-            const AUTH_KEY = "pakora_auth_v1";
+    const ACCOUNTS = {
+        pakoraadmin: { pass: "admin", label: "Chef" },
+        "k.guemuesok": { pass: "pakora", label: "Kaan" },
+        "l.wenzel": { pass: "pakora", label: "Leon" }
+    };
+    const AUTH_KEY = "pakora_auth_user";
 
-            const overlay = document.getElementById("authOverlay");
-            const form = document.getElementById("authForm");
-            const user = document.getElementById("authUser");
-            const pass = document.getElementById("authPass");
-            const error = document.getElementById("authError");
-            const logoutBtn = document.getElementById("logoutBtn");
+    const overlay = document.getElementById("authOverlay");
+    const form = document.getElementById("authForm");
+    const user = document.getElementById("authUser");
+    const pass = document.getElementById("authPass");
+    const error = document.getElementById("authError");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const welcomeName = document.getElementById("welcomeName");
 
-            const isAuthed = () => localStorage.getItem(AUTH_KEY) === "1";
-            const showAuth = () => {
-                overlay.hidden = false;
-                if (logoutBtn) logoutBtn.hidden = true;
-                document.body.style.overflow = "hidden";
-                setTimeout(() => user.focus(), 50);
-            };
-            const hideAuth = () => {
-                overlay.hidden = true;
-                if (logoutBtn) logoutBtn.hidden = false;
-                document.body.style.overflow = "";
-            };
+    const getStoredUser = () => (localStorage.getItem(AUTH_KEY) || "").toLowerCase();
+    const isAuthed = () => !!ACCOUNTS[getStoredUser()];
+    const setWelcome = (userId) => {
+        const label = ACCOUNTS[userId]?.label || "Chef";
+        if (welcomeName) welcomeName.textContent = label;
+    };
 
-            if (!isAuthed()) {
-                showAuth();
-            }
+    const showAuth = () => {
+        overlay.hidden = false;
+        if (logoutBtn) logoutBtn.hidden = true;
+        document.body.style.overflow = "hidden";
+        setTimeout(() => user.focus(), 50);
+    };
+    const hideAuth = () => {
+        overlay.hidden = true;
+        if (logoutBtn) logoutBtn.hidden = false;
+        document.body.style.overflow = "";
+    };
 
-            form.addEventListener("submit", (event) => {
-                event.preventDefault();
-                error.textContent = "";
+    if (!isAuthed()) {
+        showAuth();
+    } else {
+        setWelcome(getStoredUser());
+        hideAuth();
+    }
 
-                if (user.value.trim() === AUTH_USER && pass.value === AUTH_PASS) {
-                    localStorage.setItem(AUTH_KEY, "1");
-                    hideAuth();
-                    return;
-                }
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        error.textContent = "";
 
-                error.textContent = "Falsche Zugangsdaten.";
-                pass.value = "";
-                pass.focus();
-            });
-            if (logoutBtn) {
-                logoutBtn.addEventListener("click", () => {
-                    localStorage.removeItem(AUTH_KEY);
-                    location.reload();
-                });
-            }
-        })();
+        const userId = user.value.trim().toLowerCase();
+        if (ACCOUNTS[userId] && pass.value === ACCOUNTS[userId].pass) {
+            localStorage.setItem(AUTH_KEY, userId);
+            setWelcome(userId);
+            hideAuth();
+            return;
+        }
+
+        error.textContent = "Falsche Zugangsdaten.";
+        pass.value = "";
+        pass.focus();
+    });
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => {
+            localStorage.removeItem(AUTH_KEY);
+            location.reload();
+        });
+    }
+})();
     </script>
 </body>
 </html>
+
+
+
 
 
 

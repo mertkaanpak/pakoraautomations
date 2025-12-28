@@ -8,6 +8,9 @@
     <title>Pakora Kommunikation</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 
     <style>
         :root {
@@ -540,9 +543,20 @@
             document.querySelector('.mobile-overlay').classList.toggle('active');
         }
 
-        const BIN_ID = '695087f9ae596e708fb4f768';
-        const API_KEY = '$2a$10$9Thc2jp1h9cRa/WIHocDseT7gS7TA7mi7CODusCTQ158Px.PDfEFy';
-        const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjIggzBA4NaMNm1FSfTUzvZLBquvd9P40",
+            authDomain: "pakora-automations-chat.firebaseapp.com",
+            projectId: "pakora-automations-chat",
+            storageBucket: "pakora-automations-chat.firebasestorage.app",
+            messagingSenderId: "281325034328",
+            appId: "1:281325034328:web:e05c04bac6b8558560632d"
+        };
+        const VAPID_KEY = "BPpDXwnEO-uRFuTdvxnD_Wz-KBZT56J86V3OmVhcciE9Qq-ywn0or3E24i4xfksaA0B6W04eRmF5Utr4h9hH7RM";
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const messagingSupported = firebase.messaging && firebase.messaging.isSupported && firebase.messaging.isSupported();
+        const messaging = messagingSupported ? firebase.messaging() : null;
 
         const ACCOUNTS = {
             'pakoraadmin': { pass: 'admin', label: 'Chef' },
@@ -553,6 +567,7 @@
         const AUTH_KEY = 'pakora_chat_user';
         let currentUser = null;
         let messages = [];
+        let unsubscribeMessages = null;
 
         const overlay = document.getElementById('authOverlay');
         const form = document.getElementById('authForm');
@@ -606,21 +621,26 @@
             });
         }
 
-        async function fetchMessages() {
-            try {
-                const response = await fetch(URL + '/latest', {
-                    headers: { 'X-Master-Key': API_KEY }
-                });
-                const json = await response.json();
-                if (json.record && Array.isArray(json.record)) {
-                    messages = json.record;
-                } else {
+        function formatTime(ts) {
+            if (!ts) return '--:--';
+            const date = ts.toDate ? ts.toDate() : new Date(ts);
+            return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function listenMessages() {
+            if (unsubscribeMessages) unsubscribeMessages();
+            unsubscribeMessages = db.collection('messages')
+                .orderBy('timestamp')
+                .limit(200)
+                .onSnapshot((snapshot) => {
                     messages = [];
-                }
-                renderMessages();
-            } catch (error) {
-                console.error('Ladefehler:', error);
-            }
+                    snapshot.forEach((doc) => {
+                        messages.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderMessages();
+                }, (error) => {
+                    console.error('Ladefehler:', error);
+                });
         }
 
         function renderMessages() {
@@ -643,7 +663,7 @@
                 const meta = document.createElement('div');
                 meta.className = 'meta-line';
                 const userLabel = ACCOUNTS[msg.user] ? ACCOUNTS[msg.user].label : msg.user;
-                meta.textContent = `${userLabel} - ${msg.time}`;
+                meta.textContent = `${userLabel} - ${formatTime(msg.timestamp)}`;
 
                 wrapper.appendChild(bubble);
                 wrapper.appendChild(meta);
@@ -656,17 +676,13 @@
             chatBody.scrollTop = chatBody.scrollHeight;
         }
 
-        async function saveMessages() {
-            try {
-                await fetch(URL, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-                    body: JSON.stringify(messages)
-                });
-                fetchMessages();
-            } catch (error) {
-                alert('Fehler bei Cloud-Verbindung.');
-            }
+        async function saveMessage(text) {
+            await db.collection('messages').add({
+                user: currentUser,
+                userLabel: ACCOUNTS[currentUser]?.label || currentUser,
+                text,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
         }
 
         chatForm.addEventListener('submit', async (event) => {
@@ -674,19 +690,8 @@
             const text = messageInput.value.trim();
             if (!text || !currentUser) return;
 
-            const now = new Date();
-            const time = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-            const newMessage = {
-                id: Date.now(),
-                user: currentUser,
-                text,
-                time
-            };
-
-            messages.push(newMessage);
             messageInput.value = '';
-            renderMessages();
-            await saveMessages();
+            await saveMessage(text);
         });
 
         form.addEventListener('submit', (event) => {
@@ -699,6 +704,8 @@
                 localStorage.setItem(AUTH_KEY, user);
                 setCurrentUser(user);
                 hideAuth();
+                listenMessages();
+                requestPushPermission();
                 return;
             }
 
@@ -714,17 +721,47 @@
             });
         }
 
+        async function requestPushPermission() {
+            if (!messaging || !('Notification' in window)) return;
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') return;
+                if (!('serviceWorker' in navigator)) return;
+
+                const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                const token = await messaging.getToken({
+                    vapidKey: VAPID_KEY,
+                    serviceWorkerRegistration: registration
+                });
+                if (!token) return;
+
+                await db.collection('pushTokens').doc(token).set({
+                    userId: currentUser,
+                    userLabel: ACCOUNTS[currentUser]?.label || currentUser,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            } catch (error) {
+                console.error('Push Registrierung fehlgeschlagen:', error);
+            }
+        }
+
+        if (messaging) {
+            messaging.onMessage((payload) => {
+                console.log('Push erhalten:', payload);
+            });
+        }
+
         const storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
         if (storedUser && ACCOUNTS[storedUser]) {
             setCurrentUser(storedUser);
             hideAuth();
+            listenMessages();
+            requestPushPermission();
         } else {
             showAuth();
         }
 
         renderParticipants();
-        fetchMessages();
-        setInterval(fetchMessages, 5000);
     </script>
 </body>
 </html>
