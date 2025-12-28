@@ -7,6 +7,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Pakora Kommunikation</title>
     <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#22c55e">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -576,6 +579,9 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const messagingSupported = firebase.messaging && firebase.messaging.isSupported && firebase.messaging.isSupported();
+        const isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+        const isIosStandalone = window.navigator && window.navigator.standalone;
+        const isPwa = isStandalone || isIosStandalone;
         const messaging = messagingSupported ? firebase.messaging() : null;
 
         const ACCOUNTS = {
@@ -781,7 +787,7 @@
                 }
             });
         } else if (pushStatus) {
-            pushStatus.textContent = 'Push: nicht verfuegbar';
+            pushStatus.textContent = isPwa ? 'Push: nicht verfuegbar' : 'Push: PWA noetig';
         }
 
         const storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
