@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Pakora Live News</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- DESIGN SYSTEM --- */
+        :root { 
+            --primary: #2563eb; 
+            --secondary: #64748b; 
+            --bg: #f8fafc; 
+            --surface: #ffffff; 
+            --text: #0f172a; 
+            --border: #e2e8f0; 
+            --radius: 16px; 
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            --danger: #dc2626;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            display: flex; 
+            height: 100vh; 
+            background: var(--bg); 
+            color: var(--text); 
+            overflow: hidden; 
+        }
+
+        /* SIDEBAR (Desktop) */
+        .sidebar { 
+            width: 280px; background: #0f172a; color: white; 
+            display: flex; flex-direction: column; padding: 25px 20px; 
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            z-index: 1000; flex-shrink: 0; height: 100%;
+        }
+        .logo { display: flex; align-items: center; gap: 30px; margin-bottom: 100px; color: #fff; }
+        .logo img { max-width: 100%; height: auto; max-height: 150px; object-fit: contain; }
+        
+        .nav-item { 
+            padding: 14px; border-radius: 12px; cursor: pointer; color: #94a3b8; 
+            font-weight: 500; display: flex; align-items: center; gap: 15px; 
+            margin-bottom: 5px; text-decoration: none; font-size: 15px;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.1); color: white; }
+        .nav-item.active { background: var(--primary); color: white; }
+
+        /* MAIN CONTENT */
+        .main { 
+            flex: 1; padding: 30px; overflow-y: auto; 
+            display: flex; flex-direction: column; 
+            -webkit-overflow-scrolling: touch; /* Smooth scroll iOS */
+        }
+        
+        .header-section { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* ADMIN PANEL (Desktop) */
+        .admin-panel {
+            background: #fff; border: 2px solid var(--primary); border-radius: var(--radius);
+            padding: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(37, 99, 235, 0.1);
+        }
+        .admin-row { display: grid; grid-template-columns: 1.5fr 1fr 1.5fr auto; gap: 15px; align-items: center; }
+        
+        /* Inputs: Font-size 16px verhindert iOS Zoom */
+        input, select { 
+            width: 100%; padding: 12px; border: 1px solid #cbd5e1; 
+            border-radius: 10px; font-size: 16px; background: #fff; appearance: none;
+        }
+        
+        .btn-send { 
+            background: var(--primary); color: white; border: none; 
+            padding: 12px 25px; border-radius: 10px; font-weight: bold; font-size: 16px;
+            cursor: pointer; height: 46px; transition: 0.2s;
+        }
+        .btn-send:active { transform: scale(0.96); }
+
+        /* FEED */
+        .feed-container { display: flex; flex-direction: column; gap: 20px; max-width: 800px; padding-bottom: 50px; }
+
+        .news-card { 
+            background: var(--surface); border: 1px solid var(--border); 
+            border-radius: var(--radius); padding: 25px; box-shadow: var(--shadow); 
+            position: relative; animation: slideIn 0.3s ease; 
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: 0; } }
+
+        .news-card.urgent { border-left: 5px solid #dc2626; }
+        .news-card.info { border-left: 5px solid var(--primary); }
+        .news-card.tech { border-left: 5px solid #16a34a; }
+
+        .news-header { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+        .news-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; }
+        
+        .tag-urgent { background: #fee2e2; color: #dc2626; }
+        .tag-info { background: #eff6ff; color: #2563eb; }
+        .tag-tech { background: #f0fdf4; color: #166534; }
+        
+        .news-date { font-size: 12px; color: var(--secondary); }
+        .news-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+        .news-body { font-size: 15px; color: #475569; line-height: 1.5; white-space: pre-wrap; }
+
+        /* Delete Button */
+        .btn-delete {
+            position: absolute; top: 15px; right: 15px;
+            background: rgba(255,255,255,0.8); border: 1px solid #e2e8f0; 
+            border-radius: 50%; width: 32px; height: 32px;
+            color: #cbd5e1; font-size: 20px; line-height: 1; 
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .btn-delete:hover, .btn-delete:active { color: var(--danger); border-color: var(--danger); background: #fef2f2; }
+
+        /* MOBILE OPTIMIZATION */
+        .mobile-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 2000; background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 50%; box-shadow: 0 4px 12px rgba(37,99,235,0.4); font-size: 20px; cursor: pointer; }
+        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 900; }
+
+        @media (max-width: 900px) {
+            .sidebar { position: fixed; height: 100%; transform: translateX(-100%); width: 85%; max-width: 320px; box-shadow: 10px 0 30px rgba(0,0,0,0.2); }
+            .sidebar.open { transform: translateX(0); }
+            .mobile-toggle { display: flex; align-items: center; justify-content: center; }
+            .mobile-overlay.active { display: block; }
+            
+            /* Mobile Layout Tweaks */
+            .main { padding: 85px 15px 30px 15px; } /* Mehr Platz oben für Menü Button */
+            
+            .header-section { 
+                flex-direction: column; 
+                align-items: flex-start; 
+                gap: 10px; 
+            }
+            
+            /* Admin Panel Stapeln */
+            .admin-row { 
+                display: flex; 
+                flex-direction: column; 
+                gap: 12px; 
+            }
+            
+            .btn-send { 
+                width: 100%; 
+                margin-top: 5px; 
+                padding: 15px; /* Große Touch-Fläche */
+            }
+
+            .news-card { padding: 20px; }
+            .news-title { font-size: 17px; padding-right: 30px; /* Platz für Delete Button */ }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-overlay" onclick="toggleSidebar()"></div>
+    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+
+    <nav class="sidebar">
+        <div class="logo">
+            <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+            <span style="display:none; font-size: 24px; font-weight:800;">Pakora</span>
+        </div>
+        <a href="index.html" class="nav-item">🏠 Übersicht</a>
+        <a href="index.html" class="nav-item">❄️ Smart-Kalkulation</a>
+        <a href="konfigurator.html" class="nav-item">📐 Kühlzellen Kalkulator</a>
+        <a href="index.html" class="nav-item">⚙️ Produkt-Datenbank</a>
+        <a href="lager_online.html" class="nav-item">📦 Lagerbestand</a>
+        <div class="nav-item active">📢 Live News</div>
+    </nav>
+
+    <main class="main">
+        <div class="header-section">
+            <div>
+                <h1 style="margin:0; font-size:24px; font-weight:800;">Schwarzes Brett</h1>
+                <p style="margin:5px 0 0 0; color:var(--secondary); font-size:14px;">Live Nachrichten System</p>
+            </div>
+            <div id="status-dot" style="padding:6px 14px; background:#dcfce7; color:#166534; border-radius:20px; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:6px;">
+                <span style="width:8px; height:8px; background:#16a34a; border-radius:50%; animation:pulse 2s infinite"></span>
+                Verbunden
+            </div>
+        </div>
+
+        <div class="admin-panel">
+            <h3 style="margin-top:0; margin-bottom:15px; font-size:16px; color:var(--primary);">✍️ Neue Nachricht</h3>
+            <div class="admin-row">
+                <input type="text" id="in-title" placeholder="Titel (z.B. Preisupdate)">
+                
+                <select id="in-cat">
+                    <option value="info">ℹ️ Info (Blau)</option>
+                    <option value="urgent">🚨 Dringend (Rot)</option>
+                    <option value="tech">🔧 Technik (Grün)</option>
+                </select>
+                
+                <input type="text" id="in-text" placeholder="Nachricht...">
+                
+                <button class="btn-send" onclick="postNews()">Veröffentlichen</button>
+            </div>
+        </div>
+
+        <div class="feed-container" id="feed">
+            <div style="text-align:center; padding:40px; color:#94a3b8;">Lade Nachrichten...</div>
+        </div>
+    </main>
+
+    <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.mobile-overlay').classList.toggle('active');
+        }
+
+        // --- CLOUD DATEN (Deine echten Keys sind hier drin) ---
+        const BIN_ID = '695087f9ae596e708fb4f768';
+        const API_KEY = '$2a$10$9Thc2jp1h9cRa/WIHocDseT7gS7TA7mi7CODusCTQ158Px.PDfEFy';
+        // ------------------------------------------------------
+
+        const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+        let currentData = [];
+
+        // 1. Daten laden (Start & Auto-Update)
+        async function fetchNews() {
+            try {
+                const response = await fetch(URL + '/latest', {
+                    headers: { 'X-Master-Key': API_KEY }
+                });
+                const json = await response.json();
+                
+                if(json.record && Array.isArray(json.record)) {
+                    currentData = json.record;
+                } else {
+                    currentData = [];
+                }
+                render();
+            } catch (error) {
+                console.error("Ladefehler:", error);
+            }
+        }
+
+        // 2. Anzeigen
+        function render() {
+            const feed = document.getElementById('feed');
+            feed.innerHTML = "";
+
+            if (currentData.length === 0) {
+                feed.innerHTML = '<div style="text-align:center; color:#cbd5e1; margin-top:20px; font-style:italic;">Keine Nachrichten vorhanden.<br>Nutze das Formular oben.</div>';
+                return;
+            }
+
+            // Neueste Nachricht oben
+            const list = [...currentData].reverse();
+
+            list.forEach((item, index) => {
+                const realIndex = currentData.length - 1 - index;
+
+                let tagName = "Info";
+                if(item.cat === 'urgent') tagName = "Dringend";
+                if(item.cat === 'tech') tagName = "Technik";
+
+                const html = `
+                <div class="news-card ${item.cat}">
+                    <button class="btn-delete" onclick="deleteNews(${realIndex})" title="Löschen">×</button>
+                    <div class="news-header">
+                        <span class="news-tag tag-${item.cat}">${tagName}</span>
+                        <span class="news-date">${item.date}</span>
+                    </div>
+                    <div class="news-title">${item.title}</div>
+                    <div class="news-body">${item.text}</div>
+                </div>`;
+                feed.innerHTML += html;
+            });
+        }
+
+        // 3. Senden
+        async function postNews() {
+            const title = document.getElementById('in-title').value;
+            const text = document.getElementById('in-text').value;
+            const cat = document.getElementById('in-cat').value;
+            
+            if(!title || !text) return alert("Bitte Titel und Text ausfüllen!");
+
+            // Datum kurz formatieren (z.B. 28.12., 14:30)
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) + ', ' + 
+                            now.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' });
+
+            const newItem = { title: title, text: text, cat: cat, date: dateStr };
+
+            currentData.push(newItem);
+            
+            // UI Reset
+            document.getElementById('in-title').value = "";
+            document.getElementById('in-text').value = "";
+            document.getElementById('feed').innerHTML = '<div style="text-align:center; padding:20px; color:#2563eb;">Sende an Cloud...</div>';
+
+            await saveToCloud();
+        }
+
+        // 4. Löschen
+        async function deleteNews(index) {
+            if(!confirm("Nachricht wirklich löschen?")) return;
+            currentData.splice(index, 1);
+            document.getElementById('feed').innerHTML = '<div style="text-align:center; padding:20px; color:#dc2626;">Lösche...</div>';
+            await saveToCloud();
+        }
+
+        // 5. Speichern
+        async function saveToCloud() {
+            try {
+                await fetch(URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+                    body: JSON.stringify(currentData)
+                });
+                fetchNews();
+            } catch (error) {
+                alert("Fehler bei Cloud-Verbindung.");
+            }
+        }
+
+        // Starten
+        fetchNews();
+        
+        // Auto-Refresh (alle 5s)
+        setInterval(fetchNews, 5000);
+
+        // Animation Keyframes für Status-Punkt
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = `@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }`;
+        document.head.appendChild(styleSheet);
+
+    </script>
+</body>
+</html>

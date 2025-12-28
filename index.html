@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PakoraAutomations v19.1 (Dashboard & Logo Fix)</title>
+    <title>PakoraAutomations v19.3 (Kommunikation Update)</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* --- DESIGN SYSTEM (MOBILE FIRST OPTIMIZED) --- */
+        /* --- DESIGN SYSTEM --- */
         :root { 
             --primary: #2563eb; 
             --primary-dark: #1e40af; 
@@ -58,11 +58,10 @@
             color: #fff; 
         }
 
-        /* Logo Bild Steuerung */
         .logo img {
             max-width: 100%;
             height: auto;
-            max-height: 150px; /* Begrenzt die Höhe damit es nicht riesig wird */
+            max-height: 150px; 
             object-fit: contain;
         }
         
@@ -99,7 +98,7 @@
         h2 { margin-top: 0; font-weight: 800; color: var(--text); font-size: 24px; margin-bottom: 10px; letter-spacing: -0.5px; }
         .subtitle { font-size: 14px; color: var(--secondary); margin-top: 0; margin-bottom: 25px; line-height: 1.5; }
 
-        /* DASHBOARD GRID SYSTEM (MODERNISIERT) */
+        /* DASHBOARD GRID SYSTEM */
         .dashboard-header {
             margin-bottom: 30px;
             background: white;
@@ -130,7 +129,7 @@
 
         .dash-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); /* Responsive Grid */
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); 
             gap: 25px;
         }
 
@@ -148,7 +147,7 @@
             min-height: 200px;
             position: relative;
             overflow: hidden;
-            border-top: 4px solid transparent; /* Platzhalter für Farbe */
+            border-top: 4px solid transparent; 
         }
 
         .dash-card:hover {
@@ -156,7 +155,6 @@
             box-shadow: 0 15px 30px -5px rgba(0,0,0,0.1);
         }
 
-        /* Farb-Varianten für die Karten */
         .card-blue { border-top-color: #2563eb; }
         .card-blue:hover .dash-icon { background: #2563eb; color: white; }
         
@@ -215,7 +213,6 @@
             border-radius: 6px;
         }
         
-        /* Subtile Hintergrund-Deko */
         .bg-icon {
             position: absolute;
             right: -20px;
@@ -225,7 +222,6 @@
             pointer-events: none;
             color: #000;
         }
-
 
         /* CARDS & INPUTS */
         .card { 
@@ -299,19 +295,6 @@
         /* EXTRAS */
         .info-bar { background: #eff6ff; color: #1e40af; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px; border: 1px solid #bfdbfe; line-height: 1.4; }
         
-        /* STOCK & SCANNER */
-        .stock-control { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-        .stock-btn { width: 36px; height: 36px; border: 1px solid #cbd5e1; background: #fff; border-radius: 8px; font-size: 18px; display: flex; align-items: center; justify-content: center; }
-        .stock-input { width: 50px !important; margin: 0 !important; height: 36px; padding: 5px !important; text-align: center; }
-        .stock-status { font-size: 11px; padding: 4px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
-        .status-ok { background: #dcfce7; color: #166534; }
-        .status-low { background: #fee2e2; color: #991b1b; }
-        
-        .scan-box { text-align: center; padding: 30px 20px; background: white; border-radius: 12px; border: 2px dashed #cbd5e1; margin-bottom: 20px; }
-        .scan-input { font-size: 20px; letter-spacing: 1px; max-width: 100%; text-align: center; }
-        .scan-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .scan-result { display: none; margin-top: 20px; animation: slideUp 0.3s ease-out; }
-
         /* MODAL */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 2000; justify-content: center; align-items: flex-end; backdrop-filter: blur(4px); animation: fadeIn 0.2s; }
         .modal-content { background: white; width: 100%; max-width: 600px; border-radius: 20px 20px 0 0; padding: 25px; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; }
@@ -412,8 +395,10 @@
 
         <div class="nav-item" onclick="window.location.href='konfigurator.html'">📐 Kühlzellen Kalkulator</div>
         <div class="nav-item" onclick="nav('db'); toggleSidebar(false)">⚙️ Produkt-Datenbank</div>
-        <div class="nav-item" onclick="nav('stock'); toggleSidebar(false)">📦 Lagerbestand</div>
-        <div class="nav-item" onclick="nav('scanner'); toggleSidebar(false)">📟 Scanner / Preis-Check</div>
+        
+        <div class="nav-item" onclick="window.location.href='lager_online.html'">📦 Lagerbestand</div>
+        
+        <div class="nav-item" onclick="window.location.href='kommunikation.html'">💬 Kommunikation</div>
     </nav>
 
     <main class="main">
@@ -435,7 +420,8 @@
                         <span class="stat-badge badge-blue">Kühllast Berechnung</span>
                     </div>
                 </div>
-<div class="dash-card card-purple" onclick="window.location.href='konfigurator.html'">
+
+                <div class="dash-card card-purple" onclick="window.location.href='konfigurator.html'">
                     <div class="bg-icon">📐</div>
                     <div class="dash-icon">📐</div>
                     <div class="dash-content">
@@ -448,14 +434,15 @@
                     </div>
                 </div>
 
-                <div class="dash-card" onclick="nav('stock')">
+                <div class="dash-card card-green" onclick="window.location.href='lager_online.html'">
                     <div>
                         <div class="dash-icon">📦</div>
                         <div class="dash-title">Lagerverwaltung</div>
-                        <div class="dash-desc">Überblick über den aktuellen Bestand und Fehlteile.</div>
+                        <div class="dash-desc">Direkt zum Online-Lagerbestand wechseln.</div>
                     </div>
-                    <div class="dash-stat" id="dashStockStat">
-                        <span class="stat-badge badge-green">Lager OK</span>
+                    <div class="dash-footer">
+                        <span style="font-size:12px; color:#94a3b8;">Externe Datei</span>
+                        <span style="color:#16a34a;">➔</span>
                     </div>
                 </div>
 
@@ -470,14 +457,15 @@
                     </div>
                 </div>
 
-                <div class="dash-card" onclick="nav('scanner')">
+                <div class="dash-card card-orange" onclick="window.location.href='kommunikation.html'">
                     <div>
-                        <div class="dash-icon">📟</div>
-                        <div class="dash-title">Scanner</div>
-                        <div class="dash-desc">Schneller Preis-Check und Lagerbuchung via Barcode.</div>
+                        <div class="dash-icon">💬</div>
+                        <div class="dash-title">Kommunikation</div>
+                        <div class="dash-desc">Chat, E-Mail & Notizen.</div>
                     </div>
-                    <div class="dash-stat">
-                        <span class="stat-badge badge-blue">Bereit zum Scannen</span>
+                    <div class="dash-footer">
+                        <span style="font-size:12px; color:#94a3b8;">Externe App</span>
+                        <span style="color:#f59e0b;">➔</span>
                     </div>
                 </div>
             </div>
@@ -629,57 +617,6 @@
                 </div>
             </div>
         </div>
-
-        <div id="stock" class="section">
-            <h2>Lagerverwaltung</h2>
-            <div class="info-bar">
-                💾 Änderungen werden automatisch gespeichert.
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <span>Bestand</span>
-                    <input type="text" id="stockSearch" placeholder="🔍 Suchen..." onkeyup="renderStock()" style="margin:0; padding: 10px; font-size:14px; width:150px;">
-                </div>
-                <div style="overflow-x:auto;">
-                    <table class="offer-table">
-                        <thead>
-                            <tr>
-                                <th>Artikel</th>
-                                <th>Status</th>
-                                <th style="text-align:right;">Menge</th>
-                            </tr>
-                        </thead>
-                        <tbody id="stockTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="scanner" class="section">
-            <h2>Scanner & Check</h2>
-            <p class="subtitle">Klicke ins Feld und scanne.</p>
-
-            <div class="scan-box" id="scanContainer">
-                <input type="text" id="scanInput" class="scan-input" placeholder="Barcode scannen..." onkeydown="handleScan(event)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-                <div style="margin-top:10px; font-size:13px; color:#94a3b8;">Scanner drücken automatisch Enter</div>
-            </div>
-
-            <div id="scanResult" class="scan-result card">
-                <div style="text-align:center;">
-                    <div id="resEan" style="font-family:monospace; color:#64748b; font-size:14px;">EAN: -</div>
-                    <div id="resName" class="scan-name">Produkt</div>
-                    <div id="resPrice" class="scan-price">0,00 €</div>
-                    <div id="resStock" class="scan-stock">Bestand: 0</div>
-                    
-                    <div class="scan-actions">
-                        <button class="btn btn-delete btn-big" onclick="updateScannedStock(-1)">- Entnahme</button>
-                        <button class="btn btn-primary btn-big" onclick="updateScannedStock(1)">+ Einlagern</button>
-                    </div>
-                </div>
-            </div>
-        </div>
     </main>
 
     <div id="productModal" class="modal-overlay" onclick="if(event.target === this) closeProductModal()">
@@ -743,7 +680,7 @@
     </div>
 
    <script>
-        // --- MOBILE MENÜ STEUERUNG (NEU) ---
+        // --- MOBILE MENÜ STEUERUNG ---
         function toggleSidebar(forceOpen) {
             const sidebar = document.querySelector('.sidebar');
             const overlay = document.querySelector('.mobile-overlay');
@@ -798,15 +735,14 @@
         };
 
         const tempIndices = {
-            "16":0, "15":2, "12":4, "10":6, "5":8, "4":10, "2":12, "0":14, "-1":14, // -1 als Fallback für Index, wird aber logisch behandelt
+            "16":0, "15":2, "12":4, "10":6, "5":8, "4":10, "2":12, "0":14, "-1":14, 
             "-2":16, "-5":18, "-10":20, "-15":22, "-18":24, "-20":26, "-21":28, "-25":30
         };
 
         // =========================================================================
-        // --- 2. DIE PRODUKT-DATENBANK (MANUELLER BEREICH) ---
+        // --- 2. DIE PRODUKT-DATENBANK ---
         // =========================================================================
 
-        // TEIL 1: KOMPRESSOREN
         const LISTE_VERDICHTER = [
             { id: "04.01.032", name: "Embraco EMT 2130 GK", capacityNK: 0, capacityTK: 380, price: 216.00, category: 'compressor' },
             { id: "04.01.025", name: "Embraco EMT 6170 Z", capacityNK: 448, capacityTK: 0, price: 178.00, category: 'compressor' },
@@ -850,7 +786,6 @@
             { id: "49878", name: "Embraco SE 6078 GS", capacityNK: 18489, capacityTK: 0, price: 2600.00, category: 'compressor' }
         ];
 
-        // TEIL 2: VERFLÜSSIGUNGSSÄTZE (Außeneinheiten)
         const LISTE_AGGREGATE = [
             { id: "80.94.072", name: "Embraco EMT 6170 Z (R134a)", capacityNK: 417, capacityTK: 0, price: 385.00, category: 'condensing_unit' },
             { id: "80.94.073", name: "Embraco FFI 12 HBK (R134a)", capacityNK: 588, capacityTK: 0, price: 420.00, category: 'condensing_unit' },
@@ -869,7 +804,6 @@
             { id: "80.94.081", name: "Embraco NJ 9238 GK (R404A)", capacityNK: 2428, capacityTK: 0, price: 1500.00, category: 'condensing_unit' }
         ];
 
-        // TEIL 3: VERDAMPFER (Inneneinheiten)
         const LISTE_VERDAMPFER = [
             // --- GÜNAY ---
             { id: "GNKF650Yan", name: "Günay GNKF 650 YAN", capacityNK: 500, capacityTK: 0, price: 195.00, category: 'evaporator' },
@@ -978,10 +912,6 @@
             { id: "80.81.530", name: "CP-Box Frascold S10-52Y (R404)", capacityNK: 0, capacityTK: 13500, price: 11500.00, category: 'cp_box' }
         ];
 
-        // =========================================================================
-        // --- LOGIK FÜR BENUTZERDEFINIERTE PRODUKTE ---
-        // =========================================================================
-        
         let customProducts = JSON.parse(localStorage.getItem('pakoraCustomProducts')) || [];
 
         function saveNewProduct() {
@@ -1049,11 +979,10 @@
 
             let baseNormal = 0, baseHeavy = 0, infoText = "";
             
-            // Logik-Fallback für -1 Grad (wird nicht im Index gefunden, aber behandelt)
             let lookupTemp = temp;
-            if(temp == -1) lookupTemp = 0; // Wir nutzen die 0-Grad Spalte als Basis, Anpassung über Faktor
+            if(temp == -1) lookupTemp = 0; 
 
-            const idx = tempIndices[lookupTemp] !== undefined ? tempIndices[lookupTemp] : 14; // Default 0 Grad
+            const idx = tempIndices[lookupTemp] !== undefined ? tempIndices[lookupTemp] : 14; 
             
             const keys = Object.keys(db).map(Number).sort((a,b)=>a-b);
             let lower = keys[0], upper = keys[keys.length-1];
@@ -1118,25 +1047,13 @@
             const items = [];
             let subTotal = 0;
             
-            // --- DIE NEUE LOGIK ---
-            // 0 Grad und wärmer -> NK (Normalkühlung) -> Suche Verflüssigungssatz/CP-Box
-            // Unter 0 Grad (also -1 abwärts) -> TK (Tiefkühlung) -> Suche TK-Aggregat
             const type = temp >= 0 ? 'NK' : 'TK';
 
-            // Filter
             let units = products.units.filter(u => {
                 let cap = type === 'NK' ? u.capacityNK : u.capacityTK;
-                
-                // 1. Hat das Gerät überhaupt Leistung für diesen Bereich?
                 if(cap <= 0) return false; 
-                
-                // 2. Reicht die Leistung aus? (Puffer -5% Toleranz)
                 if(cap < watts * 0.95) return false;
-                
-                // 3. Für Normalkühlung (>=0 Grad) wollen wir Aggregate oder CP-Boxen
-                //    Der Filter 'compressor' wird sowieso ausgeschlossen, da dies Rohkompressoren sind.
                 if (u.category === 'compressor') return false; 
-
                 return true;
             });
 
@@ -1154,9 +1071,7 @@
                 else items.push({ type: "Warnung", name: `⚠️ Keine passende Außeneinheit (${type}) gefunden`, price: 0 });
             } else {
                 usedCap = type === 'NK' ? unit.capacityNK : unit.capacityTK;
-                
                 let catLabel = unit.category === 'cp_box' ? 'CP-Box' : 'Verflüssigungssatz';
-                
                 items.push({ 
                     type: catLabel, 
                     name: `${unit.name} (${usedCap}W @ ${type==='NK'?'-10':'-25'}°C)`, 
@@ -1182,7 +1097,6 @@
                 }
             }
 
-            // Standard-Zubehör
             items.push({ type: "Zubehör", name: "Expansionsventil & Düse", price: 120.00 });
             subTotal += 120.00;
             items.push({ type: "Zubehör", name: "Kälteanlagensteuerung", price: 200.00 });
@@ -1197,7 +1111,6 @@
         function renderOfferTable() {
             const tbody = document.getElementById('offerTableBody');
             tbody.innerHTML = "";
-            
             currentOffer.items.forEach(item => {
                 tbody.innerHTML += `
                     <tr>
@@ -1229,10 +1142,8 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const client = document.getElementById('clientName').value || "Kunde";
-            
             const logoImg = document.querySelector('.logo img');
             
-            // Blauer Header-Hintergrund
             doc.setFillColor(37, 99, 235);
             doc.rect(0, 0, 210, 40, 'F'); 
 
@@ -1294,7 +1205,6 @@
             const addSection = (title, list) => {
                 if(list.length === 0) return;
                 tbody.innerHTML += `<tr><td colspan="6" style="background:#f8fafc; font-weight:800; padding-top:20px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; color:#0f172a; text-transform:uppercase; letter-spacing:1px;">${title} (${list.length})</td></tr>`;
-                
                 list.forEach(item => {
                     let capDisplay = "";
                     if(item.capacityNK > 0) capDisplay += `<div class="temp-badge temp-nk">-10°C</div> ${item.capacityNK} W<br>`;
@@ -1305,20 +1215,17 @@
                     let rowStyle = "";
                     let namePrefix = "";
                     let nameStyle = "";
-
                     if (isDeepFreeze) {
                         rowStyle = "background-color: #eff6ff; border-left: 4px solid #2563eb;";
                         namePrefix = "❄️ "; 
                         nameStyle = "color: #1e40af;";
                     }
-
                     let actionHtml = "";
                     if(item.isCustom) {
                         actionHtml = `<button class="btn-delete" onclick="deleteCustomProduct('${item.id}')">🗑️</button>`;
                     } else {
                         actionHtml = `<span style="color:#cbd5e1; font-size:10px;">Standard</span>`;
                     }
-
                     let row = `<tr style="${rowStyle}">
                         <td style="font-size:11px; color:#64748b">${title}</td>
                         <td><span style="font-family:monospace; color:#64748b">${item.id}</span></td>
@@ -1335,43 +1242,12 @@
             const compressors = products.units.filter(u => u.category === 'compressor');
             const condUnits = products.units.filter(u => u.category === 'condensing_unit');
             const cpBoxes = products.units.filter(u => u.category === 'cp_box');
-            
             addSection("Kompressoren", compressors);
             addSection("Verflüssigungssätze", condUnits);
             addSection("CP-Boxen", cpBoxes);
             addSection("Verdampfer", products.evaporators);
-
             document.getElementById('dbCount').innerText = `${total} Artikel`;
-            if(total === 0) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#94a3b8;">Datenbank ist leer.</td></tr>`;
-        }
-
-        function nav(id) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            
-            // Alte Highlights entfernen
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            
-            // Sidebar Highlight finden
-            const sidebarLinks = document.querySelectorAll('.nav-item');
-            
-            // HIER IST DIE KORREKTUR DER ZAHLEN:
-            if(id === 'dashboard') sidebarLinks[0].classList.add('active'); // Home
-            if(id === 'calc') sidebarLinks[1].classList.add('active');      // Smart-Kalk
-            
-            // Index 2 ist jetzt der Kühlzellen-Kalkulator (wird hier übersprungen, da externe Seite)
-            
-            if(id === 'db') sidebarLinks[3].classList.add('active');        // Datenbank (jetzt 3)
-            if(id === 'stock') sidebarLinks[4].classList.add('active');     // Lager (jetzt 4)
-            if(id === 'scanner') sidebarLinks[5].classList.add('active');   // Scanner (jetzt 5)
-            
-            // Logik ausführen
-            if(id === 'db') renderDatabase();
-            if(id === 'stock') renderStock();
-            if(id === 'scanner') {
-                setTimeout(() => document.getElementById('scanInput').focus(), 100);
-            }
-            if(id === 'dashboard') updateDashboardStats();
+            if(total === 0) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#94a3b8">Datenbank ist leer.</td></tr>`;
         }
 
         // --- POPUP LOGIK ---
@@ -1422,149 +1298,66 @@
             document.getElementById('productModal').style.display = 'none';
         }
 
-        // =========================================================================
-        // --- 4. LAGERVERWALTUNG & SCANNER ---
-        // =========================================================================
-
-        let stockData = JSON.parse(localStorage.getItem('pakoraStockData')) || {};
-
-        function saveStock() {
-            localStorage.setItem('pakoraStockData', JSON.stringify(stockData));
-            updateDashboardStats(); // Update Dashboard wenn sich was ändert
-        }
-
-        function changeStock(id, delta) {
-            if (!stockData[id]) stockData[id] = 0;
-            stockData[id] += delta;
-            if (stockData[id] < 0) stockData[id] = 0;
-            saveStock();
-            renderStock();
-        }
-
-        function setStock(id, val) {
-            let num = parseInt(val);
-            if (isNaN(num) || num < 0) num = 0;
-            stockData[id] = num;
-            saveStock();
-            renderStock();
-        }
-
-        function renderStock() {
-            const tbody = document.getElementById('stockTableBody');
-            const search = document.getElementById('stockSearch').value.toLowerCase();
-            tbody.innerHTML = "";
-
-            const allProducts = [...products.units, ...products.evaporators];
-
-            allProducts.forEach(item => {
-                if (search && !item.name.toLowerCase().includes(search) && !item.id.toLowerCase().includes(search)) return;
-
-                const qty = stockData[item.id] || 0;
-                let statusBadge = qty > 0 
-                    ? `<span class="stock-status status-ok">Lagernd</span>` 
-                    : `<span class="stock-status status-low">Leer</span>`;
-                
-                let namePrefix = "";
-                let nameStyle = "cursor: pointer; color: var(--primary); text-decoration: underline; text-decoration-color: rgba(37,99,235,0.3);";
-                
-                if (item.capacityTK > 0 && item.capacityNK === 0) {
-                      namePrefix = "❄️ ";
-                      nameStyle += " color: #1e40af;";
-                }
-
-                let row = `<tr>
-                    <td onclick="showProductDetails('${item.id}')" style="cursor:pointer"> 
-                        <div style="font-weight:600; font-size:14px; ${nameStyle}">${namePrefix}${item.name}</div>
-                        <div style="font-size:11px; color:#64748b;">${item.id}</div>
-                    </td>
-                    <td>${statusBadge}</td>
-                    <td>
-                        <div class="stock-control">
-                            <button class="stock-btn" onclick="changeStock('${item.id}', -1)">−</button>
-                            <input type="number" class="stock-input" value="${qty}" onchange="setStock('${item.id}', this.value)">
-                            <button class="stock-btn" onclick="changeStock('${item.id}', 1)">+</button>
-                        </div>
-                    </td>
-                </tr>`;
-                tbody.innerHTML += row;
-            });
-            
-            if(tbody.innerHTML === "") {
-                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8">Keine Artikel gefunden.</td></tr>`;
-            }
-        }
-
-        let currentScannedItem = null;
-
-        function handleScan(event) {
-            if (event.key === 'Enter') {
-                const code = document.getElementById('scanInput').value.trim();
-                if(!code) return;
-                
-                const allProducts = [...products.units, ...products.evaporators];
-                const item = allProducts.find(p => p.id === code || (p.ean && p.ean === code));
-
-                if (item) {
-                    showScanResult(item);
-                    document.getElementById('scanInput').value = ""; 
-                } else {
-                    alert("❌ Produkt nicht gefunden!\nDu kannst es unter 'Produktdatenbank' neu anlegen.");
-                    document.getElementById('scanInput').value = "";
-                }
-            }
-        }
-
-        function showScanResult(item) {
-            currentScannedItem = item;
-            const qty = stockData[item.id] || 0;
-            
-            document.getElementById('scanResult').style.display = 'block';
-            document.getElementById('resName').innerText = item.name;
-            document.getElementById('resEan').innerText = item.ean ? "EAN: " + item.ean : "Art.Nr: " + item.id;
-            document.getElementById('resPrice').innerText = item.price.toFixed(2) + " €";
-            
-            const stockColor = qty > 0 ? '#166534' : '#dc2626';
-            document.getElementById('resStock').innerHTML = `<span style="color:${stockColor}">📦 Lagerbestand: <b>${qty}</b> Stück</span>`;
-        }
-
-        function updateScannedStock(delta) {
-            if(!currentScannedItem) return;
-            changeStock(currentScannedItem.id, delta);
-            showScanResult(currentScannedItem);
-        }
-
         // --- DASHBOARD HELPER ---
         function updateDashboardStats() {
-            // Datum Update
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('currentDate').innerText = new Date().toLocaleDateString('de-DE', options);
 
-            // DB Count
             const totalProducts = products.units.length + products.evaporators.length;
             document.getElementById('dashDbStat').innerHTML = `<span class="stat-badge badge-blue">${totalProducts} Artikel aktiv</span>`;
-
-            // Stock Alert
-            let lowStockCount = 0;
-            // Wir prüfen nur Artikel, die jemals im Lager waren (im stockData existieren)
-            Object.keys(stockData).forEach(key => {
-                if(stockData[key] <= 0) lowStockCount++;
-            });
-
-            const stockStat = document.getElementById('dashStockStat');
-            if(lowStockCount > 0) {
-                stockStat.innerHTML = `<span class="stat-badge badge-red">⚠️ ${lowStockCount} Artikel leer</span>`;
-            } else {
-                stockStat.innerHTML = `<span class="stat-badge badge-green">Alles OK</span>`;
-            }
         }
         
-        // INITIALISIERUNG
+        function nav(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            const sidebarLinks = document.querySelectorAll('.nav-item');
+            
+            // Indizes angepasst an neue Sidebar Struktur
+            if(id === 'dashboard') sidebarLinks[0].classList.add('active'); 
+            if(id === 'calc') sidebarLinks[1].classList.add('active');      
+            // 2 = Konfigurator Link (extern)
+            if(id === 'db') sidebarLinks[3].classList.add('active');        
+            // 4 = Lager Link (extern)
+            // 5 = Kommunikation Link (extern)
+            
+            if(id === 'db') renderDatabase();
+            if(id === 'dashboard') updateDashboardStats();
+        }
+
         window.onload = function() {
             renderDatabase();
             updateDashboardStats();
-            // Optional: Sicherstellen, dass das Dashboard beim Neuladen aktiv ist
             nav('dashboard');
         };
+const CURRENT_NEWS_VERSION = 1; 
+
+    function checkNewsStatus() {
+        // Was hat der Nutzer zuletzt gesehen?
+        const lastSeenVersion = localStorage.getItem('pakora_news_version') || 0;
+        const navItems = document.querySelectorAll('.nav-item');
+        
+        // Suche den Menüpunkt für News/Kommunikation
+        navItems.forEach(item => {
+            if(item.innerText.includes("News") || item.innerText.includes("Kommunikation")) {
+                
+                if (CURRENT_NEWS_VERSION > lastSeenVersion) {
+                    // Neuer Inhalt verfügbar -> Roter Punkt hinzufügen
+                    if(!item.querySelector('.news-dot')) {
+                        let dot = document.createElement('span');
+                        dot.className = 'news-dot';
+                        dot.style.cssText = "height:10px; width:10px; background-color:#ef4444; border-radius:50%; display:inline-block; margin-left:auto; box-shadow: 0 0 5px #ef4444;";
+                        item.appendChild(dot);
+                    }
+                }
+            }
+        });
+    }
+
+    // Beim Laden prüfen
+    document.addEventListener("DOMContentLoaded", checkNewsStatus);
     </script>
 </body>
 </html>

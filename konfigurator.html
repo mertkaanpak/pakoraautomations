@@ -3,233 +3,338 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#222">
-    
-    <link rel="apple-touch-icon" href="logo.png">
+    <title>Pakora | Zellen-Konfigurator</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <title>INTERN | Kalkulator</title>
     <style>
-        /* --- DESIGN (Chef-Modus) --- */
-        :root {
-            --primary-color: #2c3e50; /* Dunkelblau */
-            --accent-color: #27ae60;  /* Geld-Grün */
-            --light-bg: #eef2f5;
+        /* --- DESIGN SYSTEM (Exakt wie Index & Kommunikation) --- */
+        :root { 
+            --primary: #2563eb; 
+            --primary-dark: #1e40af; 
+            --secondary: #64748b; 
+            --accent: #f59e0b; 
+            --bg: #f8fafc; 
+            --surface: #ffffff; 
+            --text: #0f172a; 
+            --border: #e2e8f0; 
+            --radius: 16px; 
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+            --success: #10b981;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            display: flex; 
+            height: 100vh; 
+            background: var(--bg); 
+            color: var(--text); 
+            overflow: hidden; 
+        }
+
+        /* SIDEBAR */
+        .sidebar { 
+            width: 280px; 
+            background: #0f172a; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 25px 20px; 
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            z-index: 1000; 
+            flex-shrink: 0;
+            height: 100%;
         }
         
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0; padding: 0;
-            background-color: var(--light-bg);
-            color: #333;
-            overscroll-behavior-y: none; 
+        .logo { 
+            display: flex; 
+            align-items: center; 
+            gap: 30px; 
+            margin-bottom: 100px; 
+            color: #fff; 
+        }
+        .logo img { max-width: 100%; height: auto; max-height: 150px; object-fit: contain; }
+        
+        .nav-item { 
+            padding: 14px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            color: #94a3b8; 
+            font-weight: 500; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            transition: 0.2s; 
+            margin-bottom: 5px; 
+            font-size: 15px;
+            text-decoration: none; 
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.1); color: white; }
+        .nav-item.active { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(37,99,235,0.4); }
+
+        /* MAIN AREA */
+        .main { 
+            flex: 1; 
+            padding: 30px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            position: relative;
         }
 
-        header {
-            background: #222; color: white; padding: 15px 20px;
-            display: flex; justify-content: space-between; align-items: center;
-            position: sticky; top: 0; z-index: 1000;
-        }
-        .logo-text { font-weight: bold; font-size: 1.2rem; color: #fff; }
-        .back-link { text-decoration: none; color: #ccc; font-size: 0.9rem; }
-
-        .config-wrapper {
-            max-width: 800px; margin: 20px auto;
-            background: white; border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
-            min-height: 500px; overflow: hidden;
-        }
-
-        .step-content { padding: 30px; display: none; }
+        /* --- KONFIGURATOR SPECIFIC STYLES --- */
+        .step-content { display: none; animation: fadeIn 0.3s ease-out; }
         .step-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        h2 { text-align: center; color: var(--primary-color); margin-bottom: 20px; font-size: 1.5rem; }
+        h2 { font-weight: 800; color: var(--text); font-size: 24px; margin-bottom: 10px; letter-spacing: -0.5px; margin-top: 0; }
+        .subtitle { font-size: 14px; color: var(--secondary); margin-top: 0; margin-bottom: 25px; }
 
-        /* KARTEN */
-        .selection-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        /* KARTEN AUSWAHL (STEP 1) */
+        .selection-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 800px; margin: 0 auto; }
         .selection-card {
-            border: 2px solid #eee; border-radius: 12px; padding: 30px 10px;
-            text-align: center; cursor: pointer; transition: 0.2s;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
         }
         .selection-card:hover {
-            border-color: var(--primary-color); background-color: #f0f4f8; transform: translateY(-2px);
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.15);
         }
-        .icon { font-size: 3rem; display: block; margin-bottom: 10px; }
-        .card-title { font-weight: bold; font-size: 1.1rem; }
+        .icon { font-size: 48px; margin-bottom: 15px; display: block; }
+        .card-title { font-weight: 700; font-size: 18px; color: var(--text); display: block; margin-bottom: 5px; }
+        .card-desc { color: var(--secondary); font-size: 13px; }
 
-        /* INPUTS */
-        .section-label { 
-            font-weight: bold; color: var(--primary-color); margin-top: 25px; margin-bottom: 10px; display: block; border-bottom: 1px solid #eee; padding-bottom: 5px;
-        }
-        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-        
-        .input-group label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.85rem; color: #666; }
-        .input-group input, .input-group select {
-            width: 100%; box-sizing: border-box; padding: 12px;
-            border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;
-            background: #fff;
-            transition: all 0.3s;
-        }
-
-        /* PREIS FELDER */
-        .price-input {
-            border-color: var(--accent-color) !important;
-            background-color: #f0fff4 !important;
-            font-weight: bold; color: #1e7e34;
+        /* STEP 2 STYLES */
+        .config-card {
+            background: var(--surface);
+            padding: 30px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            max-width: 800px;
+            margin: 0 auto;
         }
 
-        /* INFO BOX */
+        .back-btn {
+            background: none; border: none; color: var(--secondary); 
+            cursor: pointer; margin-bottom: 20px; font-weight: 600; 
+            display: flex; align-items: center; gap: 5px; font-size: 14px;
+        }
+        .back-btn:hover { color: var(--primary); }
+
         .status-badge {
-            background: #eee; text-align: center; padding: 10px; border-radius: 8px;
-            font-weight: bold; margin-bottom: 20px; color: #555;
-            display: flex; justify-content: center; align-items: center; gap: 10px;
+            background: #eff6ff; color: var(--primary); border: 1px solid #bfdbfe;
+            padding: 10px 15px; border-radius: 12px; font-weight: 600; font-size: 14px;
+            display: flex; align-items: center; gap: 10px; margin-bottom: 25px;
         }
 
-        /* ERGEBNIS */
-        .summary-box {
-            background: #f9f9f9; padding: 20px; border-radius: 10px; margin-top: 30px; font-size: 0.9rem;
-            border: 1px solid #eee;
+        .section-label {
+            font-size: 12px; text-transform: uppercase; font-weight: 700; 
+            color: var(--secondary); letter-spacing: 1px; margin-top: 25px; margin-bottom: 10px;
+            border-bottom: 1px solid var(--border); padding-bottom: 5px;
         }
-        .sum-title { font-weight: bold; margin-bottom: 10px; display: block; color: #333; }
-        .summary-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #e0e0e0; }
-        .summary-row:last-child { border-bottom: none; }
+
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
         
-        .result-bar {
-            background: var(--primary-color); color: white; padding: 25px;
-            border-radius: 10px; text-align: center; margin-top: 20px;
+        input, select {
+            width: 100%; padding: 12px; border: 1px solid #cbd5e1; 
+            border-radius: 10px; font-size: 15px; background: #fff; transition: 0.2s;
         }
-        .price-big { font-size: 2.5rem; font-weight: bold; color: #2ecc71; margin: 5px 0; }
-        
+        input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,0.1); }
+
+        /* Special Inputs */
+        .price-input { border-color: #86efac !important; background: #f0fdf4 !important; color: #166534; font-weight: 600; }
+
         .btn-calc {
-            width: 100%; padding: 15px; background: var(--accent-color); color: white;
-            border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
-            margin-top: 10px; margin-bottom: 10px;
+            width: 100%; padding: 16px; background: var(--primary); color: white;
+            border: none; border-radius: 10px; font-weight: 600; font-size: 16px;
+            cursor: pointer; margin-top: 20px; margin-bottom: 20px;
+            transition: 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
         }
+        .btn-calc:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(37, 99, 235, 0.4); }
 
-        @media (max-width: 600px) { .selection-grid { grid-template-columns: 1fr; } }
+        /* ERGEBNIS BEREICH */
+        .summary-box {
+            background: #f8fafc; border-radius: 12px; padding: 20px; 
+            border: 1px solid var(--border); font-size: 14px;
+        }
+        .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #e2e8f0; color: var(--secondary); }
+        .summary-row:last-child { border-bottom: none; }
+        .summary-row span:last-child { font-weight: 600; color: var(--text); font-family: monospace; font-size: 15px; }
+
+        .result-bar {
+            margin-top: 20px; padding-top: 15px; border-top: 2px solid var(--border);
+            text-align: center;
+        }
+        .price-big { font-size: 32px; font-weight: 800; color: var(--primary); margin-top: 5px; }
+
+        /* MOBILE MENU */
+        .mobile-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 2000; background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 50%; box-shadow: 0 4px 12px rgba(37,99,235,0.4); font-size: 20px; cursor: pointer; }
+        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 900; }
+
+        @media (max-width: 900px) {
+            .sidebar { position: fixed; height: 100%; transform: translateX(-100%); width: 85%; max-width: 320px; box-shadow: 10px 0 30px rgba(0,0,0,0.2); }
+            .sidebar.open { transform: translateX(0); }
+            .mobile-toggle { display: flex; align-items: center; justify-content: center; }
+            .mobile-overlay.active { display: block; }
+            .main { padding: 80px 15px 30px 15px; }
+            .selection-grid { grid-template-columns: 1fr; }
+            .input-row { grid-template-columns: 1fr; gap: 10px; }
+        }
     </style>
 </head>
 <body>
 
-    <header>
-        <span class="logo-text">INTERN | Kalkulator</span>
-        <a href="index.html" class="back-link">Exit</a>
-    </header>
+    <div class="mobile-overlay" onclick="toggleSidebar()"></div>
+    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
 
-    <div class="config-wrapper">
+    <nav class="sidebar">
+        <div class="logo">
+            <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+            <span style="display:none; font-size: 24px; font-weight:800;">Pakora</span>
+        </div>
+        
+        <a href="index.html" class="nav-item">🏠 Übersicht</a>
+        <a href="index.html" class="nav-item">❄️ Smart-Kalkulation</a>
+        <div class="nav-item active">📐 Kühlzellen Kalkulator</div>
+        <a href="index.html" class="nav-item">⚙️ Produkt-Datenbank</a>
+        <a href="lager_online.html" class="nav-item">📦 Lagerbestand</a>
+        <a href="kommunikation.html" class="nav-item">💬 Kommunikation</a>
+    </nav>
 
+    <main class="main">
+        
         <div id="step-1" class="step-content active">
-            <h2>Kühlhaus konfigurieren</h2>
-            <p style="text-align: center; color: #777; margin-bottom: 30px;">Bitte wählen Sie die Bauart:</p>
+            <div style="text-align:center; margin-bottom:40px;">
+                <h2>Kühlzelle Konfigurieren</h2>
+                <p class="subtitle">Wählen Sie die Bauart für die Kalkulation.</p>
+            </div>
             
             <div class="selection-grid">
                 <div class="selection-card" onclick="startConfig(false)">
                     <span class="icon">🏠</span>
                     <span class="card-title">Ohne Boden</span>
-                    <div style="font-size:0.8rem; color:#888; margin-top:5px;">Standard Kühlung</div>
+                    <span class="card-desc">Standard U-Profil Montage</span>
                 </div>
                 
                 <div class="selection-card" onclick="startConfig(true)">
                     <span class="icon">📦</span>
                     <span class="card-title">Mit Boden</span>
-                    <div style="font-size:0.8rem; color:#888; margin-top:5px;">Inkl. Siebdruckplatte</div>
+                    <span class="card-desc">Inkl. isoliertem Boden & Siebdruckplatte</span>
                 </div>
             </div>
         </div>
 
         <div id="step-2" class="step-content">
-            <button style="background:none; border:none; color:#999; cursor:pointer; margin-bottom:10px;" onclick="goToStep(1)">← Zurück zur Auswahl</button>
-            
-            <div class="status-badge">
-                <span id="badge-icon"></span>
-                <span id="badge-text"></span>
-            </div>
+            <div class="config-card">
+                <button class="back-btn" onclick="goToStep(1)">← Zurück zur Auswahl</button>
+                
+                <div class="status-badge">
+                    <span id="badge-icon"></span>
+                    <span id="badge-text"></span>
+                </div>
 
-            <div class="section-label">1. Maße (Außen)</div>
-            <div class="input-row">
+                <div class="section-label">1. Außenmaße der Zelle</div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Länge (m)</label>
+                        <input type="number" id="inp-laenge" placeholder="3.00" step="0.01" oninput="berechnePreis()">
+                    </div>
+                    <div class="input-group">
+                        <label>Breite (m)</label>
+                        <input type="number" id="inp-breite" placeholder="2.50" step="0.01" oninput="berechnePreis()">
+                    </div>
+                </div>
                 <div class="input-group">
-                    <label>Länge (m)</label>
-                    <input type="number" id="inp-laenge" placeholder="3.00" step="0.01" oninput="berechnePreis()">
+                    <label>Höhe (m)</label>
+                    <input type="number" id="inp-hoehe" placeholder="z.B. 2.20" step="0.01" oninput="berechnePreis()">
                 </div>
+
+                <div class="section-label">2. Kalkulations-Basis (€/m²)</div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label style="color:#166534;">Paneel Preis:</label>
+                        <input type="number" id="inp-preis-qm" class="price-input" value="55.00" oninput="berechnePreis()">
+                    </div>
+                    
+                    <div class="input-group" id="div-siebdruck">
+                        <label style="color:#166534;">Siebdruckplatten:</label>
+                        <input type="number" id="inp-preis-siebdruck" class="price-input" value="50.00" oninput="berechnePreis()">
+                    </div>
+                </div>
+
+                <div class="section-label">3. Tür & Ausstattung</div>
                 <div class="input-group">
-                    <label>Breite (m)</label>
-                    <input type="number" id="inp-breite" placeholder="2.50" step="0.01" oninput="berechnePreis()">
-                </div>
-            </div>
-            
-            <div class="input-group">
-                <label>Höhe (m)</label>
-                <input type="number" id="inp-hoehe" placeholder="z.B. 2.20" step="0.01" oninput="berechnePreis()">
-            </div>
-
-            <div class="section-label">2. Ihre Kalkulation (€/m²)</div>
-            <div class="input-row">
-                <div class="input-group">
-                    <label style="color:var(--accent-color);">Paneel Preis:</label>
-                    <input type="number" id="inp-preis-qm" class="price-input" value="55.00" oninput="berechnePreis()">
-                </div>
-                
-                <div class="input-group" id="div-siebdruck">
-                    <label style="color:var(--accent-color);">Siebdruckplatten:</label>
-                    <input type="number" id="inp-preis-siebdruck" class="price-input" value="50.00" oninput="berechnePreis()">
-                </div>
-            </div>
-
-            <div class="section-label">3. Tür & Position</div>
-            <div class="input-group">
-                <label>Türgröße:</label>
-                <select id="inp-tuer" onchange="berechnePreis()">
-                    <option value="0" selected>Keine Tür [0 €]</option>
-                    <option value="550">Drehtür 75 x 175 cm [550 €]</option>
-                    <option value="580">Drehtür 75 x 190 cm [580 €]</option>
-                    <option value="600">Drehtür 80 x 190 cm [600 €]</option>
-                    <option value="650">Drehtür 90 x 190 cm [650 €]</option>
-                    <option value="700">Drehtür 110 x 190 cm [700 €]</option>
-                    <option value="800">Drehtür 100 x 200 cm [800 €]</option>
-                    <option value="900">Drehtür 120 x 200 cm [900 €]</option>
-                    <option value="1000">Drehtür 120 x 220 cm [1.000 €]</option>
-                    <option value="0">Schiebetür (Auf Anfrage)</option>
-                </select>
-            </div>
-
-            <button class="btn-calc" onclick="berechnePreis()">⟳ Preis Aktualisieren</button>
-
-            <div class="summary-box" id="summary-area" style="display:none;">
-                <span class="sum-title">Details zur Berechnung:</span>
-                
-                <div class="summary-row">
-                    <span>Hülle (Wand+Decke) <small id="val-huelle-qm">(0 m²)</small></span>
-                    <span id="val-huelle-eur">0,00 €</span>
-                </div>
-                
-                <div class="summary-row" id="row-boden-details">
-                    <span>Boden Paneel <small id="val-boden-qm">(0 m²)</small></span>
-                    <span id="val-boden-eur">0,00 €</span>
-                </div>
-                
-                <div class="summary-row" id="row-siebdruck-details">
-                    <span>Boden Siebdruck <small>Aufpreis</small></span>
-                    <span id="val-siebdruck-eur">0,00 €</span>
+                    <label>Türgröße:</label>
+                    <select id="inp-tuer" onchange="berechnePreis()">
+                        <option value="0" selected>Keine Tür [0 €]</option>
+                        <option value="550">Drehtür 75 x 175 cm [550 €]</option>
+                        <option value="580">Drehtür 75 x 190 cm [580 €]</option>
+                        <option value="600">Drehtür 80 x 190 cm [600 €]</option>
+                        <option value="650">Drehtür 90 x 190 cm [650 €]</option>
+                        <option value="700">Drehtür 110 x 190 cm [700 €]</option>
+                        <option value="800">Drehtür 100 x 200 cm [800 €]</option>
+                        <option value="900">Drehtür 120 x 200 cm [900 €]</option>
+                        <option value="1000">Drehtür 120 x 220 cm [1.000 €]</option>
+                        <option value="0">Schiebetür (Auf Anfrage)</option>
+                    </select>
                 </div>
 
-                <div class="summary-row">
-                    <span>Tür</span>
-                    <span id="val-tuer-eur">0,00 €</span>
+                <button class="btn-calc" onclick="berechnePreis()">⟳ Preis Aktualisieren</button>
+
+                <div class="summary-box" id="summary-area" style="display:none;">
+                    <div style="font-weight:700; margin-bottom:10px; color:var(--text);">Details zur Berechnung:</div>
+                    
+                    <div class="summary-row">
+                        <span>Hülle (Wand+Decke) <small id="val-huelle-qm">(0 m²)</small></span>
+                        <span id="val-huelle-eur">0,00 €</span>
+                    </div>
+                    
+                    <div class="summary-row" id="row-boden-details">
+                        <span>Boden Paneel <small id="val-boden-qm">(0 m²)</small></span>
+                        <span id="val-boden-eur">0,00 €</span>
+                    </div>
+                    
+                    <div class="summary-row" id="row-siebdruck-details">
+                        <span>Boden Siebdruck <small>Aufpreis</small></span>
+                        <span id="val-siebdruck-eur">0,00 €</span>
+                    </div>
+
+                    <div class="summary-row">
+                        <span>Tür Element</span>
+                        <span id="val-tuer-eur">0,00 €</span>
+                    </div>
+
+                    <div class="result-bar">
+                        <div style="font-size:13px; color:var(--secondary); text-transform:uppercase; letter-spacing:1px;">Gesamtpreis (Netto)</div>
+                        <div class="price-big" id="preis-ausgabe">0,00 €</div>
+                    </div>
                 </div>
             </div>
-
-            <div class="result-bar">
-                <div style="font-size:0.9rem; opacity:0.8;">Gesamtpreis (Netto):</div>
-                <div class="price-big" id="preis-ausgabe">0,00 €</div>
-            </div>
-            
-            <br><br>
         </div>
 
-    </div>
+    </main>
 
     <script>
+        // SIDEBAR TOGGLE
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+
+        // --- CORE CALCULATION LOGIC ---
         let hatBoden = false; 
 
         function goToStep(stepNumber) {
@@ -264,7 +369,6 @@
         function berechnePreis() {
             let L = parseFloat(document.getElementById('inp-laenge').value) || 0;
             let B = parseFloat(document.getElementById('inp-breite').value) || 0;
-            // HIER GEÄNDERT: Höhe wird jetzt als Input (Zahl) gelesen, nicht mehr als Select
             let H = parseFloat(document.getElementById('inp-hoehe').value) || 0;
             let tuerPreis = parseFloat(document.getElementById('inp-tuer').value);
 
@@ -275,7 +379,7 @@
             let deckenFlaeche = L * B;
             let bodenFlaeche = L * B;
 
-            let kostenHuelle = 0;   
+            let kostenHuelle = 0;    
             let kostenBodenPaneel = 0; 
             let kostenSiebdruck = 0;
 
