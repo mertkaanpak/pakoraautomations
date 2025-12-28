@@ -151,6 +151,118 @@
             .news-card { padding: 20px; }
             .news-title { font-size: 17px; padding-right: 30px; /* Platz für Delete Button */ }
         }
+    
+        /* Modern refresh */
+        :root {
+            --bg: #f5f7fb;
+            --surface: #ffffff;
+            --border: #e5e7eb;
+            --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            --shadow-soft: 0 4px 14px rgba(15, 23, 42, 0.06);
+        }
+
+        body {
+            background:
+                radial-gradient(900px 400px at 10% -10%, rgba(37, 99, 235, 0.12), transparent 45%),
+                radial-gradient(800px 350px at 90% 0%, rgba(245, 158, 11, 0.12), transparent 45%),
+                linear-gradient(180deg, #f8fafc, #eef2f7 60%, #f8fafc);
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #0b1220, #111827);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 12px 0 30px rgba(15, 23, 42, 0.35);
+        }
+
+        .logo { margin-bottom: 60px; }
+
+        .nav-item {
+            position: relative;
+            border: 1px solid transparent;
+        }
+
+        .nav-item.active {
+            background: rgba(37, 99, 235, 0.18);
+            border-color: rgba(37, 99, 235, 0.35);
+            box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.15);
+        }
+
+        .nav-item.active::before {
+            content: "";
+            position: absolute;
+            left: 6px;
+            top: 8px;
+            bottom: 8px;
+            width: 4px;
+            border-radius: 999px;
+            background: #60a5fa;
+        }
+
+        .main { gap: 20px; }
+
+        .card,
+        .dash-card,
+        .news-card,
+        .stat-card,
+        .config-card,
+        .admin-panel,
+        .header-card,
+        .selection-card,
+        .summary-box {
+            box-shadow: var(--shadow);
+            border-color: var(--border);
+        }
+
+        .dash-card:hover,
+        .selection-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+        }
+
+        .news-card {
+            background: linear-gradient(180deg, #ffffff, #f8fafc);
+        }
+
+        input,
+        select,
+        textarea {
+            border-color: #d1d5db;
+            background: #ffffff;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+            border-color: #2563eb;
+        }
+
+        .btn,
+        .btn-primary,
+        .btn-send,
+        .btn-calc,
+        .btn-upload {
+            transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+        }
+
+        .btn-primary,
+        .btn-send,
+        .btn-calc {
+            background: linear-gradient(120deg, #2563eb, #1d4ed8);
+            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn-upload {
+            background: linear-gradient(120deg, #f59e0b, #f97316);
+        }
+
+        .btn-primary:hover,
+        .btn-send:hover,
+        .btn-calc:hover,
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.02);
+        }
     </style>
 </head>
 <body>
@@ -169,6 +281,7 @@
         <a href="index.html" class="nav-item">⚙️ Produkt-Datenbank</a>
         <a href="lager_online.html" class="nav-item">📦 Lagerbestand</a>
         <div class="nav-item active">📢 Live News</div>
+        <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
     </nav>
 
     <main class="main">
@@ -331,5 +444,134 @@
         document.head.appendChild(styleSheet);
 
     </script>
+
+    <style>
+        #authOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            backdrop-filter: blur(6px);
+        }
+        #authOverlay[hidden] { display: none; }
+        #authCard {
+            width: min(420px, 92vw);
+            background: #0b1220;
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(2, 6, 23, 0.6);
+        }
+        #authCard h2 { margin: 0 0 8px 0; font-size: 20px; }
+        #authCard p { margin: 0 0 18px 0; color: #94a3b8; font-size: 14px; }
+        #authCard label { display: block; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+        #authCard input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 16px;
+            margin-bottom: 14px;
+        }
+        #authCard button {
+            width: 100%;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(120deg, #2563eb, #1d4ed8);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #authError {
+            color: #f87171;
+            font-size: 13px;
+            min-height: 18px;
+        }            .logout-btn {
+            margin-top: auto;
+            background: rgba(148, 163, 184, 0.12);
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            text-align: left;
+        }
+        .logout-btn:hover { background: rgba(239, 68, 68, 0.15); color: #fecaca; border-color: rgba(239, 68, 68, 0.35); }
+</style>
+
+    <div id="authOverlay" hidden>
+        <div id="authCard">
+            <h2>Zugriff gesperrt</h2>
+            <p>Bitte anmelden, um fortzufahren.</p>
+            <form id="authForm">
+                <label for="authUser">Benutzername</label>
+                <input id="authUser" type="text" autocomplete="username" required />
+                <label for="authPass">Passwort</label>
+                <input id="authPass" type="password" autocomplete="current-password" required />
+                <div id="authError"></div>
+                <button type="submit">Anmelden</button>
+            </form>
+        </div>
+    </div>\n
+    <script>
+        (function () {
+            const AUTH_USER = "pakoraadmin";
+            const AUTH_PASS = "admin";
+            const AUTH_KEY = "pakora_auth_v1";
+
+            const overlay = document.getElementById("authOverlay");
+            const form = document.getElementById("authForm");
+            const user = document.getElementById("authUser");
+            const pass = document.getElementById("authPass");
+            const error = document.getElementById("authError");
+            const logoutBtn = document.getElementById("logoutBtn");
+
+            const isAuthed = () => localStorage.getItem(AUTH_KEY) === "1";
+            const showAuth = () => {
+                overlay.hidden = false;
+                if (logoutBtn) logoutBtn.hidden = true;
+                document.body.style.overflow = "hidden";
+                setTimeout(() => user.focus(), 50);
+            };
+            const hideAuth = () => {
+                overlay.hidden = true;
+                if (logoutBtn) logoutBtn.hidden = false;
+                document.body.style.overflow = "";
+            };
+
+            if (!isAuthed()) {
+                showAuth();
+            }
+
+            form.addEventListener("submit", (event) => {
+                event.preventDefault();
+                error.textContent = "";
+
+                if (user.value.trim() === AUTH_USER && pass.value === AUTH_PASS) {
+                    localStorage.setItem(AUTH_KEY, "1");
+                    hideAuth();
+                    return;
+                }
+
+                error.textContent = "Falsche Zugangsdaten.";
+                pass.value = "";
+                pass.focus();
+            });
+            if (logoutBtn) {
+                logoutBtn.addEventListener("click", () => {
+                    localStorage.removeItem(AUTH_KEY);
+                    location.reload();
+                });
+            }
+        })();
+    </script>
 </body>
 </html>
+
+
+
+

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pakora | Verdichter Recherche</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #64748b;
+            --accent: #f59e0b;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #0f172a;
+            --border: #e2e8f0;
+            --radius: 16px;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 25px 20px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            flex-shrink: 0;
+            height: 100%;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 60px;
+            color: #fff;
+        }
+        .logo img { max-width: 100%; height: auto; max-height: 150px; object-fit: contain; }
+
+        .nav-item {
+            padding: 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: #94a3b8;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: 0.2s;
+            margin-bottom: 5px;
+            font-size: 15px;
+            text-decoration: none;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.1); color: white; }
+        .nav-item.active { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(37,99,235,0.4); }
+
+        .main {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .header-card {
+            background: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .card {
+            background: var(--surface);
+            padding: 25px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        label { display: block; font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        input, select { width: 100%; padding: 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; background: #fff; appearance: none; }
+        input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,0.1); }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.2s;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(37,99,235,0.25); }
+
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; padding: 12px; background: #f1f5f9; color: #475569; font-size: 12px; text-transform: uppercase; border-radius: 6px; }
+        td { padding: 15px 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        tr:last-child td { border-bottom: none; }
+
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .badge-info { background: #eff6ff; color: #2563eb; }
+
+        .mobile-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 2000; background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 50%; box-shadow: 0 4px 12px rgba(37,99,235,0.4); font-size: 20px; cursor: pointer; }
+        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 900; }
+
+        @media (max-width: 900px) {
+            .sidebar { position: fixed; height: 100%; transform: translateX(-100%); width: 85%; max-width: 320px; box-shadow: 10px 0 30px rgba(0,0,0,0.2); }
+            .sidebar.open { transform: translateX(0); }
+            .mobile-toggle { display: flex; align-items: center; justify-content: center; }
+            .mobile-overlay.active { display: block; }
+            .main { padding: 80px 15px 30px 15px; }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+
+        /* Modern refresh */
+        :root {
+            --bg: #f5f7fb;
+            --surface: #ffffff;
+            --border: #e5e7eb;
+            --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            --shadow-soft: 0 4px 14px rgba(15, 23, 42, 0.06);
+        }
+
+        body {
+            background:
+                radial-gradient(900px 400px at 10% -10%, rgba(37, 99, 235, 0.12), transparent 45%),
+                radial-gradient(800px 350px at 90% 0%, rgba(245, 158, 11, 0.12), transparent 45%),
+                linear-gradient(180deg, #f8fafc, #eef2f7 60%, #f8fafc);
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #0b1220, #111827);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 12px 0 30px rgba(15, 23, 42, 0.35);
+        }
+
+        .logo { margin-bottom: 60px; }
+
+        .nav-item {
+            position: relative;
+            border: 1px solid transparent;
+        }
+
+        .nav-item.active {
+            background: rgba(37, 99, 235, 0.18);
+            border-color: rgba(37, 99, 235, 0.35);
+            box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.15);
+        }
+
+        .nav-item.active::before {
+            content: "";
+            position: absolute;
+            left: 6px;
+            top: 8px;
+            bottom: 8px;
+            width: 4px;
+            border-radius: 999px;
+            background: #60a5fa;
+        }
+
+        .main { gap: 20px; }
+
+        .card,
+        .header-card {
+            box-shadow: var(--shadow);
+            border-color: var(--border);
+        }
+
+        input,
+        select {
+            border-color: #d1d5db;
+            background: #ffffff;
+        }
+
+        input:focus,
+        select:focus {
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+            border-color: #2563eb;
+        }
+
+        .btn,
+        .btn-primary {
+            transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(120deg, #2563eb, #1d4ed8);
+            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.02);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-overlay" onclick="toggleSidebar()"></div>
+    <button class="mobile-toggle" onclick="toggleSidebar()">Menu</button>
+
+    <nav class="sidebar">
+        <div class="logo">
+            <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+            <span style="display:none; font-size: 24px; font-weight:800;">Pakora</span>
+        </div>
+
+        <a href="index.html" class="nav-item">Zurueck zur App</a>
+        <div class="nav-item active">Verdichter Recherche</div>
+        <a href="kommunikation.html" class="nav-item">Kommunikation</a>
+        <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
+    </nav>
+
+    <main class="main">
+        <div class="header-card">
+            <div>
+                <h1 style="margin:0; font-size:22px; font-weight:800;">Verdichter Recherche</h1>
+                <div style="font-size:13px; color:var(--secondary); margin-top:5px;">
+                    Strukturierte Suche nach Verdichtern und Leistungsdaten.
+                </div>
+            </div>
+            <span class="badge badge-info">Beta</span>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-top:0; font-size:18px;">Suchparameter</h2>
+            <div class="grid-2">
+                <div>
+                    <label>Hersteller</label>
+                    <input type="text" placeholder="z.B. Bitzer, Copeland">
+                </div>
+                <div>
+                    <label>Kaeltemittel</label>
+                    <select>
+                        <option>R134a</option>
+                        <option>R404A</option>
+                        <option>R452A</option>
+                        <option>R744 (CO2)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Temperaturbereich</label>
+                    <select>
+                        <option>Normalkuehlung (-10 C)</option>
+                        <option>Tiefkuehlung (-25 C)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Leistung (W)</label>
+                    <input type="number" placeholder="z.B. 4500">
+                </div>
+            </div>
+            <div style="margin-top:15px;">
+                <button class="btn btn-primary">Suche starten</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-top:0; font-size:18px;">Ergebnisse</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Modell</th>
+                            <th>Leistung</th>
+                            <th>Kaeltemittel</th>
+                            <th>Hinweis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="4" style="text-align:center; padding:24px; color:#94a3b8;">
+                                Noch keine Ergebnisse. Bitte Suchparameter setzen.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.mobile-overlay').classList.toggle('active');
+        }
+    </script>
+
+    <style>
+        #authOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            backdrop-filter: blur(6px);
+        }
+        #authOverlay[hidden] { display: none; }
+        #authCard {
+            width: min(420px, 92vw);
+            background: #0b1220;
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(2, 6, 23, 0.6);
+        }
+        #authCard h2 { margin: 0 0 8px 0; font-size: 20px; }
+        #authCard p { margin: 0 0 18px 0; color: #94a3b8; font-size: 14px; }
+        #authCard label { display: block; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+        #authCard input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 16px;
+            margin-bottom: 14px;
+        }
+        #authCard button {
+            width: 100%;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(120deg, #2563eb, #1d4ed8);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #authError {
+            color: #f87171;
+            font-size: 13px;
+            min-height: 18px;
+        }            .logout-btn {
+            margin-top: auto;
+            background: rgba(148, 163, 184, 0.12);
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            text-align: left;
+        }
+        .logout-btn:hover { background: rgba(239, 68, 68, 0.15); color: #fecaca; border-color: rgba(239, 68, 68, 0.35); }
+</style>
+
+    <div id="authOverlay" hidden>
+        <div id="authCard">
+            <h2>Zugriff gesperrt</h2>
+            <p>Bitte anmelden, um fortzufahren.</p>
+            <form id="authForm">
+                <label for="authUser">Benutzername</label>
+                <input id="authUser" type="text" autocomplete="username" required />
+                <label for="authPass">Passwort</label>
+                <input id="authPass" type="password" autocomplete="current-password" required />
+                <div id="authError"></div>
+                <button type="submit">Anmelden</button>
+            </form>
+        </div>
+    </div>\n
+    <script>
+        (function () {
+            const AUTH_USER = "pakoraadmin";
+            const AUTH_PASS = "admin";
+            const AUTH_KEY = "pakora_auth_v1";
+
+            const overlay = document.getElementById("authOverlay");
+            const form = document.getElementById("authForm");
+            const user = document.getElementById("authUser");
+            const pass = document.getElementById("authPass");
+            const error = document.getElementById("authError");
+            const logoutBtn = document.getElementById("logoutBtn");
+
+            const isAuthed = () => localStorage.getItem(AUTH_KEY) === "1";
+            const showAuth = () => {
+                overlay.hidden = false;
+                if (logoutBtn) logoutBtn.hidden = true;
+                document.body.style.overflow = "hidden";
+                setTimeout(() => user.focus(), 50);
+            };
+            const hideAuth = () => {
+                overlay.hidden = true;
+                if (logoutBtn) logoutBtn.hidden = false;
+                document.body.style.overflow = "";
+            };
+
+            if (!isAuthed()) {
+                showAuth();
+            }
+
+            form.addEventListener("submit", (event) => {
+                event.preventDefault();
+                error.textContent = "";
+
+                if (user.value.trim() === AUTH_USER && pass.value === AUTH_PASS) {
+                    localStorage.setItem(AUTH_KEY, "1");
+                    hideAuth();
+                    return;
+                }
+
+                error.textContent = "Falsche Zugangsdaten.";
+                pass.value = "";
+                pass.focus();
+            });
+            if (logoutBtn) {
+                logoutBtn.addEventListener("click", () => {
+                    localStorage.removeItem(AUTH_KEY);
+                    location.reload();
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
+
+
+
+
