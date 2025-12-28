@@ -1,2 +1,8 @@
 Benutzername: pakoraadmin
 Passwort: admin
+
+Benutzername: k.guemuesok
+Passwort: pakora
+
+Benutzername: l.wenzel
+Passwort: pakora

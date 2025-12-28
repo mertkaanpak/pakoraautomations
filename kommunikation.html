@@ -5,458 +5,410 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Pakora Live News</title>
+    <title>Pakora Kommunikation</title>
     <link rel="icon" type="image/png" href="logo.png">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        /* --- DESIGN SYSTEM --- */
-        :root { 
-            --primary: #2563eb; 
-            --secondary: #64748b; 
-            --bg: #f8fafc; 
-            --surface: #ffffff; 
-            --text: #0f172a; 
-            --border: #e2e8f0; 
-            --radius: 16px; 
-            --shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-            --danger: #dc2626;
-        }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            margin: 0; 
-            display: flex; 
-            height: 100vh; 
-            background: var(--bg); 
-            color: var(--text); 
-            overflow: hidden; 
-        }
-
-        /* SIDEBAR (Desktop) */
-        .sidebar { 
-            width: 280px; background: #0f172a; color: white; 
-            display: flex; flex-direction: column; padding: 25px 20px; 
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            z-index: 1000; flex-shrink: 0; height: 100%;
-        }
-        .logo { display: flex; align-items: center; gap: 30px; margin-bottom: 100px; color: #fff; }
-        .logo img { max-width: 100%; height: auto; max-height: 150px; object-fit: contain; }
-        
-        .nav-item { 
-            padding: 14px; border-radius: 12px; cursor: pointer; color: #94a3b8; 
-            font-weight: 500; display: flex; align-items: center; gap: 15px; 
-            margin-bottom: 5px; text-decoration: none; font-size: 15px;
-        }
-        .nav-item:hover { background: rgba(255,255,255,0.1); color: white; }
-        .nav-item.active { background: var(--primary); color: white; }
-
-        /* MAIN CONTENT */
-        .main { 
-            flex: 1; padding: 30px; overflow-y: auto; 
-            display: flex; flex-direction: column; 
-            -webkit-overflow-scrolling: touch; /* Smooth scroll iOS */
-        }
-        
-        .header-section { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-        
-        /* ADMIN PANEL (Desktop) */
-        .admin-panel {
-            background: #fff; border: 2px solid var(--primary); border-radius: var(--radius);
-            padding: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(37, 99, 235, 0.1);
-        }
-        .admin-row { display: grid; grid-template-columns: 1.5fr 1fr 1.5fr auto; gap: 15px; align-items: center; }
-        
-        /* Inputs: Font-size 16px verhindert iOS Zoom */
-        input, select { 
-            width: 100%; padding: 12px; border: 1px solid #cbd5e1; 
-            border-radius: 10px; font-size: 16px; background: #fff; appearance: none;
-        }
-        
-        .btn-send { 
-            background: var(--primary); color: white; border: none; 
-            padding: 12px 25px; border-radius: 10px; font-weight: bold; font-size: 16px;
-            cursor: pointer; height: 46px; transition: 0.2s;
-        }
-        .btn-send:active { transform: scale(0.96); }
-
-        /* FEED */
-        .feed-container { display: flex; flex-direction: column; gap: 20px; max-width: 800px; padding-bottom: 50px; }
-
-        .news-card { 
-            background: var(--surface); border: 1px solid var(--border); 
-            border-radius: var(--radius); padding: 25px; box-shadow: var(--shadow); 
-            position: relative; animation: slideIn 0.3s ease; 
-        }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: 0; } }
-
-        .news-card.urgent { border-left: 5px solid #dc2626; }
-        .news-card.info { border-left: 5px solid var(--primary); }
-        .news-card.tech { border-left: 5px solid #16a34a; }
-
-        .news-header { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
-        .news-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; }
-        
-        .tag-urgent { background: #fee2e2; color: #dc2626; }
-        .tag-info { background: #eff6ff; color: #2563eb; }
-        .tag-tech { background: #f0fdf4; color: #166534; }
-        
-        .news-date { font-size: 12px; color: var(--secondary); }
-        .news-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
-        .news-body { font-size: 15px; color: #475569; line-height: 1.5; white-space: pre-wrap; }
-
-        /* Delete Button */
-        .btn-delete {
-            position: absolute; top: 15px; right: 15px;
-            background: rgba(255,255,255,0.8); border: 1px solid #e2e8f0; 
-            border-radius: 50%; width: 32px; height: 32px;
-            color: #cbd5e1; font-size: 20px; line-height: 1; 
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-        }
-        .btn-delete:hover, .btn-delete:active { color: var(--danger); border-color: var(--danger); background: #fef2f2; }
-
-        /* MOBILE OPTIMIZATION */
-        .mobile-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 2000; background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 50%; box-shadow: 0 4px 12px rgba(37,99,235,0.4); font-size: 20px; cursor: pointer; }
-        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 900; }
-
-        @media (max-width: 900px) {
-            .sidebar { position: fixed; height: 100%; transform: translateX(-100%); width: 85%; max-width: 320px; box-shadow: 10px 0 30px rgba(0,0,0,0.2); }
-            .sidebar.open { transform: translateX(0); }
-            .mobile-toggle { display: flex; align-items: center; justify-content: center; }
-            .mobile-overlay.active { display: block; }
-            
-            /* Mobile Layout Tweaks */
-            .main { padding: 85px 15px 30px 15px; } /* Mehr Platz oben für Menü Button */
-            
-            .header-section { 
-                flex-direction: column; 
-                align-items: flex-start; 
-                gap: 10px; 
-            }
-            
-            /* Admin Panel Stapeln */
-            .admin-row { 
-                display: flex; 
-                flex-direction: column; 
-                gap: 12px; 
-            }
-            
-            .btn-send { 
-                width: 100%; 
-                margin-top: 5px; 
-                padding: 15px; /* Große Touch-Fläche */
-            }
-
-            .news-card { padding: 20px; }
-            .news-title { font-size: 17px; padding-right: 30px; /* Platz für Delete Button */ }
-        }
-    
-        /* Modern refresh */
         :root {
-            --bg: #f5f7fb;
-            --surface: #ffffff;
-            --border: #e5e7eb;
-            --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-            --shadow-soft: 0 4px 14px rgba(15, 23, 42, 0.06);
+            --bg: #0f172a;
+            --surface: #111827;
+            --panel: #0b1220;
+            --panel-soft: #111827;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --accent: #22c55e;
+            --accent-strong: #16a34a;
+            --bubble-in: #1f2937;
+            --bubble-out: #0f2e1c;
+            --border: rgba(148, 163, 184, 0.16);
+            --shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
         }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
+            font-family: 'Sora', sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            color: var(--text);
+            overflow: hidden;
             background:
-                radial-gradient(900px 400px at 10% -10%, rgba(37, 99, 235, 0.12), transparent 45%),
-                radial-gradient(800px 350px at 90% 0%, rgba(245, 158, 11, 0.12), transparent 45%),
-                linear-gradient(180deg, #f8fafc, #eef2f7 60%, #f8fafc);
+                radial-gradient(700px 360px at 15% -10%, rgba(34, 197, 94, 0.2), transparent 55%),
+                radial-gradient(900px 420px at 90% 0%, rgba(59, 130, 246, 0.18), transparent 45%),
+                linear-gradient(180deg, #0b1220, #0f172a 50%, #0b1220);
         }
 
         .sidebar {
-            background: linear-gradient(180deg, #0b1220, #111827);
-            border-right: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 12px 0 30px rgba(15, 23, 42, 0.35);
+            width: 260px;
+            background: linear-gradient(180deg, #0b1220, #0f172a);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 18px;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            flex-shrink: 0;
+            height: 100%;
+            border-right: 1px solid rgba(148, 163, 184, 0.12);
+            box-shadow: 10px 0 30px rgba(2, 6, 23, 0.55);
         }
 
-        .logo { margin-bottom: 60px; }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 40px;
+        }
+
+        .logo img {
+            max-width: 100%;
+            height: auto;
+            max-height: 110px;
+            object-fit: contain;
+        }
 
         .nav-item {
-            position: relative;
+            padding: 12px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: #cbd5f5;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+            text-decoration: none;
+            font-size: 14px;
             border: 1px solid transparent;
         }
 
+        .nav-item:hover { background: rgba(148, 163, 184, 0.12); color: white; }
+
         .nav-item.active {
-            background: rgba(37, 99, 235, 0.18);
-            border-color: rgba(37, 99, 235, 0.35);
-            box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.15);
+            background: rgba(34, 197, 94, 0.16);
+            color: #ecfdf3;
+            border-color: rgba(34, 197, 94, 0.25);
+            box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.08);
         }
 
-        .nav-item.active::before {
-            content: "";
-            position: absolute;
-            left: 6px;
-            top: 8px;
-            bottom: 8px;
-            width: 4px;
-            border-radius: 999px;
-            background: #60a5fa;
+        .logout-btn {
+            margin-top: auto;
+            background: rgba(148, 163, 184, 0.12);
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            text-align: left;
         }
 
-        .main { gap: 20px; }
+        .logout-btn:hover { background: rgba(239, 68, 68, 0.18); color: #fecaca; border-color: rgba(239, 68, 68, 0.35); }
 
-        .card,
-        .dash-card,
-        .news-card,
-        .stat-card,
-        .config-card,
-        .admin-panel,
-        .header-card,
-        .selection-card,
-        .summary-box {
+        .main {
+            flex: 1;
+            padding: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .header-title h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .header-title p { margin: 6px 0 0 0; color: var(--muted); font-size: 13px; }
+
+        .presence {
+            padding: 6px 14px;
+            background: rgba(34, 197, 94, 0.2);
+            color: #bbf7d0;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .presence span {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .chat-shell {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap: 18px;
+            height: 100%;
+        }
+
+        .chat-list {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
             box-shadow: var(--shadow);
-            border-color: var(--border);
         }
 
-        .dash-card:hover,
-        .selection-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+        .chat-list h3 {
+            margin: 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted);
         }
 
-        .news-card {
-            background: linear-gradient(180deg, #ffffff, #f8fafc);
+        .current-user {
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            color: #ecfdf3;
         }
 
-        input,
-        select,
-        textarea {
-            border-color: #d1d5db;
-            background: #ffffff;
+        .current-user strong { font-size: 15px; }
+        .current-user span { font-size: 12px; color: #bbf7d0; }
+
+        .chat-item {
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 14px;
+            padding: 12px 14px;
+            background: rgba(15, 23, 42, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
 
-        input:focus,
-        select:focus,
-        textarea:focus {
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-            border-color: #2563eb;
+        .chat-item.active {
+            border-color: rgba(34, 197, 94, 0.35);
+            background: rgba(34, 197, 94, 0.08);
         }
 
-        .btn,
-        .btn-primary,
-        .btn-send,
-        .btn-calc,
-        .btn-upload {
-            transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+        .chat-item .title { font-weight: 600; font-size: 15px; }
+        .chat-item .meta { font-size: 12px; color: var(--muted); }
+
+        .participants {
+            display: grid;
+            gap: 10px;
         }
 
-        .btn-primary,
-        .btn-send,
-        .btn-calc {
-            background: linear-gradient(120deg, #2563eb, #1d4ed8);
-            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+        .participant {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #cbd5f5;
         }
 
-        .btn-upload {
-            background: linear-gradient(120deg, #f59e0b, #f97316);
+        .participant .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
         }
 
-        .btn-primary:hover,
-        .btn-send:hover,
-        .btn-calc:hover,
-        .btn-upload:hover {
-            transform: translateY(-2px);
-            filter: brightness(1.02);
-        }
-    </style>
-</head>
-<body>
-
-    <div class="mobile-overlay" onclick="toggleSidebar()"></div>
-    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
-
-    <nav class="sidebar">
-        <div class="logo">
-            <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-            <span style="display:none; font-size: 24px; font-weight:800;">Pakora</span>
-        </div>
-        <a href="index.html" class="nav-item">🏠 Übersicht</a>
-        <a href="index.html" class="nav-item">❄️ Smart-Kalkulation</a>
-        <a href="konfigurator.html" class="nav-item">📐 Kühlzellen Kalkulator</a>
-        <a href="index.html" class="nav-item">⚙️ Produkt-Datenbank</a>
-        <a href="lager_online.html" class="nav-item">📦 Lagerbestand</a>
-        <div class="nav-item active">📢 Live News</div>
-        <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
-    </nav>
-
-    <main class="main">
-        <div class="header-section">
-            <div>
-                <h1 style="margin:0; font-size:24px; font-weight:800;">Schwarzes Brett</h1>
-                <p style="margin:5px 0 0 0; color:var(--secondary); font-size:14px;">Live Nachrichten System</p>
-            </div>
-            <div id="status-dot" style="padding:6px 14px; background:#dcfce7; color:#166534; border-radius:20px; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:6px;">
-                <span style="width:8px; height:8px; background:#16a34a; border-radius:50%; animation:pulse 2s infinite"></span>
-                Verbunden
-            </div>
-        </div>
-
-        <div class="admin-panel">
-            <h3 style="margin-top:0; margin-bottom:15px; font-size:16px; color:var(--primary);">✍️ Neue Nachricht</h3>
-            <div class="admin-row">
-                <input type="text" id="in-title" placeholder="Titel (z.B. Preisupdate)">
-                
-                <select id="in-cat">
-                    <option value="info">ℹ️ Info (Blau)</option>
-                    <option value="urgent">🚨 Dringend (Rot)</option>
-                    <option value="tech">🔧 Technik (Grün)</option>
-                </select>
-                
-                <input type="text" id="in-text" placeholder="Nachricht...">
-                
-                <button class="btn-send" onclick="postNews()">Veröffentlichen</button>
-            </div>
-        </div>
-
-        <div class="feed-container" id="feed">
-            <div style="text-align:center; padding:40px; color:#94a3b8;">Lade Nachrichten...</div>
-        </div>
-    </main>
-
-    <script>
-        function toggleSidebar() {
-            document.querySelector('.sidebar').classList.toggle('open');
-            document.querySelector('.mobile-overlay').classList.toggle('active');
+        .chat-panel {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: var(--shadow);
         }
 
-        // --- CLOUD DATEN (Deine echten Keys sind hier drin) ---
-        const BIN_ID = '695087f9ae596e708fb4f768';
-        const API_KEY = '$2a$10$9Thc2jp1h9cRa/WIHocDseT7gS7TA7mi7CODusCTQ158Px.PDfEFy';
-        // ------------------------------------------------------
+        .chat-header {
+            padding: 16px 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-        const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-        let currentData = [];
+        .chat-title strong { font-size: 16px; }
+        .chat-title span { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-        // 1. Daten laden (Start & Auto-Update)
-        async function fetchNews() {
-            try {
-                const response = await fetch(URL + '/latest', {
-                    headers: { 'X-Master-Key': API_KEY }
-                });
-                const json = await response.json();
-                
-                if(json.record && Array.isArray(json.record)) {
-                    currentData = json.record;
-                } else {
-                    currentData = [];
-                }
-                render();
-            } catch (error) {
-                console.error("Ladefehler:", error);
+        .chat-actions {
+            font-size: 12px;
+            color: #bbf7d0;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(34, 197, 94, 0.25);
+            background: rgba(34, 197, 94, 0.12);
+        }
+
+        .chat-body {
+            flex: 1;
+            padding: 22px 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(34, 197, 94, 0.08), transparent 40%),
+                radial-gradient(circle at 80% 40%, rgba(59, 130, 246, 0.08), transparent 40%),
+                repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0 12px, rgba(255, 255, 255, 0.02) 12px 24px);
+        }
+
+        .msg {
+            max-width: 70%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .msg-in { align-self: flex-start; }
+        .msg-out { align-self: flex-end; }
+
+        .bubble {
+            padding: 12px 14px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.4;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            word-break: break-word;
+        }
+
+        .msg-in .bubble {
+            background: var(--bubble-in);
+            border-top-left-radius: 4px;
+        }
+
+        .msg-out .bubble {
+            background: var(--bubble-out);
+            border-color: rgba(34, 197, 94, 0.35);
+            border-top-right-radius: 4px;
+        }
+
+        .meta-line {
+            display: flex;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .msg-out .meta-line { justify-content: flex-end; }
+
+        .chat-input {
+            padding: 16px 18px;
+            border-top: 1px solid rgba(148, 163, 184, 0.16);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        .chat-input textarea {
+            flex: 1;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            background: rgba(15, 23, 42, 0.6);
+            color: #e2e8f0;
+            padding: 12px 14px;
+            font-size: 14px;
+            resize: none;
+            min-height: 46px;
+            max-height: 120px;
+        }
+
+        .chat-input button {
+            background: linear-gradient(120deg, #22c55e, #16a34a);
+            color: #07110b;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(34, 197, 94, 0.3);
+        }
+
+        .chat-input button:active { transform: translateY(1px); }
+
+        .empty-state {
+            text-align: center;
+            color: var(--muted);
+            font-size: 14px;
+            margin-top: 40px;
+        }
+
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 2000;
+            background: #22c55e;
+            color: #05120b;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(34, 197, 94, 0.4);
+        }
+
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 6, 23, 0.6);
+            z-index: 900;
+        }
+
+        @media (max-width: 1100px) {
+            .chat-shell { grid-template-columns: 280px 1fr; }
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                position: fixed;
+                height: 100%;
+                transform: translateX(-100%);
+                width: 82%;
+                max-width: 320px;
             }
+            .sidebar.open { transform: translateX(0); }
+            .mobile-toggle { display: flex; align-items: center; justify-content: center; }
+            .mobile-overlay.active { display: block; }
+            .main { padding: 80px 16px 18px; }
+            .chat-shell { grid-template-columns: 1fr; }
+            .chat-list { order: 2; }
+            .chat-panel { order: 1; min-height: 55vh; }
+            .msg { max-width: 85%; }
         }
 
-        // 2. Anzeigen
-        function render() {
-            const feed = document.getElementById('feed');
-            feed.innerHTML = "";
-
-            if (currentData.length === 0) {
-                feed.innerHTML = '<div style="text-align:center; color:#cbd5e1; margin-top:20px; font-style:italic;">Keine Nachrichten vorhanden.<br>Nutze das Formular oben.</div>';
-                return;
-            }
-
-            // Neueste Nachricht oben
-            const list = [...currentData].reverse();
-
-            list.forEach((item, index) => {
-                const realIndex = currentData.length - 1 - index;
-
-                let tagName = "Info";
-                if(item.cat === 'urgent') tagName = "Dringend";
-                if(item.cat === 'tech') tagName = "Technik";
-
-                const html = `
-                <div class="news-card ${item.cat}">
-                    <button class="btn-delete" onclick="deleteNews(${realIndex})" title="Löschen">×</button>
-                    <div class="news-header">
-                        <span class="news-tag tag-${item.cat}">${tagName}</span>
-                        <span class="news-date">${item.date}</span>
-                    </div>
-                    <div class="news-title">${item.title}</div>
-                    <div class="news-body">${item.text}</div>
-                </div>`;
-                feed.innerHTML += html;
-            });
-        }
-
-        // 3. Senden
-        async function postNews() {
-            const title = document.getElementById('in-title').value;
-            const text = document.getElementById('in-text').value;
-            const cat = document.getElementById('in-cat').value;
-            
-            if(!title || !text) return alert("Bitte Titel und Text ausfüllen!");
-
-            // Datum kurz formatieren (z.B. 28.12., 14:30)
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) + ', ' + 
-                            now.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' });
-
-            const newItem = { title: title, text: text, cat: cat, date: dateStr };
-
-            currentData.push(newItem);
-            
-            // UI Reset
-            document.getElementById('in-title').value = "";
-            document.getElementById('in-text').value = "";
-            document.getElementById('feed').innerHTML = '<div style="text-align:center; padding:20px; color:#2563eb;">Sende an Cloud...</div>';
-
-            await saveToCloud();
-        }
-
-        // 4. Löschen
-        async function deleteNews(index) {
-            if(!confirm("Nachricht wirklich löschen?")) return;
-            currentData.splice(index, 1);
-            document.getElementById('feed').innerHTML = '<div style="text-align:center; padding:20px; color:#dc2626;">Lösche...</div>';
-            await saveToCloud();
-        }
-
-        // 5. Speichern
-        async function saveToCloud() {
-            try {
-                await fetch(URL, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-                    body: JSON.stringify(currentData)
-                });
-                fetchNews();
-            } catch (error) {
-                alert("Fehler bei Cloud-Verbindung.");
-            }
-        }
-
-        // Starten
-        fetchNews();
-        
-        // Auto-Refresh (alle 5s)
-        setInterval(fetchNews, 5000);
-
-        // Animation Keyframes für Status-Punkt
-        const styleSheet = document.createElement("style");
-        styleSheet.innerText = `@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }`;
-        document.head.appendChild(styleSheet);
-
-    </script>
-
-    <style>
         #authOverlay {
             position: fixed;
             inset: 0;
-            background: rgba(2, 6, 23, 0.65);
+            background: rgba(2, 6, 23, 0.72);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 3000;
             backdrop-filter: blur(6px);
         }
+
         #authOverlay[hidden] { display: none; }
+
         #authCard {
             width: min(420px, 92vw);
             background: #0b1220;
@@ -466,9 +418,11 @@
             padding: 24px;
             box-shadow: 0 20px 60px rgba(2, 6, 23, 0.6);
         }
+
         #authCard h2 { margin: 0 0 8px 0; font-size: 20px; }
         #authCard p { margin: 0 0 18px 0; color: #94a3b8; font-size: 14px; }
         #authCard label { display: block; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+
         #authCard input {
             width: 100%;
             padding: 12px 14px;
@@ -479,34 +433,96 @@
             font-size: 16px;
             margin-bottom: 14px;
         }
+
         #authCard button {
             width: 100%;
             padding: 12px 14px;
             border: none;
             border-radius: 10px;
-            background: linear-gradient(120deg, #2563eb, #1d4ed8);
-            color: white;
+            background: linear-gradient(120deg, #22c55e, #16a34a);
+            color: #05120b;
             font-weight: 600;
             cursor: pointer;
         }
+
         #authError {
             color: #f87171;
             font-size: 13px;
             min-height: 18px;
-        }            .logout-btn {
-            margin-top: auto;
-            background: rgba(148, 163, 184, 0.12);
-            color: #e2e8f0;
-            border: 1px solid rgba(148, 163, 184, 0.25);
-            text-align: left;
         }
-        .logout-btn:hover { background: rgba(239, 68, 68, 0.15); color: #fecaca; border-color: rgba(239, 68, 68, 0.35); }
-</style>
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-overlay" onclick="toggleSidebar()"></div>
+    <button class="mobile-toggle" onclick="toggleSidebar()">Menu</button>
+
+    <nav class="sidebar">
+        <div class="logo">
+            <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+            <span style="display:none; font-size: 22px; font-weight:700;">Pakora</span>
+        </div>
+        <a href="index.html" class="nav-item">Uebersicht</a>
+        <a href="index.html" class="nav-item">Smart-Kalkulation</a>
+        <a href="konfigurator.html" class="nav-item">Kuehlzellen Kalkulator</a>
+        <a href="index.html" class="nav-item">Produkt-Datenbank</a>
+        <a href="lager_online.html" class="nav-item">Lagerbestand</a>
+        <div class="nav-item active">Kommunikation</div>
+        <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
+    </nav>
+
+    <main class="main">
+        <div class="header-section">
+            <div class="header-title">
+                <h1>Team Chat</h1>
+                <p>WhatsApp-Stil fuer Pakora Automation</p>
+            </div>
+            <div class="presence"><span></span>Verbunden</div>
+        </div>
+
+        <section class="chat-shell">
+            <aside class="chat-list">
+                <h3>Chats</h3>
+                <div class="current-user">
+                    <strong id="currentUserName">Nicht angemeldet</strong>
+                    <span id="currentUserId">Bitte anmelden</span>
+                </div>
+                <div class="chat-item active">
+                    <div class="title">Pakora Team</div>
+                    <div class="meta" id="lastMessage">Keine Nachrichten</div>
+                </div>
+                <h3>Teilnehmer</h3>
+                <div class="participants" id="participantsList"></div>
+            </aside>
+
+            <div class="chat-panel">
+                <div class="chat-header">
+                    <div class="chat-title">
+                        <strong>Pakora Team</strong>
+                        <span>Gruppenchat fuer 3 Accounts</span>
+                    </div>
+                    <div class="chat-actions" id="activeUser">-</div>
+                </div>
+                <div class="chat-body" id="chatBody">
+                    <div class="empty-state">Noch keine Nachrichten. Schreibe die erste Nachricht.</div>
+                </div>
+                <form class="chat-input" id="chatForm">
+                    <textarea id="messageInput" placeholder="Nachricht schreiben..."></textarea>
+                    <button type="submit">Senden</button>
+                </form>
+            </div>
+        </section>
+    </main>
 
     <div id="authOverlay" hidden>
         <div id="authCard">
             <h2>Zugriff gesperrt</h2>
-            <p>Bitte anmelden, um fortzufahren.</p>
+            <p>Bitte mit deinem Account anmelden.</p>
             <form id="authForm">
                 <label for="authUser">Benutzername</label>
                 <input id="authUser" type="text" autocomplete="username" required />
@@ -516,62 +532,199 @@
                 <button type="submit">Anmelden</button>
             </form>
         </div>
-    </div>\n
+    </div>
+
     <script>
-        (function () {
-            const AUTH_USER = "pakoraadmin";
-            const AUTH_PASS = "admin";
-            const AUTH_KEY = "pakora_auth_v1";
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.mobile-overlay').classList.toggle('active');
+        }
 
-            const overlay = document.getElementById("authOverlay");
-            const form = document.getElementById("authForm");
-            const user = document.getElementById("authUser");
-            const pass = document.getElementById("authPass");
-            const error = document.getElementById("authError");
-            const logoutBtn = document.getElementById("logoutBtn");
+        const BIN_ID = '695087f9ae596e708fb4f768';
+        const API_KEY = '$2a$10$9Thc2jp1h9cRa/WIHocDseT7gS7TA7mi7CODusCTQ158Px.PDfEFy';
+        const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-            const isAuthed = () => localStorage.getItem(AUTH_KEY) === "1";
-            const showAuth = () => {
-                overlay.hidden = false;
-                if (logoutBtn) logoutBtn.hidden = true;
-                document.body.style.overflow = "hidden";
-                setTimeout(() => user.focus(), 50);
-            };
-            const hideAuth = () => {
-                overlay.hidden = true;
-                if (logoutBtn) logoutBtn.hidden = false;
-                document.body.style.overflow = "";
-            };
+        const ACCOUNTS = {
+            'pakoraadmin': { pass: 'admin', label: 'Pakora Admin' },
+            'k.guemuesok': { pass: 'pakora', label: 'K. Guemuesok' },
+            'l.wenzel': { pass: 'pakora', label: 'L. Wenzel' }
+        };
 
-            if (!isAuthed()) {
-                showAuth();
-            }
+        const AUTH_KEY = 'pakora_chat_user';
+        let currentUser = null;
+        let messages = [];
 
-            form.addEventListener("submit", (event) => {
-                event.preventDefault();
-                error.textContent = "";
+        const overlay = document.getElementById('authOverlay');
+        const form = document.getElementById('authForm');
+        const userInput = document.getElementById('authUser');
+        const passInput = document.getElementById('authPass');
+        const error = document.getElementById('authError');
+        const logoutBtn = document.getElementById('logoutBtn');
 
-                if (user.value.trim() === AUTH_USER && pass.value === AUTH_PASS) {
-                    localStorage.setItem(AUTH_KEY, "1");
-                    hideAuth();
-                    return;
-                }
+        const chatBody = document.getElementById('chatBody');
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        const currentUserName = document.getElementById('currentUserName');
+        const currentUserId = document.getElementById('currentUserId');
+        const participantsList = document.getElementById('participantsList');
+        const lastMessage = document.getElementById('lastMessage');
+        const activeUser = document.getElementById('activeUser');
 
-                error.textContent = "Falsche Zugangsdaten.";
-                pass.value = "";
-                pass.focus();
+        function showAuth() {
+            overlay.hidden = false;
+            if (logoutBtn) logoutBtn.hidden = true;
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => userInput.focus(), 50);
+        }
+
+        function hideAuth() {
+            overlay.hidden = true;
+            if (logoutBtn) logoutBtn.hidden = false;
+            document.body.style.overflow = '';
+        }
+
+        function setCurrentUser(userId) {
+            currentUser = userId;
+            const info = ACCOUNTS[userId];
+            currentUserName.textContent = info ? info.label : 'Unbekannt';
+            currentUserId.textContent = userId || '-';
+            activeUser.textContent = info ? `Angemeldet: ${info.label}` : '-';
+        }
+
+        function renderParticipants() {
+            participantsList.innerHTML = '';
+            Object.keys(ACCOUNTS).forEach((id) => {
+                const item = document.createElement('div');
+                item.className = 'participant';
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                const label = document.createElement('div');
+                label.textContent = `${ACCOUNTS[id].label} (${id})`;
+                item.appendChild(dot);
+                item.appendChild(label);
+                participantsList.appendChild(item);
             });
-            if (logoutBtn) {
-                logoutBtn.addEventListener("click", () => {
-                    localStorage.removeItem(AUTH_KEY);
-                    location.reload();
+        }
+
+        async function fetchMessages() {
+            try {
+                const response = await fetch(URL + '/latest', {
+                    headers: { 'X-Master-Key': API_KEY }
                 });
+                const json = await response.json();
+                if (json.record && Array.isArray(json.record)) {
+                    messages = json.record;
+                } else {
+                    messages = [];
+                }
+                renderMessages();
+            } catch (error) {
+                console.error('Ladefehler:', error);
             }
-        })();
+        }
+
+        function renderMessages() {
+            chatBody.innerHTML = '';
+            if (!messages.length) {
+                chatBody.innerHTML = '<div class="empty-state">Noch keine Nachrichten. Schreibe die erste Nachricht.</div>';
+                lastMessage.textContent = 'Keine Nachrichten';
+                return;
+            }
+
+            messages.forEach((msg) => {
+                const wrapper = document.createElement('div');
+                const isOwn = msg.user === currentUser;
+                wrapper.className = `msg ${isOwn ? 'msg-out' : 'msg-in'}`;
+
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                bubble.textContent = msg.text;
+
+                const meta = document.createElement('div');
+                meta.className = 'meta-line';
+                const userLabel = ACCOUNTS[msg.user] ? ACCOUNTS[msg.user].label : msg.user;
+                meta.textContent = `${userLabel} - ${msg.time}`;
+
+                wrapper.appendChild(bubble);
+                wrapper.appendChild(meta);
+                chatBody.appendChild(wrapper);
+            });
+
+            const last = messages[messages.length - 1];
+            const lastUser = ACCOUNTS[last.user] ? ACCOUNTS[last.user].label : last.user;
+            lastMessage.textContent = `${lastUser}: ${last.text}`;
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        async function saveMessages() {
+            try {
+                await fetch(URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+                    body: JSON.stringify(messages)
+                });
+                fetchMessages();
+            } catch (error) {
+                alert('Fehler bei Cloud-Verbindung.');
+            }
+        }
+
+        chatForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const text = messageInput.value.trim();
+            if (!text || !currentUser) return;
+
+            const now = new Date();
+            const time = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            const newMessage = {
+                id: Date.now(),
+                user: currentUser,
+                text,
+                time
+            };
+
+            messages.push(newMessage);
+            messageInput.value = '';
+            renderMessages();
+            await saveMessages();
+        });
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            error.textContent = '';
+            const user = userInput.value.trim();
+            const pass = passInput.value;
+
+            if (ACCOUNTS[user] && ACCOUNTS[user].pass === pass) {
+                localStorage.setItem(AUTH_KEY, user);
+                setCurrentUser(user);
+                hideAuth();
+                return;
+            }
+
+            error.textContent = 'Falsche Zugangsdaten.';
+            passInput.value = '';
+            passInput.focus();
+        });
+
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem(AUTH_KEY);
+                location.reload();
+            });
+        }
+
+        const storedUser = localStorage.getItem(AUTH_KEY);
+        if (storedUser && ACCOUNTS[storedUser]) {
+            setCurrentUser(storedUser);
+            hideAuth();
+        } else {
+            showAuth();
+        }
+
+        renderParticipants();
+        fetchMessages();
+        setInterval(fetchMessages, 5000);
     </script>
 </body>
 </html>
-
-
-
-
