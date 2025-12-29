@@ -176,7 +176,7 @@
         .chat-shell {
             flex: 1;
             display: grid;
-            grid-template-columns: 320px minmax(0, 1fr) 280px;
+            grid-template-columns: 280px minmax(0, 1fr) 240px;
             gap: 18px;
             height: 100%;
         }
@@ -488,8 +488,8 @@
             padding: 12px 14px;
             font-size: 14px;
             resize: none;
-            min-height: 46px;
-            max-height: 120px;
+            min-height: 64px;
+            max-height: 160px;
         }
 
         .chat-input button {
@@ -1119,6 +1119,7 @@
         async function saveNote(text) {
             await db.collection('importantNotes').add({
                 user: currentUser,
+                userId: currentUser,
                 userLabel: ACCOUNTS[currentUser]?.label || currentUser,
                 text,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -1128,6 +1129,7 @@
         async function saveMessage(text, attachment) {
             await db.collection('messages').add({
                 user: currentUser,
+                userId: currentUser,
                 userLabel: ACCOUNTS[currentUser]?.label || currentUser,
                 text,
                 attachment: attachment || null,

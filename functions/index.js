@@ -8,7 +8,7 @@ exports.notifyOnMessage = functions.firestore
   .onCreate(async (snap) => {
     const data = snap.data() || {};
     const senderLabel = data.userLabel || "Unbekannt";
-    const senderId = data.userId || "";
+    const senderId = data.userId || data.user || "";
     const text = data.text || "Neue Nachricht";
 
     const tokensSnap = await admin.firestore().collection("pushTokens").get();
@@ -27,7 +27,7 @@ exports.notifyOnMessage = functions.firestore
       return null;
     }
 
-    const tokens = [];
+    const tokenEntries = [];
     const dedupeDeletes = [];
     const tokenIndex = new Map();
     tokensSnap.forEach((doc) => {
@@ -47,15 +47,33 @@ exports.notifyOnMessage = functions.firestore
         if (existing) {
           dedupeDeletes.push(admin.firestore().collection("pushTokens").doc(existing.token).delete());
         }
-        tokenIndex.set(dedupeKey, { token: doc.id, updatedAt });
+        tokenIndex.set(dedupeKey, { token: doc.id, updatedAt, userId });
       } else {
         dedupeDeletes.push(admin.firestore().collection("pushTokens").doc(doc.id).delete());
       }
     });
 
-    tokenIndex.forEach((value) => tokens.push(value.token));
+    tokenIndex.forEach((value) => tokenEntries.push(value));
 
-    if (!tokens.length) return null;
+    const filteredEntries = senderId
+      ? tokenEntries.filter((entry) => entry.userId !== senderId)
+      : tokenEntries;
+    const tokens = filteredEntries.map((entry) => entry.token);
+
+    if (!tokens.length) {
+      await admin.firestore().collection("pushLogs").add({
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        messageId: snap.id,
+        senderId,
+        senderLabel,
+        text,
+        tokensCount: 0,
+        successCount: 0,
+        failureCount: 0,
+        note: "no tokens after sender filter"
+      });
+      return null;
+    }
 
     let response;
     try {
@@ -128,7 +146,7 @@ exports.notifyOnImportantNote = functions.firestore
   .onCreate(async (snap) => {
     const data = snap.data() || {};
     const senderLabel = data.userLabel || "Unbekannt";
-    const senderId = data.userId || "";
+    const senderId = data.userId || data.user || "";
     const text = data.text || "Wichtiger Hinweis";
 
     const tokensSnap = await admin.firestore().collection("pushTokens").get();
@@ -148,7 +166,7 @@ exports.notifyOnImportantNote = functions.firestore
       return null;
     }
 
-    const tokens = [];
+    const tokenEntries = [];
     const dedupeDeletes = [];
     const tokenIndex = new Map();
     tokensSnap.forEach((doc) => {
@@ -168,15 +186,34 @@ exports.notifyOnImportantNote = functions.firestore
         if (existing) {
           dedupeDeletes.push(admin.firestore().collection("pushTokens").doc(existing.token).delete());
         }
-        tokenIndex.set(dedupeKey, { token: doc.id, updatedAt });
+        tokenIndex.set(dedupeKey, { token: doc.id, updatedAt, userId });
       } else {
         dedupeDeletes.push(admin.firestore().collection("pushTokens").doc(doc.id).delete());
       }
     });
 
-    tokenIndex.forEach((value) => tokens.push(value.token));
+    tokenIndex.forEach((value) => tokenEntries.push(value));
 
-    if (!tokens.length) return null;
+    const filteredEntries = senderId
+      ? tokenEntries.filter((entry) => entry.userId !== senderId)
+      : tokenEntries;
+    const tokens = filteredEntries.map((entry) => entry.token);
+
+    if (!tokens.length) {
+      await admin.firestore().collection("pushLogs").add({
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        type: "note",
+        noteId: snap.id,
+        senderId,
+        senderLabel,
+        text,
+        tokensCount: 0,
+        successCount: 0,
+        failureCount: 0,
+        note: "no tokens after sender filter"
+      });
+      return null;
+    }
 
     let response;
     try {
