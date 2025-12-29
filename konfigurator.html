@@ -673,9 +673,13 @@
     </div>\n
     <script>
         (function () {
-            const AUTH_USER = "pakoraadmin";
-            const AUTH_PASS = "admin";
-            const AUTH_KEY = "pakora_auth_v1";
+            const AUTH_KEY = "pakora_auth_user";
+            const ACCOUNTS = {
+                "m.pak": { pass: "admin", label: "Mert Kaan" },
+                "k.guemuesok": { pass: "pakora", label: "Kaan" },
+                "l.wenzel": { pass: "pakora", label: "Leon" },
+                "ö.pak": { pass: "pakora", label: "Ömer" }
+            };
 
             const overlay = document.getElementById("authOverlay");
             const form = document.getElementById("authForm");
@@ -684,7 +688,8 @@
             const error = document.getElementById("authError");
             const logoutBtn = document.getElementById("logoutBtn");
 
-            const isAuthed = () => localStorage.getItem(AUTH_KEY) === "1";
+            const getStoredUser = () => (localStorage.getItem(AUTH_KEY) || "").toLowerCase();
+            const isAuthed = () => !!ACCOUNTS[getStoredUser()];
             const showAuth = () => {
                 overlay.hidden = false;
                 if (logoutBtn) logoutBtn.hidden = true;
@@ -704,9 +709,10 @@
             form.addEventListener("submit", (event) => {
                 event.preventDefault();
                 error.textContent = "";
+                const userId = user.value.trim().toLowerCase();
 
-                if (user.value.trim() === AUTH_USER && pass.value === AUTH_PASS) {
-                    localStorage.setItem(AUTH_KEY, "1");
+                if (ACCOUNTS[userId] && pass.value === ACCOUNTS[userId].pass) {
+                    localStorage.setItem(AUTH_KEY, userId);
                     hideAuth();
                     return;
                 }
