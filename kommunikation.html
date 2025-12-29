@@ -222,6 +222,7 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
+            cursor: pointer;
         }
 
         .chat-item.active {
@@ -231,6 +232,12 @@
 
         .chat-item .title { font-weight: 600; font-size: 15px; }
         .chat-item .meta { font-size: 12px; color: var(--muted); }
+
+        .chat-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
 
         .participants {
             display: grid;
@@ -488,8 +495,8 @@
             padding: 12px 14px;
             font-size: 14px;
             resize: none;
-            min-height: 64px;
-            max-height: 160px;
+            min-height: 88px;
+            max-height: 220px;
         }
 
         .chat-input button {
@@ -501,6 +508,12 @@
             font-weight: 700;
             cursor: pointer;
             box-shadow: none;
+        }
+
+        .chat-input button:disabled,
+        .chat-input .attach-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .chat-input button:active { transform: translateY(1px); }
@@ -587,6 +600,7 @@
             .chat-panel { order: 1; min-height: 70vh; }
             .notes-panel { display: flex; order: 3; }
             .msg { max-width: 85%; }
+            .chat-input textarea { min-height: 110px; }
         }
 
         #authOverlay {
@@ -745,19 +759,14 @@
                     <strong id="currentUserName">Nicht angemeldet</strong>
                     <span id="currentUserId">Bitte anmelden</span>
                 </div>
-                <div class="chat-item active">
-                    <div class="title">Pakora Team</div>
-                    <div class="meta" id="lastMessage">Keine Nachrichten</div>
-                </div>
-                <h3>Teilnehmer</h3>
-                <div class="participants" id="participantsList"></div>
+                <div class="chat-items" id="chatList"></div>
             </aside>
 
             <div class="chat-panel">
                 <div class="chat-header">
                     <div class="chat-title">
-                        <strong>Pakora Team</strong>
-                        <span>Gruppenchat fuer 3 Accounts</span>
+                        <strong id="chatTitle">Pakora Team</strong>
+                        <span id="chatSubtitle">Gruppenchat fuer das Team</span>
                     </div>
                     <div class="chat-actions" id="activeUser">-</div>
                 </div>
@@ -769,7 +778,7 @@
                     <button class="attach-btn" id="attachBtn" type="button">Anhaengen</button>
                     <div class="attach-name" id="attachName">Kein Anhang</div>
                     <textarea id="messageInput" placeholder="Nachricht schreiben..."></textarea>
-                    <button type="submit">Senden</button>
+                    <button type="submit" id="sendBtn">Senden</button>
                 </form>
             </div>
 
@@ -868,13 +877,15 @@
         const messageInput = document.getElementById('messageInput');
         const currentUserName = document.getElementById('currentUserName');
         const currentUserId = document.getElementById('currentUserId');
-        const participantsList = document.getElementById('participantsList');
-        const lastMessage = document.getElementById('lastMessage');
+        const chatList = document.getElementById('chatList');
+        const chatTitle = document.getElementById('chatTitle');
+        const chatSubtitle = document.getElementById('chatSubtitle');
         const activeUser = document.getElementById('activeUser');
         const chatHeaderActions = document.querySelector('.chat-actions');
         const attachmentInput = document.getElementById('attachmentInput');
         const attachBtn = document.getElementById('attachBtn');
         const attachName = document.getElementById('attachName');
+        const sendBtn = document.getElementById('sendBtn');
         const pushStatus = document.getElementById('pushStatus');
         const pushEnableBtn = document.getElementById('pushEnable');
         const noteForm = document.getElementById('noteForm');
@@ -885,6 +896,11 @@
         const pushPromptLater = document.getElementById('pushPromptLater');
         let pendingAttachment = null;
         let attachmentUploading = false;
+        let activeChat = null;
+        let chatIndex = [];
+        const lastMessageByChat = new Map();
+
+        const GROUP_CHAT_ID = 'group:pakora';
 
         function showAuth() {
             overlay.hidden = false;
@@ -958,19 +974,107 @@
             if (attachName) attachName.textContent = 'Kein Anhang';
         }
 
-        function renderParticipants() {
-            participantsList.innerHTML = '';
-            Object.keys(ACCOUNTS).forEach((id) => {
-                const item = document.createElement('div');
-                item.className = 'participant';
-                const dot = document.createElement('div');
-                dot.className = 'dot';
-                const label = document.createElement('div');
-                label.textContent = `${ACCOUNTS[id].label} (${id})`;
-                item.appendChild(dot);
-                item.appendChild(label);
-                participantsList.appendChild(item);
+        function getDmChatId(userA, userB) {
+            return `dm:${[userA, userB].sort().join('|')}`;
+        }
+
+        function buildChatIndex() {
+            const ids = Object.keys(ACCOUNTS);
+            const chats = [{
+                id: GROUP_CHAT_ID,
+                type: 'group',
+                title: 'Pakora Team',
+                subtitle: 'Gruppenchat fuer das Team',
+                participants: ids
+            }];
+
+            if (isAdmin()) {
+                for (let i = 0; i < ids.length; i++) {
+                    for (let j = i + 1; j < ids.length; j++) {
+                        const a = ids[i];
+                        const b = ids[j];
+                        const title = `${ACCOUNTS[a]?.label || a} ↔ ${ACCOUNTS[b]?.label || b}`;
+                        chats.push({
+                            id: getDmChatId(a, b),
+                            type: 'dm',
+                            title,
+                            subtitle: 'Direktnachricht',
+                            participants: [a, b]
+                        });
+                    }
+                }
+                return chats;
+            }
+
+            ids.filter((id) => id !== currentUser).forEach((otherId) => {
+                chats.push({
+                    id: getDmChatId(currentUser, otherId),
+                    type: 'dm',
+                    title: ACCOUNTS[otherId]?.label || otherId,
+                    subtitle: otherId,
+                    participants: [currentUser, otherId]
+                });
             });
+
+            return chats;
+        }
+
+        function renderChatList() {
+            if (!chatList) return;
+            chatList.innerHTML = '';
+            chatIndex.forEach((chat) => {
+                const item = document.createElement('div');
+                item.className = `chat-item${activeChat && activeChat.id === chat.id ? ' active' : ''}`;
+                item.dataset.chatId = chat.id;
+                const title = document.createElement('div');
+                title.className = 'title';
+                title.textContent = chat.title;
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                const preview = lastMessageByChat.get(chat.id) || chat.subtitle;
+                meta.textContent = preview;
+                item.appendChild(title);
+                item.appendChild(meta);
+                item.addEventListener('click', () => setActiveChat(chat.id));
+                chatList.appendChild(item);
+            });
+        }
+
+        function updateChatHeader(chat) {
+            if (chatTitle) chatTitle.textContent = chat.title;
+            if (chatSubtitle) chatSubtitle.textContent = chat.subtitle;
+        }
+
+        function setChatInputEnabled(enabled, placeholder) {
+            if (!messageInput) return;
+            messageInput.disabled = !enabled;
+            messageInput.placeholder = enabled ? 'Nachricht schreiben...' : (placeholder || 'Nur lesen');
+            if (attachBtn) attachBtn.disabled = !enabled;
+            if (attachmentInput) attachmentInput.disabled = !enabled;
+            if (sendBtn) sendBtn.disabled = !enabled;
+        }
+
+        function canWriteToChat(chat) {
+            if (!chat) return false;
+            if (chat.type === 'group') return true;
+            return chat.participants.includes(currentUser);
+        }
+
+        function setActiveChat(chatId) {
+            const chat = chatIndex.find((item) => item.id === chatId) || chatIndex[0];
+            activeChat = chat;
+            updateChatHeader(chat);
+            setChatInputEnabled(canWriteToChat(chat));
+            renderChatList();
+            listenMessages();
+        }
+
+        async function initializeChatSession() {
+            chatIndex = buildChatIndex();
+            if (isAdmin()) {
+                await migrateGroupMessages();
+            }
+            setActiveChat(GROUP_CHAT_ID);
         }
 
         function formatTime(ts) {
@@ -979,9 +1083,43 @@
             return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
         }
 
+        function getChatRecipients(chat) {
+            const allUsers = Object.keys(ACCOUNTS);
+            const base = chat.type === 'group' ? allUsers : chat.participants;
+            return base.filter((id) => id !== currentUser);
+        }
+
+        async function migrateGroupMessages() {
+            if (!isAdmin()) return;
+            const key = 'pakora_group_migrated_v1';
+            if (localStorage.getItem(key) === '1') return;
+            try {
+                let processed = 0;
+                while (processed < 500) {
+                    const snap = await db.collection('messages')
+                        .where('chatId', '==', null)
+                        .limit(50)
+                        .get();
+                    if (snap.empty) break;
+                    const batch = db.batch();
+                    snap.forEach((doc) => {
+                        batch.update(doc.ref, { chatId: GROUP_CHAT_ID, chatType: 'group' });
+                    });
+                    await batch.commit();
+                    processed += snap.size;
+                    if (snap.size < 50) break;
+                }
+                localStorage.setItem(key, '1');
+            } catch (err) {
+                console.warn('Migration fehlgeschlagen:', err);
+            }
+        }
+
         function listenMessages() {
+            if (!activeChat) return;
             if (unsubscribeMessages) unsubscribeMessages();
             unsubscribeMessages = db.collection('messages')
+                .where('chatId', '==', activeChat.id)
                 .orderBy('timestamp')
                 .limit(200)
                 .onSnapshot((snapshot) => {
@@ -999,7 +1137,8 @@
             chatBody.innerHTML = '';
             if (!messages.length) {
                 chatBody.innerHTML = '<div class="empty-state">Noch keine Nachrichten. Schreibe die erste Nachricht.</div>';
-                lastMessage.textContent = 'Keine Nachrichten';
+                lastMessageByChat.set(activeChat.id, activeChat.subtitle);
+                renderChatList();
                 return;
             }
 
@@ -1059,11 +1198,12 @@
             });
 
             const last = messages[messages.length - 1];
-                const lastUser = ACCOUNTS[last.user] ? ACCOUNTS[last.user].label : last.user;
-                const lastText = last.text ? last.text : (last.attachment ? 'Anhang' : '');
-                lastMessage.textContent = `${lastUser}: ${lastText}`;
-                chatBody.scrollTop = chatBody.scrollHeight;
-            }
+            const lastUser = ACCOUNTS[last.user] ? ACCOUNTS[last.user].label : last.user;
+            const lastText = last.text ? last.text : (last.attachment ? 'Anhang' : '');
+            lastMessageByChat.set(activeChat.id, `${lastUser}: ${lastText}`);
+            renderChatList();
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
 
         function listenNotes() {
             if (!notesList) return;
@@ -1127,10 +1267,20 @@
         }
 
         async function saveMessage(text, attachment) {
+            const chat = activeChat || {
+                id: GROUP_CHAT_ID,
+                type: 'group',
+                participants: Object.keys(ACCOUNTS)
+            };
+            const recipients = getChatRecipients(chat);
             await db.collection('messages').add({
                 user: currentUser,
                 userId: currentUser,
                 userLabel: ACCOUNTS[currentUser]?.label || currentUser,
+                chatId: chat.id,
+                chatType: chat.type,
+                participants: chat.participants || [],
+                recipients,
                 text,
                 attachment: attachment || null,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -1140,6 +1290,7 @@
         chatForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const text = messageInput.value.trim();
+            if (!activeChat || !canWriteToChat(activeChat)) return;
             if ((!text && !pendingAttachment) || !currentUser) return;
             if (attachmentUploading) {
                 alert('Anhang wird noch hochgeladen. Bitte kurz warten.');
@@ -1226,8 +1377,11 @@
                 const target = event.target;
                 if (!isAdmin() || !target || !target.dataset) return;
                 if (!target.dataset.clearChat) return;
+                if (!activeChat) return;
                 if (!confirm('Chat wirklich komplett leeren?')) return;
-                const snapshot = await db.collection('messages').get();
+                const snapshot = await db.collection('messages')
+                    .where('chatId', '==', activeChat.id)
+                    .get();
                 const deletes = [];
                 snapshot.forEach((doc) => {
                     deletes.push(db.collection('messages').doc(doc.id).delete());
@@ -1249,7 +1403,7 @@
             });
         }
 
-        form.addEventListener('submit', (event) => {
+        form.addEventListener('submit', async (event) => {
             event.preventDefault();
             error.textContent = '';
             const user = userInput.value.trim().toLowerCase();
@@ -1260,7 +1414,7 @@
                 localStorage.removeItem(LEGACY_AUTH_KEY);
                 setCurrentUser(user);
                 hideAuth();
-                listenMessages();
+                await initializeChatSession();
                 listenNotes();
                 registerPush(false);
                 showPushPrompt();
@@ -1418,26 +1572,28 @@
             });
         }
 
-        let storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
-        if (!storedUser) {
-            storedUser = (localStorage.getItem(LEGACY_AUTH_KEY) || '').toLowerCase();
-            if (storedUser) {
-                localStorage.setItem(AUTH_KEY, storedUser);
-                localStorage.removeItem(LEGACY_AUTH_KEY);
+        async function bootstrap() {
+            let storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
+            if (!storedUser) {
+                storedUser = (localStorage.getItem(LEGACY_AUTH_KEY) || '').toLowerCase();
+                if (storedUser) {
+                    localStorage.setItem(AUTH_KEY, storedUser);
+                    localStorage.removeItem(LEGACY_AUTH_KEY);
+                }
+            }
+            if (storedUser && ACCOUNTS[storedUser]) {
+                setCurrentUser(storedUser);
+                hideAuth();
+                await initializeChatSession();
+                listenNotes();
+                registerPush(false);
+                showPushPrompt();
+            } else {
+                showAuth();
             }
         }
-        if (storedUser && ACCOUNTS[storedUser]) {
-            setCurrentUser(storedUser);
-            hideAuth();
-            listenMessages();
-            listenNotes();
-            registerPush(false);
-            showPushPrompt();
-        } else {
-            showAuth();
-        }
 
-        renderParticipants();
+        bootstrap();
     </script>
 </body>
 </html>

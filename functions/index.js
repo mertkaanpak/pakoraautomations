@@ -9,6 +9,8 @@ exports.notifyOnMessage = functions.firestore
     const data = snap.data() || {};
     const senderLabel = data.userLabel || "Unbekannt";
     const senderId = data.userId || data.user || "";
+    const recipients = Array.isArray(data.recipients) ? data.recipients.filter(Boolean) : [];
+    const hasRecipients = recipients.length > 0;
     const text = data.text || "Neue Nachricht";
 
     const tokensSnap = await admin.firestore().collection("pushTokens").get();
@@ -55,9 +57,12 @@ exports.notifyOnMessage = functions.firestore
 
     tokenIndex.forEach((value) => tokenEntries.push(value));
 
-    const filteredEntries = senderId
-      ? tokenEntries.filter((entry) => entry.userId !== senderId)
-      : tokenEntries;
+    const filteredEntries = tokenEntries.filter((entry) => {
+      if (!entry.userId) return false;
+      if (senderId && entry.userId === senderId) return false;
+      if (hasRecipients && !recipients.includes(entry.userId)) return false;
+      return true;
+    });
     const tokens = filteredEntries.map((entry) => entry.token);
 
     if (!tokens.length) {
