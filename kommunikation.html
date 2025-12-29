@@ -856,7 +856,13 @@
                 console.error('Push Registrierung fehlgeschlagen:', error);
                 const code = error && (error.code || error.message) ? String(error.code || error.message) : '';
                 const shortCode = code ? ` (${code.replace(/\s+/g, ' ').slice(0, 40)})` : '';
-                updatePushUi(`Push: Fehler${shortCode}`, false, true);
+                const origin = window.location.origin;
+                const swScripts = (await navigator.serviceWorker.getRegistrations())
+                    .map((reg) => reg.active?.scriptURL || reg.waiting?.scriptURL || reg.installing?.scriptURL || '')
+                    .filter(Boolean)
+                    .join(' | ');
+                const debug = ` Origin:${origin} SW:${swScripts || '-'}`;
+                updatePushUi(`Push: Fehler${shortCode}${debug}`.slice(0, 180), false, true);
             }
         }
 
