@@ -28,9 +28,32 @@ exports.notifyOnMessage = functions.firestore
     }
 
     const tokens = [];
+    const dedupeDeletes = [];
+    const tokenIndex = new Map();
     tokensSnap.forEach((doc) => {
-      if (doc.id) tokens.push(doc.id);
+      if (!doc.id) return;
+      const data = doc.data() || {};
+      const deviceId = data.deviceId || "";
+      const updatedAt = data.updatedAt && data.updatedAt.toMillis ? data.updatedAt.toMillis() : 0;
+      const userId = data.userId || "";
+      const platform = data.platform || "";
+      const userAgent = data.userAgent || "";
+      const dedupeKey = deviceId
+        ? `device:${deviceId}`
+        : `ua:${userId}|${platform}|${userAgent}`;
+
+      const existing = tokenIndex.get(dedupeKey);
+      if (!existing || updatedAt > existing.updatedAt) {
+        if (existing) {
+          dedupeDeletes.push(admin.firestore().collection("pushTokens").doc(existing.token).delete());
+        }
+        tokenIndex.set(dedupeKey, { token: doc.id, updatedAt });
+      } else {
+        dedupeDeletes.push(admin.firestore().collection("pushTokens").doc(doc.id).delete());
+      }
     });
+
+    tokenIndex.forEach((value) => tokens.push(value.token));
 
     if (!tokens.length) return null;
 
@@ -69,7 +92,7 @@ exports.notifyOnMessage = functions.firestore
       return null;
     }
 
-    const deletes = [];
+    const deletes = [...dedupeDeletes];
     const results = response.responses.map((resp, idx) => {
       if (!resp.success && resp.error) {
         const code = resp.error.code;

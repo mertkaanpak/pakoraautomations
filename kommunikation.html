@@ -168,7 +168,7 @@
         .chat-shell {
             flex: 1;
             display: grid;
-            grid-template-columns: 320px minmax(0, 1fr);
+            grid-template-columns: 320px minmax(0, 1fr) 280px;
             gap: 18px;
             height: 100%;
         }
@@ -254,6 +254,72 @@
             overflow: hidden;
             box-shadow: var(--shadow);
         }
+
+        .notes-panel {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .notes-header h3 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+        .notes-header p { margin: 6px 0 0 0; font-size: 12px; color: #cbd5f5; }
+
+        .notes-form textarea {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            background: rgba(15, 23, 42, 0.6);
+            color: #e2e8f0;
+            padding: 10px 12px;
+            font-size: 13px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .notes-form button {
+            margin-top: 10px;
+            width: 100%;
+            background: linear-gradient(120deg, #22c55e, #16a34a);
+            color: #05120b;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .notes-form textarea:disabled,
+        .notes-form button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .notes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .note-card {
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.55);
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .note-card strong { font-size: 12px; color: #bbf7d0; }
+        .note-card p { margin: 0; font-size: 13px; color: #e2e8f0; }
+        .note-card span { font-size: 11px; color: var(--muted); }
 
         .chat-header {
             padding: 16px 20px;
@@ -424,6 +490,7 @@
 
         @media (max-width: 1100px) {
             .chat-shell { grid-template-columns: 280px 1fr; }
+            .notes-panel { display: none; }
         }
 
         @media (max-width: 900px) {
@@ -441,6 +508,7 @@
             .chat-shell { grid-template-columns: 1fr; }
             .chat-list { order: 2; }
             .chat-panel { order: 1; min-height: 55vh; }
+            .notes-panel { display: flex; order: 3; }
             .msg { max-width: 85%; }
         }
 
@@ -572,6 +640,20 @@
                     <button type="submit">Senden</button>
                 </form>
             </div>
+
+            <aside class="notes-panel">
+                <div class="notes-header">
+                    <h3>Wichtige Hinweise</h3>
+                    <p>Angespinnte Infos fuer das Team</p>
+                </div>
+                <form class="notes-form" id="noteForm">
+                    <textarea id="noteInput" placeholder="Wichtige Info anpinnen..."></textarea>
+                    <button type="submit" id="noteSubmit">Anpinnen</button>
+                </form>
+                <div class="notes-list" id="notesList">
+                    <div class="empty-state">Keine Hinweise angepinnt.</div>
+                </div>
+            </aside>
         </section>
     </main>
 
@@ -625,6 +707,7 @@
         let currentUser = null;
         let messages = [];
         let unsubscribeMessages = null;
+        let unsubscribeNotes = null;
 
         const overlay = document.getElementById('authOverlay');
         const form = document.getElementById('authForm');
@@ -643,18 +726,30 @@
         const activeUser = document.getElementById('activeUser');
         const pushStatus = document.getElementById('pushStatus');
         const pushEnableBtn = document.getElementById('pushEnable');
+        const noteForm = document.getElementById('noteForm');
+        const noteInput = document.getElementById('noteInput');
+        const notesList = document.getElementById('notesList');
 
         function showAuth() {
             overlay.hidden = false;
             if (logoutBtn) logoutBtn.hidden = true;
             document.body.style.overflow = 'hidden';
             setTimeout(() => userInput.focus(), 50);
+            setNotesEnabled(false);
         }
 
         function hideAuth() {
             overlay.hidden = true;
             if (logoutBtn) logoutBtn.hidden = false;
             document.body.style.overflow = '';
+            setNotesEnabled(true);
+        }
+
+        function setNotesEnabled(enabled) {
+            if (!noteInput || !noteForm) return;
+            noteInput.disabled = !enabled;
+            const submitBtn = document.getElementById('noteSubmit');
+            if (submitBtn) submitBtn.disabled = !enabled;
         }
 
         function setCurrentUser(userId) {
@@ -735,6 +830,56 @@
             chatBody.scrollTop = chatBody.scrollHeight;
         }
 
+        function listenNotes() {
+            if (!notesList) return;
+            if (unsubscribeNotes) unsubscribeNotes();
+            unsubscribeNotes = db.collection('importantNotes')
+                .orderBy('timestamp', 'desc')
+                .limit(50)
+                .onSnapshot((snapshot) => {
+                    const notes = [];
+                    snapshot.forEach((doc) => {
+                        notes.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderNotes(notes);
+                }, (error) => {
+                    console.error('Hinweis-Fehler:', error);
+                });
+        }
+
+        function renderNotes(notes) {
+            if (!notesList) return;
+            notesList.innerHTML = '';
+            if (!notes.length) {
+                notesList.innerHTML = '<div class="empty-state">Keine Hinweise angepinnt.</div>';
+                return;
+            }
+
+            notes.forEach((note) => {
+                const card = document.createElement('div');
+                card.className = 'note-card';
+                const author = document.createElement('strong');
+                author.textContent = note.userLabel || note.user || 'Unbekannt';
+                const text = document.createElement('p');
+                text.textContent = note.text || '';
+                const time = document.createElement('span');
+                time.textContent = formatTime(note.timestamp);
+                card.appendChild(author);
+                card.appendChild(text);
+                card.appendChild(time);
+                notesList.appendChild(card);
+            });
+        }
+
+        async function saveNote(text) {
+            await db.collection('importantNotes').add({
+                user: currentUser,
+                userLabel: ACCOUNTS[currentUser]?.label || currentUser,
+                text,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
         async function saveMessage(text) {
             await db.collection('messages').add({
                 user: currentUser,
@@ -753,6 +898,17 @@
             await saveMessage(text);
         });
 
+        if (noteForm) {
+            noteForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!currentUser) return;
+                const text = noteInput.value.trim();
+                if (!text) return;
+                noteInput.value = '';
+                await saveNote(text);
+            });
+        }
+
         form.addEventListener('submit', (event) => {
             event.preventDefault();
             error.textContent = '';
@@ -764,6 +920,7 @@
                 setCurrentUser(user);
                 hideAuth();
                 listenMessages();
+                listenNotes();
                 registerPush(false);
                 return;
             }
@@ -910,6 +1067,7 @@
             setCurrentUser(storedUser);
             hideAuth();
             listenMessages();
+            listenNotes();
             registerPush(false);
         } else {
             showAuth();
