@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -23,6 +22,7 @@
             --text: #e5e7eb;
             --muted: #94a3b8;
             --accent: #22c55e;
+            --accent-strong: #16a34a;
             --border: rgba(148, 163, 184, 0.16);
             --shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
         }
@@ -123,7 +123,7 @@
 
         .calendar-shell {
             display: grid;
-            grid-template-columns: 360px minmax(0, 1fr);
+            grid-template-columns: minmax(0, 1fr) 360px;
             gap: 18px;
         }
 
@@ -141,6 +141,74 @@
             text-transform: uppercase;
             letter-spacing: 0.12em;
             color: var(--muted);
+        }
+
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .calendar-header h2 { margin: 0; font-size: 18px; }
+
+        .calendar-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .calendar-nav button {
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            background: rgba(15, 23, 42, 0.6);
+            color: #e2e8f0;
+            padding: 6px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .calendar-cell {
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(15, 23, 42, 0.55);
+            padding: 10px;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .calendar-cell.outside { opacity: 0.35; cursor: default; }
+        .calendar-cell.today { border-color: rgba(34, 197, 94, 0.45); }
+        .calendar-cell.selected { box-shadow: inset 0 0 0 2px rgba(34, 197, 94, 0.5); }
+
+        .calendar-cell span {
+            font-size: 12px;
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        .calendar-cell .badge {
+            font-size: 10px;
+            color: #bbf7d0;
+            background: rgba(34, 197, 94, 0.2);
+            border-radius: 999px;
+            padding: 2px 6px;
+            align-self: flex-start;
+        }
+
+        .weekday {
+            text-align: center;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 6px;
         }
 
         .event-form label {
@@ -181,7 +249,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            max-height: 70vh;
+            max-height: 60vh;
             overflow-y: auto;
             padding-right: 4px;
         }
@@ -357,7 +425,19 @@
 
         <section class="calendar-shell">
             <div class="panel">
-                <h3>Neuer Termin</h3>
+                <div class="calendar-header">
+                    <h2 id="monthLabel">-</h2>
+                    <div class="calendar-nav">
+                        <button type="button" id="prevMonth">Zurueck</button>
+                        <button type="button" id="nextMonth">Weiter</button>
+                    </div>
+                </div>
+                <div class="calendar-grid" id="weekdayRow"></div>
+                <div class="calendar-grid" id="calendarGrid"></div>
+            </div>
+
+            <div class="panel">
+                <h3>Termin anlegen</h3>
                 <form class="event-form" id="eventForm">
                     <label for="eventTitle">Titel</label>
                     <input id="eventTitle" type="text" placeholder="z.B. Wartung Kunde X" required>
@@ -369,15 +449,9 @@
                     <textarea id="eventNote" placeholder="Details, Adresse, Kontakt..."></textarea>
                     <button type="submit">Termin speichern</button>
                 </form>
-            </div>
 
-            <div class="panel">
-                <h3>Termine</h3>
-                <div class="event-list" id="eventList">
-                    <div class="event-card">
-                        <p>Keine Termine gespeichert.</p>
-                    </div>
-                </div>
+                <h3 style="margin-top:20px;">Termine am Tag</h3>
+                <div class="event-list" id="eventList"></div>
             </div>
         </section>
     </main>
@@ -437,8 +511,16 @@
         const eventTime = document.getElementById('eventTime');
         const eventNote = document.getElementById('eventNote');
         const eventList = document.getElementById('eventList');
+        const calendarGrid = document.getElementById('calendarGrid');
+        const weekdayRow = document.getElementById('weekdayRow');
+        const monthLabel = document.getElementById('monthLabel');
+        const prevMonth = document.getElementById('prevMonth');
+        const nextMonth = document.getElementById('nextMonth');
 
         let currentUser = null;
+        let selectedDate = new Date();
+        let viewMonth = new Date();
+        let allEvents = [];
         let unsubscribeEvents = null;
 
         const isAdmin = () => currentUser === ADMIN_USER;
@@ -460,29 +542,79 @@
             currentUser = userId;
         }
 
-        function formatDate(dateStr, timeStr) {
-            if (!dateStr) return '--';
-            const timePart = timeStr ? ` ${timeStr}` : '';
-            return `${dateStr}${timePart}`;
+        function pad(num) {
+            return String(num).padStart(2, '0');
         }
 
-        function listenEvents() {
-            if (unsubscribeEvents) unsubscribeEvents();
-            unsubscribeEvents = db.collection('calendarEvents')
-                .orderBy('eventDateTime')
-                .limit(200)
-                .onSnapshot((snapshot) => {
-                    const events = [];
-                    snapshot.forEach((doc) => {
-                        events.push({ id: doc.id, ...doc.data() });
+        function toDateKey(dateObj) {
+            return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}`;
+        }
+
+        function renderWeekdays() {
+            const labels = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+            weekdayRow.innerHTML = '';
+            labels.forEach((label) => {
+                const cell = document.createElement('div');
+                cell.className = 'weekday';
+                cell.textContent = label;
+                weekdayRow.appendChild(cell);
+            });
+        }
+
+        function renderCalendar() {
+            const monthName = viewMonth.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+            monthLabel.textContent = monthName;
+            calendarGrid.innerHTML = '';
+
+            const year = viewMonth.getFullYear();
+            const month = viewMonth.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const startOffset = (firstDay.getDay() + 6) % 7;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const todayKey = toDateKey(new Date());
+            const selectedKey = toDateKey(selectedDate);
+
+            for (let i = 0; i < 42; i++) {
+                const dayIndex = i - startOffset + 1;
+                const cellDate = new Date(year, month, dayIndex);
+                const cellKey = toDateKey(cellDate);
+                const inMonth = dayIndex > 0 && dayIndex <= daysInMonth;
+
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell';
+                if (!inMonth) cell.classList.add('outside');
+                if (cellKey === todayKey) cell.classList.add('today');
+                if (cellKey === selectedKey) cell.classList.add('selected');
+
+                const number = document.createElement('span');
+                number.textContent = String(cellDate.getDate());
+                cell.appendChild(number);
+
+                const count = allEvents.filter((evt) => evt.eventDate === cellKey).length;
+                if (count > 0) {
+                    const badge = document.createElement('div');
+                    badge.className = 'badge';
+                    badge.textContent = `${count} Termin${count > 1 ? 'e' : ''}`;
+                    cell.appendChild(badge);
+                }
+
+                if (inMonth) {
+                    cell.addEventListener('click', () => {
+                        selectedDate = cellDate;
+                        eventDate.value = cellKey;
+                        renderCalendar();
+                        renderDayEvents();
                     });
-                    renderEvents(events);
-                }, (err) => {
-                    console.error('Terminfehler:', err);
-                });
+                }
+
+                calendarGrid.appendChild(cell);
+            }
         }
 
-        function renderEvents(events) {
+        function renderDayEvents() {
+            const key = toDateKey(selectedDate);
+            const events = allEvents.filter((evt) => evt.eventDate === key);
             eventList.innerHTML = '';
             if (!events.length) {
                 eventList.innerHTML = '<div class="event-card"><p>Keine Termine gespeichert.</p></div>';
@@ -497,7 +629,8 @@
                 note.textContent = evt.note || '';
                 const meta = document.createElement('span');
                 const author = evt.userLabel || evt.user || 'Unbekannt';
-                meta.textContent = `${formatDate(evt.eventDate, evt.eventTime)} Â· ${author}`;
+                const time = evt.eventTime ? ` ${evt.eventTime}` : '';
+                meta.textContent = `${evt.eventDate}${time} · ${author}`;
                 card.appendChild(title);
                 if (evt.note) card.appendChild(note);
                 card.appendChild(meta);
@@ -512,6 +645,23 @@
                 }
                 eventList.appendChild(card);
             });
+        }
+
+        function listenEvents() {
+            if (unsubscribeEvents) unsubscribeEvents();
+            unsubscribeEvents = db.collection('calendarEvents')
+                .orderBy('eventDateTime')
+                .limit(200)
+                .onSnapshot((snapshot) => {
+                    allEvents = [];
+                    snapshot.forEach((doc) => {
+                        allEvents.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderCalendar();
+                    renderDayEvents();
+                }, (err) => {
+                    console.error('Terminfehler:', err);
+                });
         }
 
         async function saveEvent() {
@@ -553,6 +703,20 @@
             });
         }
 
+        if (prevMonth) {
+            prevMonth.addEventListener('click', () => {
+                viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1);
+                renderCalendar();
+            });
+        }
+
+        if (nextMonth) {
+            nextMonth.addEventListener('click', () => {
+                viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1);
+                renderCalendar();
+            });
+        }
+
         form.addEventListener('submit', (event) => {
             event.preventDefault();
             error.textContent = '';
@@ -562,6 +726,8 @@
                 localStorage.setItem(AUTH_KEY, user);
                 setCurrentUser(user);
                 hideAuth();
+                renderWeekdays();
+                eventDate.value = toDateKey(selectedDate);
                 listenEvents();
                 return;
             }
@@ -581,6 +747,8 @@
         if (storedUser && ACCOUNTS[storedUser]) {
             setCurrentUser(storedUser);
             hideAuth();
+            renderWeekdays();
+            eventDate.value = toDateKey(selectedDate);
             listenEvents();
         } else {
             showAuth();
