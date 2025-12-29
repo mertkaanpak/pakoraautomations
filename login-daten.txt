@@ -1,8 +1,11 @@
-Benutzername: pakoraadmin
+Benutzername: m.pak
 Passwort: admin
 
 Benutzername: k.guemuesok
 Passwort: pakora
 
 Benutzername: l.wenzel
+Passwort: pakora
+
+Benutzername: ö.pak
 Passwort: pakora
