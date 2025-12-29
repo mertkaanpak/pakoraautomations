@@ -379,13 +379,38 @@
             background: #22c55e;
             color: #05120b;
             border: none;
-            padding: 10px 14px;
-            border-radius: 50%;
-            font-size: 18px;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            padding: 0;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
             cursor: pointer;
             box-shadow: 0 6px 18px rgba(34, 197, 94, 0.4);
         }
 
+        .mobile-toggle span {
+            display: block;
+            width: 18px;
+            height: 2px;
+            background: #05120b;
+            border-radius: 2px;
+        }
+
+        .mobile-toggle span:nth-child(2) { width: 14px; }
+
+        .push-enable {
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #05210f;
+            background: linear-gradient(120deg, #22c55e, #16a34a);
+            border: none;
+            cursor: pointer;
+        }
         .mobile-overlay {
             display: none;
             position: fixed;
@@ -483,7 +508,11 @@
 </head>
 <body>
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
-    <button class="mobile-toggle" onclick="toggleSidebar()">Menu</button>
+    <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Menue oeffnen">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
 
     <nav class="sidebar">
         <div class="logo">
@@ -508,6 +537,7 @@
             <div style="display:flex; align-items:center; gap:10px;">
                 <div class="presence"><span></span>Verbunden</div>
                 <div id="pushStatus" class="push-status">Push: aus</div>
+                <button id="pushEnable" class="push-enable" hidden>Push aktivieren</button>
             </div>
         </div>
 
@@ -611,6 +641,7 @@
         const lastMessage = document.getElementById('lastMessage');
         const activeUser = document.getElementById('activeUser');
         const pushStatus = document.getElementById('pushStatus');
+        const pushEnableBtn = document.getElementById('pushEnable');
 
         function showAuth() {
             overlay.hidden = false;
@@ -732,7 +763,7 @@
                 setCurrentUser(user);
                 hideAuth();
                 listenMessages();
-                requestPushPermission();
+                registerPush(false);
                 return;
             }
 
@@ -748,19 +779,45 @@
             });
         }
 
-        async function requestPushPermission() {
-            if (!messaging || !('Notification' in window)) return;
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') return;
-                if (!('serviceWorker' in navigator)) return;
+        function updatePushUi(text, isActive, showButton) {
+            if (pushStatus) {
+                pushStatus.textContent = text;
+                pushStatus.classList.toggle('active', !!isActive);
+            }
+            if (pushEnableBtn) {
+                pushEnableBtn.hidden = !showButton;
+            }
+        }
 
+        async function registerPush(promptUser) {
+            if (!messaging || !('Notification' in window) || !('serviceWorker' in navigator)) {
+                updatePushUi(isPwa ? 'Push: nicht verfuegbar' : 'Push: PWA noetig', false, false);
+                return;
+            }
+
+            let permission = Notification.permission;
+            if (permission === 'default' && promptUser) {
+                permission = await Notification.requestPermission();
+            }
+
+            if (permission !== 'granted') {
+                const text = permission === 'denied' ? 'Push: blockiert' : 'Push: aus';
+                updatePushUi(text, false, permission !== 'denied');
+                return;
+            }
+
+            updatePushUi('Push: wird aktiviert', false, false);
+
+            try {
                 const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
                 const token = await messaging.getToken({
                     vapidKey: VAPID_KEY,
                     serviceWorkerRegistration: registration
                 });
-                if (!token) return;
+                if (!token) {
+                    updatePushUi('Push: aus', false, true);
+                    return;
+                }
 
                 await db.collection('pushTokens').doc(token).set({
                     userId: currentUser,
@@ -768,12 +825,10 @@
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
 
-                if (pushStatus) {
-                    pushStatus.textContent = 'Push: aktiv';
-                    pushStatus.classList.add('active');
-                }
+                updatePushUi('Push: aktiv', true, false);
             } catch (error) {
                 console.error('Push Registrierung fehlgeschlagen:', error);
+                updatePushUi('Push: Fehler', false, true);
             }
         }
 
@@ -786,8 +841,14 @@
                     new Notification(title, { body, icon: '/logo.png' });
                 }
             });
-        } else if (pushStatus) {
-            pushStatus.textContent = isPwa ? 'Push: nicht verfuegbar' : 'Push: PWA noetig';
+        } else {
+            updatePushUi(isPwa ? 'Push: nicht verfuegbar' : 'Push: PWA noetig', false, false);
+        }
+
+        if (pushEnableBtn) {
+            pushEnableBtn.addEventListener('click', () => {
+                registerPush(true);
+            });
         }
 
         const storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
@@ -795,7 +856,7 @@
             setCurrentUser(storedUser);
             hideAuth();
             listenMessages();
-            requestPushPermission();
+            registerPush(false);
         } else {
             showAuth();
         }
