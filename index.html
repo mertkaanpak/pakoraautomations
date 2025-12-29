@@ -605,9 +605,9 @@
         <div class="nav-item" onclick="window.location.href='konfigurator.html'">📐 Kühlzellen Kalkulator</div>
         <div class="nav-item" onclick="nav('db'); toggleSidebar(false)">⚙️ Produkt-Datenbank</div>
         
-        <div class="nav-item" onclick="window.location.href='lager_online.html'">📦 Lagerbestand</div>
-        
-        <div class="nav-item" onclick="window.location.href='kommunikation.html'">💬 Kommunikation</div>
+        <div class="nav-item" onclick="window.location.href='lager_online.html'">Lagerbestand</div>
+        <div class="nav-item" onclick="window.location.href='kommunikation.html'">Kommunikation</div>
+        <div class="nav-item" onclick="window.location.href='kalender.html'">Kalender</div>
         <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
     </nav>
 
@@ -1354,21 +1354,25 @@
             const client = document.getElementById('clientName').value || "Kunde";
             const logoImg = document.querySelector('.logo img');
             
-            doc.setFillColor(37, 99, 235);
-            doc.rect(0, 0, 210, 40, 'F'); 
+            doc.setFillColor(255, 255, 255);
+            doc.rect(0, 0, 210, 40, 'F');
+            doc.setDrawColor(220, 226, 235);
+            doc.line(15, 40, 195, 40);
 
             try {
                if(logoImg && logoImg.src && logoImg.style.display !== 'none') {
-                   doc.addImage(logoImg, 'PNG', 160, 5, 30, 30); 
+                   doc.addImage(logoImg, 'PNG', 15, 7, 28, 28); 
                }
             } catch (e) { console.warn("Logo Fehler", e); }
 
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(22);
-            doc.text("ANGEBOT", 15, 25);
+            doc.setTextColor(20, 83, 45);
+            doc.setFontSize(20);
+            doc.text("ANGEBOT", 50, 23);
             
             doc.setFontSize(10);
-            doc.text("PakoraAutomations", 160, 38);
+            doc.setTextColor(30, 41, 59);
+            doc.text("Pakora Automations", 150, 18);
+            doc.text("pakora-automations-chat.web.app", 150, 24);
 
             doc.setTextColor(0, 0, 0);
             doc.text(`Kunde: ${client}`, 15, 55);
@@ -1394,12 +1398,12 @@
                 head: [['Typ', 'Beschreibung', 'Preis']],
                 body: body,
                 theme: 'grid',
-                headStyles: { fillColor: [37, 99, 235] },
+                headStyles: { fillColor: [34, 197, 94] },
                 columnStyles: { 2: { halign: 'right' } },
                 didParseCell: function(data) {
                     if (data.row.index === body.length - 1) {
                         data.cell.styles.fontStyle = 'bold';
-                        data.cell.styles.fillColor = [240, 249, 255];
+                        data.cell.styles.fillColor = [236, 253, 243];
                     }
                 }
             });

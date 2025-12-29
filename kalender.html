@@ -1,0 +1,590 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Pakora Kalender</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#22c55e">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #111827;
+            --panel: #0b1220;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --accent: #22c55e;
+            --border: rgba(148, 163, 184, 0.16);
+            --shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Sora', sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            color: var(--text);
+            overflow: hidden;
+            background:
+                radial-gradient(700px 360px at 15% -10%, rgba(34, 197, 94, 0.2), transparent 55%),
+                radial-gradient(900px 420px at 90% 0%, rgba(59, 130, 246, 0.18), transparent 45%),
+                linear-gradient(180deg, #0b1220, #0f172a 50%, #0b1220);
+        }
+
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, #0b1220, #0f172a);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 18px;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            flex-shrink: 0;
+            height: 100%;
+            border-right: 1px solid rgba(148, 163, 184, 0.12);
+            box-shadow: 10px 0 30px rgba(2, 6, 23, 0.55);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 40px;
+        }
+
+        .logo img {
+            max-width: 100%;
+            height: auto;
+            max-height: 110px;
+            object-fit: contain;
+        }
+
+        .nav-item {
+            padding: 12px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: #cbd5f5;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover { background: rgba(148, 163, 184, 0.12); color: white; }
+
+        .nav-item.active {
+            background: rgba(34, 197, 94, 0.16);
+            color: #ecfdf3;
+            border-color: rgba(34, 197, 94, 0.25);
+            box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.08);
+        }
+
+        .logout-btn {
+            margin-top: auto;
+            background: rgba(148, 163, 184, 0.12);
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            text-align: left;
+        }
+
+        .main {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .header-title h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .header-title p { margin: 6px 0 0 0; color: var(--muted); font-size: 13px; }
+
+        .calendar-shell {
+            display: grid;
+            grid-template-columns: 360px minmax(0, 1fr);
+            gap: 18px;
+        }
+
+        .panel {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: var(--shadow);
+        }
+
+        .panel h3 {
+            margin: 0 0 14px 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+        }
+
+        .event-form label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #94a3b8;
+        }
+
+        .event-form input,
+        .event-form textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .event-form textarea { min-height: 80px; resize: vertical; }
+
+        .event-form button {
+            width: 100%;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(120deg, #22c55e, #16a34a);
+            color: #05120b;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .event-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .event-card {
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.55);
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .event-card strong { font-size: 14px; color: #bbf7d0; }
+        .event-card p { margin: 0; font-size: 13px; color: #e2e8f0; }
+        .event-card span { font-size: 11px; color: var(--muted); }
+
+        .admin-delete {
+            align-self: flex-end;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.15);
+            color: #fecaca;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            cursor: pointer;
+        }
+
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 2000;
+            background: #22c55e;
+            color: #05120b;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            padding: 0;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(34, 197, 94, 0.4);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .mobile-toggle span {
+            display: block;
+            width: 18px;
+            height: 2px;
+            background: #05120b;
+            border-radius: 2px;
+        }
+
+        .mobile-toggle span:nth-child(2) { width: 14px; }
+
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 6, 23, 0.6);
+            z-index: 900;
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                position: fixed;
+                height: 100%;
+                transform: translateX(-100%);
+                width: 82%;
+                max-width: 320px;
+            }
+            .sidebar.open { transform: translateX(0); }
+            .mobile-toggle { display: flex; }
+            .mobile-overlay.active { display: block; }
+            .main { padding: 80px 16px 18px; }
+            .calendar-shell { grid-template-columns: 1fr; }
+        }
+
+        #authOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.72);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            backdrop-filter: blur(6px);
+        }
+
+        #authOverlay[hidden] { display: none; }
+
+        #authCard {
+            width: min(420px, 92vw);
+            background: #0b1220;
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(2, 6, 23, 0.6);
+        }
+
+        #authCard h2 { margin: 0 0 8px 0; font-size: 20px; }
+        #authCard p { margin: 0 0 18px 0; color: #94a3b8; font-size: 14px; }
+        #authCard label { display: block; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+
+        #authCard input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 16px;
+            margin-bottom: 14px;
+        }
+
+        #authCard button {
+            width: 100%;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(120deg, #22c55e, #16a34a);
+            color: #05120b;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        #authError {
+            color: #f87171;
+            font-size: 13px;
+            min-height: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-overlay" onclick="toggleSidebar()"></div>
+    <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Menue oeffnen">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+    <nav class="sidebar">
+        <div class="logo">
+            <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+            <span style="display:none; font-size: 22px; font-weight:700;">Pakora</span>
+        </div>
+        <a href="index.html" class="nav-item">Uebersicht</a>
+        <a href="index.html" class="nav-item">Smart-Kalkulation</a>
+        <a href="konfigurator.html" class="nav-item">Kuehlzellen Kalkulator</a>
+        <a href="index.html" class="nav-item">Produkt-Datenbank</a>
+        <a href="lager_online.html" class="nav-item">Lagerbestand</a>
+        <a href="kommunikation.html" class="nav-item">Kommunikation</a>
+        <div class="nav-item active">Kalender</div>
+        <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
+    </nav>
+
+    <main class="main">
+        <div class="header-section">
+            <div class="header-title">
+                <h1>Team Kalender</h1>
+                <p>Wichtige Termine fuer Pakora Automation</p>
+            </div>
+        </div>
+
+        <section class="calendar-shell">
+            <div class="panel">
+                <h3>Neuer Termin</h3>
+                <form class="event-form" id="eventForm">
+                    <label for="eventTitle">Titel</label>
+                    <input id="eventTitle" type="text" placeholder="z.B. Wartung Kunde X" required>
+                    <label for="eventDate">Datum</label>
+                    <input id="eventDate" type="date" required>
+                    <label for="eventTime">Uhrzeit</label>
+                    <input id="eventTime" type="time">
+                    <label for="eventNote">Notiz</label>
+                    <textarea id="eventNote" placeholder="Details, Adresse, Kontakt..."></textarea>
+                    <button type="submit">Termin speichern</button>
+                </form>
+            </div>
+
+            <div class="panel">
+                <h3>Termine</h3>
+                <div class="event-list" id="eventList">
+                    <div class="event-card">
+                        <p>Keine Termine gespeichert.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="authOverlay" hidden>
+        <div id="authCard">
+            <h2>Zugriff gesperrt</h2>
+            <p>Bitte mit deinem Account anmelden.</p>
+            <form id="authForm">
+                <label for="authUser">Benutzername</label>
+                <input id="authUser" type="text" autocomplete="username" required />
+                <label for="authPass">Passwort</label>
+                <input id="authPass" type="password" autocomplete="current-password" required />
+                <div id="authError"></div>
+                <button type="submit">Anmelden</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.mobile-overlay').classList.toggle('active');
+        }
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjIggzBA4NaMNm1FSfTUzvZLBquvd9P40",
+            authDomain: "pakora-automations-chat.firebaseapp.com",
+            projectId: "pakora-automations-chat",
+            storageBucket: "pakora-automations-chat.firebasestorage.app",
+            messagingSenderId: "281325034328",
+            appId: "1:281325034328:web:e05c04bac6b8558560632d"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const AUTH_KEY = 'pakora_auth_user';
+        const ADMIN_USER = 'm.pak';
+        const ACCOUNTS = {
+            'm.pak': { pass: 'admin', label: 'Mert Kaan' },
+            'k.guemuesok': { pass: 'pakora', label: 'Kaan' },
+            'l.wenzel': { pass: 'pakora', label: 'Leon' },
+            '\u00f6.pak': { pass: 'pakora', label: '\u00d6mer' }
+        };
+
+        const overlay = document.getElementById('authOverlay');
+        const form = document.getElementById('authForm');
+        const userInput = document.getElementById('authUser');
+        const passInput = document.getElementById('authPass');
+        const error = document.getElementById('authError');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        const eventForm = document.getElementById('eventForm');
+        const eventTitle = document.getElementById('eventTitle');
+        const eventDate = document.getElementById('eventDate');
+        const eventTime = document.getElementById('eventTime');
+        const eventNote = document.getElementById('eventNote');
+        const eventList = document.getElementById('eventList');
+
+        let currentUser = null;
+        let unsubscribeEvents = null;
+
+        const isAdmin = () => currentUser === ADMIN_USER;
+
+        function showAuth() {
+            overlay.hidden = false;
+            if (logoutBtn) logoutBtn.hidden = true;
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => userInput.focus(), 50);
+        }
+
+        function hideAuth() {
+            overlay.hidden = true;
+            if (logoutBtn) logoutBtn.hidden = false;
+            document.body.style.overflow = '';
+        }
+
+        function setCurrentUser(userId) {
+            currentUser = userId;
+        }
+
+        function formatDate(dateStr, timeStr) {
+            if (!dateStr) return '--';
+            const timePart = timeStr ? ` ${timeStr}` : '';
+            return `${dateStr}${timePart}`;
+        }
+
+        function listenEvents() {
+            if (unsubscribeEvents) unsubscribeEvents();
+            unsubscribeEvents = db.collection('calendarEvents')
+                .orderBy('eventDateTime')
+                .limit(200)
+                .onSnapshot((snapshot) => {
+                    const events = [];
+                    snapshot.forEach((doc) => {
+                        events.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderEvents(events);
+                }, (err) => {
+                    console.error('Terminfehler:', err);
+                });
+        }
+
+        function renderEvents(events) {
+            eventList.innerHTML = '';
+            if (!events.length) {
+                eventList.innerHTML = '<div class="event-card"><p>Keine Termine gespeichert.</p></div>';
+                return;
+            }
+            events.forEach((evt) => {
+                const card = document.createElement('div');
+                card.className = 'event-card';
+                const title = document.createElement('strong');
+                title.textContent = evt.title || 'Termin';
+                const note = document.createElement('p');
+                note.textContent = evt.note || '';
+                const meta = document.createElement('span');
+                const author = evt.userLabel || evt.user || 'Unbekannt';
+                meta.textContent = `${formatDate(evt.eventDate, evt.eventTime)} · ${author}`;
+                card.appendChild(title);
+                if (evt.note) card.appendChild(note);
+                card.appendChild(meta);
+
+                if (isAdmin()) {
+                    const delBtn = document.createElement('button');
+                    delBtn.type = 'button';
+                    delBtn.className = 'admin-delete';
+                    delBtn.textContent = 'Loeschen';
+                    delBtn.dataset.eventId = evt.id;
+                    card.appendChild(delBtn);
+                }
+                eventList.appendChild(card);
+            });
+        }
+
+        async function saveEvent() {
+            const title = eventTitle.value.trim();
+            const date = eventDate.value;
+            const time = eventTime.value || '';
+            const note = eventNote.value.trim();
+            if (!title || !date) return;
+            const eventDateTime = time ? `${date}T${time}` : `${date}T00:00`;
+            await db.collection('calendarEvents').add({
+                title,
+                note,
+                eventDate: date,
+                eventTime: time,
+                eventDateTime,
+                user: currentUser,
+                userLabel: ACCOUNTS[currentUser]?.label || currentUser,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        if (eventForm) {
+            eventForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                await saveEvent();
+                eventTitle.value = '';
+                eventNote.value = '';
+            });
+        }
+
+        if (eventList) {
+            eventList.addEventListener('click', async (event) => {
+                const target = event.target;
+                if (!isAdmin() || !target || !target.dataset) return;
+                const eventId = target.dataset.eventId;
+                if (!eventId) return;
+                if (!confirm('Termin wirklich loeschen?')) return;
+                await db.collection('calendarEvents').doc(eventId).delete();
+            });
+        }
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            error.textContent = '';
+            const user = userInput.value.trim().toLowerCase();
+            const pass = passInput.value.trim();
+            if (ACCOUNTS[user] && ACCOUNTS[user].pass === pass) {
+                localStorage.setItem(AUTH_KEY, user);
+                setCurrentUser(user);
+                hideAuth();
+                listenEvents();
+                return;
+            }
+            error.textContent = 'Falsche Zugangsdaten.';
+            passInput.value = '';
+            passInput.focus();
+        });
+
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem(AUTH_KEY);
+                location.reload();
+            });
+        }
+
+        const storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
+        if (storedUser && ACCOUNTS[storedUser]) {
+            setCurrentUser(storedUser);
+            hideAuth();
+            listenEvents();
+        } else {
+            showAuth();
+        }
+    </script>
+</body>
+</html>

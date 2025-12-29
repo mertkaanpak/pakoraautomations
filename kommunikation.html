@@ -428,6 +428,27 @@
             cursor: pointer;
         }
 
+        .attachment {
+            margin-top: 6px;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.5);
+            padding: 8px;
+        }
+
+        .attachment img {
+            max-width: 100%;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .attachment a {
+            color: #bbf7d0;
+            font-size: 12px;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
         .chat-input {
             padding: 16px 18px;
             border-top: 1px solid rgba(148, 163, 184, 0.16);
@@ -435,6 +456,26 @@
             gap: 12px;
             align-items: center;
             background: rgba(15, 23, 42, 0.9);
+        }
+
+        .chat-input .attach-btn {
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            background: rgba(15, 23, 42, 0.6);
+            color: #e2e8f0;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .chat-input .attach-name {
+            font-size: 11px;
+            color: var(--muted);
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .chat-input textarea {
@@ -678,6 +719,7 @@
         <a href="konfigurator.html" class="nav-item">Kuehlzellen Kalkulator</a>
         <a href="index.html" class="nav-item">Produkt-Datenbank</a>
         <a href="lager_online.html" class="nav-item">Lagerbestand</a>
+        <a href="kalender.html" class="nav-item">Kalender</a>
         <div class="nav-item active">Kommunikation</div>
         <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
     </nav>
@@ -722,6 +764,9 @@
                     <div class="empty-state">Noch keine Nachrichten. Schreibe die erste Nachricht.</div>
                 </div>
                 <form class="chat-input" id="chatForm">
+                    <input id="attachmentInput" type="file" accept="image/*,.pdf" hidden />
+                    <button class="attach-btn" id="attachBtn" type="button">Anhaengen</button>
+                    <div class="attach-name" id="attachName">Kein Anhang</div>
                     <textarea id="messageInput" placeholder="Nachricht schreiben..."></textarea>
                     <button type="submit">Senden</button>
                 </form>
@@ -825,6 +870,9 @@
         const lastMessage = document.getElementById('lastMessage');
         const activeUser = document.getElementById('activeUser');
         const chatHeaderActions = document.querySelector('.chat-actions');
+        const attachmentInput = document.getElementById('attachmentInput');
+        const attachBtn = document.getElementById('attachBtn');
+        const attachName = document.getElementById('attachName');
         const pushStatus = document.getElementById('pushStatus');
         const pushEnableBtn = document.getElementById('pushEnable');
         const noteForm = document.getElementById('noteForm');
@@ -833,6 +881,7 @@
         const pushPrompt = document.getElementById('pushPrompt');
         const pushPromptEnable = document.getElementById('pushPromptEnable');
         const pushPromptLater = document.getElementById('pushPromptLater');
+        let pendingAttachment = null;
 
         function showAuth() {
             overlay.hidden = false;
@@ -899,6 +948,12 @@
             }
         }
 
+        function clearAttachment() {
+            pendingAttachment = null;
+            if (attachmentInput) attachmentInput.value = '';
+            if (attachName) attachName.textContent = 'Kein Anhang';
+        }
+
         function renderParticipants() {
             participantsList.innerHTML = '';
             Object.keys(ACCOUNTS).forEach((id) => {
@@ -949,16 +1004,39 @@
                 const isOwn = msg.user === currentUser;
                 wrapper.className = `msg ${isOwn ? 'msg-out' : 'msg-in'}`;
 
-                const bubble = document.createElement('div');
-                bubble.className = 'bubble';
-                bubble.textContent = msg.text;
+                let bubble = null;
+                if (msg.text) {
+                    bubble = document.createElement('div');
+                    bubble.className = 'bubble';
+                    bubble.textContent = msg.text;
+                }
 
                 const meta = document.createElement('div');
                 meta.className = 'meta-line';
                 const userLabel = ACCOUNTS[msg.user] ? ACCOUNTS[msg.user].label : msg.user;
                 meta.textContent = `${userLabel} - ${formatTime(msg.timestamp)}`;
 
-                wrapper.appendChild(bubble);
+                if (bubble) {
+                    wrapper.appendChild(bubble);
+                }
+                if (msg.attachment && msg.attachment.dataUrl) {
+                    const attachment = document.createElement('div');
+                    attachment.className = 'attachment';
+                    if (msg.attachment.kind === 'image') {
+                        const img = document.createElement('img');
+                        img.src = msg.attachment.dataUrl;
+                        img.alt = msg.attachment.name || 'Bild';
+                        attachment.appendChild(img);
+                    } else {
+                        const link = document.createElement('a');
+                        link.href = msg.attachment.dataUrl;
+                        link.target = '_blank';
+                        link.rel = 'noopener';
+                        link.textContent = msg.attachment.name || 'Datei herunterladen';
+                        attachment.appendChild(link);
+                    }
+                    wrapper.appendChild(attachment);
+                }
                 wrapper.appendChild(meta);
 
                 if (isAdmin()) {
@@ -977,10 +1055,11 @@
             });
 
             const last = messages[messages.length - 1];
-            const lastUser = ACCOUNTS[last.user] ? ACCOUNTS[last.user].label : last.user;
-            lastMessage.textContent = `${lastUser}: ${last.text}`;
-            chatBody.scrollTop = chatBody.scrollHeight;
-        }
+                const lastUser = ACCOUNTS[last.user] ? ACCOUNTS[last.user].label : last.user;
+                const lastText = last.text ? last.text : (last.attachment ? 'Anhang' : '');
+                lastMessage.textContent = `${lastUser}: ${lastText}`;
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
 
         function listenNotes() {
             if (!notesList) return;
@@ -1042,11 +1121,12 @@
             });
         }
 
-        async function saveMessage(text) {
+        async function saveMessage(text, attachment) {
             await db.collection('messages').add({
                 user: currentUser,
                 userLabel: ACCOUNTS[currentUser]?.label || currentUser,
                 text,
+                attachment: attachment || null,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
@@ -1054,10 +1134,12 @@
         chatForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const text = messageInput.value.trim();
-            if (!text || !currentUser) return;
+            if ((!text && !pendingAttachment) || !currentUser) return;
 
             messageInput.value = '';
-            await saveMessage(text);
+            const attachment = pendingAttachment;
+            clearAttachment();
+            await saveMessage(text, attachment);
         });
 
         if (noteForm) {
@@ -1068,6 +1150,45 @@
                 if (!text) return;
                 noteInput.value = '';
                 await saveNote(text);
+            });
+        }
+
+        if (attachBtn && attachmentInput) {
+            attachBtn.addEventListener('click', () => {
+                attachmentInput.click();
+            });
+        }
+
+        if (attachmentInput) {
+            attachmentInput.addEventListener('change', async () => {
+                const file = attachmentInput.files && attachmentInput.files[0];
+                if (!file) {
+                    clearAttachment();
+                    return;
+                }
+                const maxSize = 450 * 1024;
+                if (file.size > maxSize) {
+                    alert('Anhang zu gross. Bitte unter 450 KB.');
+                    clearAttachment();
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const dataUrl = String(reader.result || '');
+                    const kind = file.type.startsWith('image/') ? 'image' : 'file';
+                    pendingAttachment = {
+                        name: file.name,
+                        type: file.type,
+                        kind,
+                        dataUrl
+                    };
+                    if (attachName) attachName.textContent = file.name;
+                };
+                reader.onerror = () => {
+                    alert('Anhang konnte nicht gelesen werden.');
+                    clearAttachment();
+                };
+                reader.readAsDataURL(file);
             });
         }
 
