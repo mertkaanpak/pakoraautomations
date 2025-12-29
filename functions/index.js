@@ -34,23 +34,40 @@ exports.notifyOnMessage = functions.firestore
 
     if (!tokens.length) return null;
 
-    const response = await admin.messaging().sendMulticast({
-      tokens,
-      notification: {
-        title: `Neue Nachricht von ${senderLabel}`,
-        body: text
-      },
-      data: {
+    let response;
+    try {
+      response = await admin.messaging().sendEachForMulticast({
+        tokens,
+        notification: {
+          title: `Neue Nachricht von ${senderLabel}`,
+          body: text
+        },
+        data: {
+          senderId,
+          senderLabel,
+          messageId: snap.id
+        },
+        webpush: {
+          fcmOptions: {
+            link: "https://pakora-automations-chat.web.app/kommunikation.html"
+          }
+        }
+      });
+    } catch (error) {
+      await admin.firestore().collection("pushLogs").add({
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        messageId: snap.id,
         senderId,
         senderLabel,
-        messageId: snap.id
-      },
-      webpush: {
-        fcmOptions: {
-          link: "https://pakora-automations-chat.web.app/kommunikation.html"
-        }
-      }
-    });
+        text,
+        tokensCount: tokens.length,
+        successCount: 0,
+        failureCount: tokens.length,
+        errorCode: error && error.code ? error.code : null,
+        errorMessage: error && error.message ? error.message : String(error)
+      });
+      return null;
+    }
 
     const deletes = [];
     const results = response.responses.map((resp, idx) => {
