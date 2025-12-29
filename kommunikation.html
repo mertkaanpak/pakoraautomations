@@ -327,6 +327,7 @@
         .note-card strong { font-size: 12px; color: #bbf7d0; }
         .note-card p { margin: 0; font-size: 13px; color: #e2e8f0; }
         .note-card span { font-size: 11px; color: var(--muted); }
+        .note-card .admin-delete { align-self: flex-end; }
 
         .chat-header {
             padding: 16px 20px;
@@ -400,6 +401,22 @@
         }
 
         .msg-out .meta-line { justify-content: flex-end; }
+
+        .admin-actions {
+            margin-top: 4px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .admin-delete {
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.15);
+            color: #fecaca;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            cursor: pointer;
+        }
 
         .chat-input {
             padding: 16px 18px;
@@ -774,6 +791,7 @@
         };
 
         const AUTH_KEY = 'pakora_chat_user';
+        const ADMIN_USER = 'm.pak';
         const DEVICE_KEY = 'pakora_device_id';
         let currentUser = null;
         let messages = [];
@@ -846,6 +864,10 @@
             activeUser.textContent = info ? `Angemeldet: ${info.label}` : '-';
         }
 
+        function isAdmin() {
+            return currentUser === ADMIN_USER;
+        }
+
         function renderParticipants() {
             participantsList.innerHTML = '';
             Object.keys(ACCOUNTS).forEach((id) => {
@@ -907,6 +929,19 @@
 
                 wrapper.appendChild(bubble);
                 wrapper.appendChild(meta);
+
+                if (isAdmin()) {
+                    const actions = document.createElement('div');
+                    actions.className = 'admin-actions';
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'admin-delete';
+                    delBtn.type = 'button';
+                    delBtn.textContent = 'Loeschen';
+                    delBtn.dataset.messageId = msg.id;
+                    actions.appendChild(delBtn);
+                    wrapper.appendChild(actions);
+                }
+
                 chatBody.appendChild(wrapper);
             });
 
@@ -953,6 +988,16 @@
                 card.appendChild(author);
                 card.appendChild(text);
                 card.appendChild(time);
+
+                if (isAdmin()) {
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'admin-delete';
+                    delBtn.type = 'button';
+                    delBtn.textContent = 'Loeschen';
+                    delBtn.dataset.noteId = note.id;
+                    card.appendChild(delBtn);
+                }
+
                 notesList.appendChild(card);
             });
         }
@@ -992,6 +1037,28 @@
                 if (!text) return;
                 noteInput.value = '';
                 await saveNote(text);
+            });
+        }
+
+        if (chatBody) {
+            chatBody.addEventListener('click', async (event) => {
+                const target = event.target;
+                if (!isAdmin() || !target || !target.dataset) return;
+                const messageId = target.dataset.messageId;
+                if (!messageId) return;
+                if (!confirm('Nachricht wirklich loeschen?')) return;
+                await db.collection('messages').doc(messageId).delete();
+            });
+        }
+
+        if (notesList) {
+            notesList.addEventListener('click', async (event) => {
+                const target = event.target;
+                if (!isAdmin() || !target || !target.dataset) return;
+                const noteId = target.dataset.noteId;
+                if (!noteId) return;
+                if (!confirm('Hinweis wirklich loeschen?')) return;
+                await db.collection('importantNotes').doc(noteId).delete();
             });
         }
 
