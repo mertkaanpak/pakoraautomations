@@ -128,6 +128,28 @@
         .header-title h1 { margin: 0; font-size: 24px; font-weight: 700; }
         .header-title p { margin: 6px 0 0 0; color: var(--muted); font-size: 13px; }
 
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-actions button {
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            background: rgba(15, 23, 42, 0.6);
+            color: #e2e8f0;
+            padding: 8px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .header-actions button:hover {
+            border-color: rgba(34, 197, 94, 0.5);
+            color: #ffffff;
+        }
+
         .calendar-shell {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 360px;
@@ -428,6 +450,9 @@
                 <h1>Team Kalender</h1>
                 <p>Wichtige Termine fuer Pakora Automation</p>
             </div>
+            <div class="header-actions">
+                <button type="button" id="todayBtn">Heute</button>
+            </div>
         </div>
 
         <section class="calendar-shell">
@@ -523,6 +548,7 @@
         const monthLabel = document.getElementById('monthLabel');
         const prevMonth = document.getElementById('prevMonth');
         const nextMonth = document.getElementById('nextMonth');
+        const todayBtn = document.getElementById('todayBtn');
 
         let currentUser = null;
         let selectedDate = new Date();
@@ -721,6 +747,16 @@
             nextMonth.addEventListener('click', () => {
                 viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1);
                 renderCalendar();
+            });
+        }
+
+        if (todayBtn) {
+            todayBtn.addEventListener('click', () => {
+                selectedDate = new Date();
+                viewMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+                eventDate.value = toDateKey(selectedDate);
+                renderCalendar();
+                renderDayEvents();
             });
         }
 
