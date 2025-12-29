@@ -621,6 +621,7 @@
         };
 
         const AUTH_KEY = 'pakora_chat_user';
+        const DEVICE_KEY = 'pakora_device_id';
         let currentUser = null;
         let messages = [];
         let unsubscribeMessages = null;
@@ -845,6 +846,12 @@
                     return;
                 }
 
+                let deviceId = localStorage.getItem(DEVICE_KEY);
+                if (!deviceId) {
+                    deviceId = `dev_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+                    localStorage.setItem(DEVICE_KEY, deviceId);
+                }
+
                 await db.collection('pushTokens').doc(token).set({
                     userId: currentUser,
                     userLabel: ACCOUNTS[currentUser]?.label || currentUser,
@@ -852,8 +859,22 @@
                     origin: window.location.origin,
                     isPwa,
                     userAgent: navigator.userAgent || '',
-                    platform: navigator.platform || ''
+                    platform: navigator.platform || '',
+                    deviceId
                 }, { merge: true });
+
+                const dupes = await db.collection('pushTokens')
+                    .where('deviceId', '==', deviceId)
+                    .get();
+                const deletions = [];
+                dupes.forEach((doc) => {
+                    if (doc.id !== token) {
+                        deletions.push(db.collection('pushTokens').doc(doc.id).delete());
+                    }
+                });
+                if (deletions.length) {
+                    await Promise.all(deletions);
+                }
 
                 updatePushUi('Push: aktiv', true, false);
             } catch (error) {

@@ -17,6 +17,7 @@ messaging.onBackgroundMessage((payload) => {
   const options = {
     body: payload.notification?.body || "",
     icon: "/logo.png",
+    tag: payload?.data?.messageId || payload?.fcmOptions?.link || "pakora-message",
     data: {
       link: payload?.fcmOptions?.link || "/kommunikation.html"
     }
