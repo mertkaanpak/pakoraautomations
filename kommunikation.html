@@ -790,6 +790,11 @@
         }
 
         async function registerPush(promptUser) {
+            if (!isPwa) {
+                updatePushUi('Push: PWA noetig', false, false);
+                return;
+            }
+
             if (!messaging || !('Notification' in window) || !('serviceWorker' in navigator)) {
                 updatePushUi(isPwa ? 'Push: nicht verfuegbar' : 'Push: PWA noetig', false, false);
                 return;
@@ -828,7 +833,9 @@
                 updatePushUi('Push: aktiv', true, false);
             } catch (error) {
                 console.error('Push Registrierung fehlgeschlagen:', error);
-                updatePushUi('Push: Fehler', false, true);
+                const code = error && (error.code || error.message) ? String(error.code || error.message) : '';
+                const shortCode = code ? ` (${code.replace(/\s+/g, ' ').slice(0, 40)})` : '';
+                updatePushUi(`Push: Fehler${shortCode}`, false, true);
             }
         }
 
