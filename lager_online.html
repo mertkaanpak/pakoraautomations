@@ -590,7 +590,9 @@
             const file = input.files[0];
             if(!file) return;
 
-            if(!confirm("⚠️ ACHTUNG CHEF:\nHiermit wird der gesamte Online-Lagerbestand überschrieben!\n\nFortfahren?")) {
+            if(!confirm("⚠️ ACHTUNG CHEF:\nHiermit wird der gesamte Online-Lagerbestand überschrieben!
+
+Fortfahren?")) {
                 input.value = '';
                 return;
             }
@@ -716,7 +718,7 @@
                 <button type="submit">Anmelden</button>
             </form>
         </div>
-    </div>\n
+    </div>
     <script>
         (function () {
             const AUTH_KEY = "pakora_auth_user";
@@ -724,7 +726,7 @@
                 "m.pak": { pass: "admin", label: "Mert Kaan" },
                 "k.guemuesok": { pass: "pakora", label: "Kaan" },
                 "l.wenzel": { pass: "pakora", label: "Leon" },
-                "ö.pak": { pass: "pakora", label: "Ömer" }
+                "\u00f6.pak": { pass: "pakora", label: "\u00d6mer" }
             };
 
             const overlay = document.getElementById("authOverlay");
@@ -757,7 +759,9 @@
                 error.textContent = "";
                 const userId = user.value.trim().toLowerCase();
 
-                if (ACCOUNTS[userId] && pass.value === ACCOUNTS[userId].pass) {
+                const password = pass.value.trim();
+
+                if (ACCOUNTS[userId] && password === ACCOUNTS[userId].pass) {
                     localStorage.setItem(AUTH_KEY, userId);
                     hideAuth();
                     return;
