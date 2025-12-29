@@ -350,6 +350,16 @@
             background: rgba(34, 197, 94, 0.12);
         }
 
+        .chat-actions.admin {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-actions .admin-delete {
+            padding: 4px 10px;
+        }
+
         .chat-body {
             flex: 1;
             padding: 22px 20px;
@@ -814,6 +824,7 @@
         const participantsList = document.getElementById('participantsList');
         const lastMessage = document.getElementById('lastMessage');
         const activeUser = document.getElementById('activeUser');
+        const chatHeaderActions = document.querySelector('.chat-actions');
         const pushStatus = document.getElementById('pushStatus');
         const pushEnableBtn = document.getElementById('pushEnable');
         const noteForm = document.getElementById('noteForm');
@@ -863,10 +874,29 @@
             currentUserName.textContent = info ? info.label : 'Unbekannt';
             currentUserId.textContent = userId || '-';
             activeUser.textContent = info ? `Angemeldet: ${info.label}` : '-';
+            renderAdminControls();
         }
 
         function isAdmin() {
             return currentUser === ADMIN_USER;
+        }
+
+        function renderAdminControls() {
+            if (!chatHeaderActions) return;
+            chatHeaderActions.classList.toggle('admin', isAdmin());
+            if (!isAdmin()) {
+                const existing = chatHeaderActions.querySelector('[data-clear-chat]');
+                if (existing) existing.remove();
+                return;
+            }
+            if (!chatHeaderActions.querySelector('[data-clear-chat]')) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'admin-delete';
+                btn.textContent = 'Chat leeren';
+                btn.setAttribute('data-clear-chat', '1');
+                chatHeaderActions.appendChild(btn);
+            }
         }
 
         function renderParticipants() {
@@ -1049,6 +1079,23 @@
                 if (!messageId) return;
                 if (!confirm('Nachricht wirklich loeschen?')) return;
                 await db.collection('messages').doc(messageId).delete();
+            });
+        }
+
+        if (chatHeaderActions) {
+            chatHeaderActions.addEventListener('click', async (event) => {
+                const target = event.target;
+                if (!isAdmin() || !target || !target.dataset) return;
+                if (!target.dataset.clearChat) return;
+                if (!confirm('Chat wirklich komplett leeren?')) return;
+                const snapshot = await db.collection('messages').get();
+                const deletes = [];
+                snapshot.forEach((doc) => {
+                    deletes.push(db.collection('messages').doc(doc.id).delete());
+                });
+                if (deletes.length) {
+                    await Promise.all(deletes);
+                }
             });
         }
 
