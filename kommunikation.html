@@ -789,6 +789,25 @@
             }
         }
 
+        async function cleanupServiceWorkers() {
+            if (!('serviceWorker' in navigator)) return;
+            try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map((registration) => {
+                    const url = registration.active?.scriptURL
+                        || registration.waiting?.scriptURL
+                        || registration.installing?.scriptURL
+                        || '';
+                    if (url.includes('github.io')) {
+                        return registration.unregister();
+                    }
+                    return Promise.resolve();
+                }));
+            } catch (error) {
+                console.warn('Service Worker Cleanup fehlgeschlagen:', error);
+            }
+        }
+
         async function registerPush(promptUser) {
             if (!isPwa) {
                 updatePushUi('Push: PWA noetig', false, false);
@@ -814,7 +833,9 @@
             updatePushUi('Push: wird aktiviert', false, false);
 
             try {
-                const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                await cleanupServiceWorkers();
+                const swUrl = `${window.location.origin}/firebase-messaging-sw.js`;
+                const registration = await navigator.serviceWorker.register(swUrl);
                 const token = await messaging.getToken({
                     vapidKey: VAPID_KEY,
                     serviceWorkerRegistration: registration
