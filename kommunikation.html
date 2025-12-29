@@ -575,6 +575,57 @@
             min-height: 18px;
         }
 
+        #pushPrompt {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.72);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3200;
+            backdrop-filter: blur(6px);
+        }
+
+        #pushPrompt[hidden] { display: none; }
+
+        #pushPromptCard {
+            width: min(420px, 92vw);
+            background: #0b1220;
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(2, 6, 23, 0.6);
+        }
+
+        #pushPromptCard h2 { margin: 0 0 8px 0; font-size: 20px; }
+        #pushPromptCard p { margin: 0 0 18px 0; color: #94a3b8; font-size: 14px; }
+        #pushPromptActions {
+            display: grid;
+            gap: 10px;
+        }
+
+        #pushPromptEnable {
+            width: 100%;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(120deg, #22c55e, #16a34a);
+            color: #05120b;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        #pushPromptLater {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.6);
+            color: #e2e8f0;
+            cursor: pointer;
+        }
+
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.4; }
@@ -680,6 +731,17 @@
         </div>
     </div>
 
+    <div id="pushPrompt" hidden>
+        <div id="pushPromptCard">
+            <h2>Push-Mitteilungen aktivieren?</h2>
+            <p>Damit du neue Nachrichten sofort siehst, brauchen wir deine Erlaubnis.</p>
+            <div id="pushPromptActions">
+                <button id="pushPromptEnable">Push aktivieren</button>
+                <button id="pushPromptLater">Spaeter</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('open');
@@ -737,6 +799,9 @@
         const noteForm = document.getElementById('noteForm');
         const noteInput = document.getElementById('noteInput');
         const notesList = document.getElementById('notesList');
+        const pushPrompt = document.getElementById('pushPrompt');
+        const pushPromptEnable = document.getElementById('pushPromptEnable');
+        const pushPromptLater = document.getElementById('pushPromptLater');
 
         function showAuth() {
             overlay.hidden = false;
@@ -751,6 +816,18 @@
             if (logoutBtn) logoutBtn.hidden = false;
             document.body.style.overflow = '';
             setNotesEnabled(true);
+        }
+
+        function showPushPrompt() {
+            if (!pushPrompt) return;
+            if (!isPwa || !messaging || !('Notification' in window)) return;
+            if (Notification.permission !== 'default') return;
+            pushPrompt.hidden = false;
+        }
+
+        function hidePushPrompt() {
+            if (!pushPrompt) return;
+            pushPrompt.hidden = true;
         }
 
         function setNotesEnabled(enabled) {
@@ -930,6 +1007,7 @@
                 listenMessages();
                 listenNotes();
                 registerPush(false);
+                showPushPrompt();
                 return;
             }
 
@@ -1070,6 +1148,19 @@
             });
         }
 
+        if (pushPromptEnable) {
+            pushPromptEnable.addEventListener('click', async () => {
+                await registerPush(true);
+                hidePushPrompt();
+            });
+        }
+
+        if (pushPromptLater) {
+            pushPromptLater.addEventListener('click', () => {
+                hidePushPrompt();
+            });
+        }
+
         const storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
         if (storedUser && ACCOUNTS[storedUser]) {
             setCurrentUser(storedUser);
@@ -1077,6 +1168,7 @@
             listenMessages();
             listenNotes();
             registerPush(false);
+            showPushPrompt();
         } else {
             showAuth();
         }
