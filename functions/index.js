@@ -12,7 +12,20 @@ exports.notifyOnMessage = functions.firestore
     const text = data.text || "Neue Nachricht";
 
     const tokensSnap = await admin.firestore().collection("pushTokens").get();
-    if (tokensSnap.empty) return null;
+    if (tokensSnap.empty) {
+      await admin.firestore().collection("pushLogs").add({
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        messageId: snap.id,
+        senderId,
+        senderLabel,
+        text,
+        tokensCount: 0,
+        successCount: 0,
+        failureCount: 0,
+        note: "no tokens"
+      });
+      return null;
+    }
 
     const tokens = [];
     tokensSnap.forEach((doc) => {
@@ -40,13 +53,31 @@ exports.notifyOnMessage = functions.firestore
     });
 
     const deletes = [];
-    response.responses.forEach((resp, idx) => {
+    const results = response.responses.map((resp, idx) => {
       if (!resp.success && resp.error) {
         const code = resp.error.code;
         if (code === "messaging/registration-token-not-registered" || code === "messaging/invalid-registration-token") {
           deletes.push(admin.firestore().collection("pushTokens").doc(tokens[idx]).delete());
         }
       }
+      return {
+        token: tokens[idx],
+        success: resp.success,
+        errorCode: resp.error ? resp.error.code : null,
+        errorMessage: resp.error ? resp.error.message : null
+      };
+    });
+
+    await admin.firestore().collection("pushLogs").add({
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      messageId: snap.id,
+      senderId,
+      senderLabel,
+      text,
+      tokensCount: tokens.length,
+      successCount: response.successCount,
+      failureCount: response.failureCount,
+      results
     });
 
     return Promise.all(deletes);
