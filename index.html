@@ -1654,7 +1654,7 @@ const CURRENT_NEWS_VERSION = 1;
         "m.pak": { pass: "admin", label: "Mert Kaan" },
         "k.guemuesok": { pass: "pakora", label: "Kaan" },
         "l.wenzel": { pass: "pakora", label: "Leon" },
-        "ö.pak": { pass: "pakora", label: "Ömer" }
+        "\u00f6.pak": { pass: "pakora", label: "\u00d6mer" }
     };
     const AUTH_KEY = "pakora_auth_user";
 
@@ -1673,6 +1673,11 @@ const CURRENT_NEWS_VERSION = 1;
         if (welcomeName) welcomeName.textContent = label;
     };
 
+    const rawRedirect = new URLSearchParams(window.location.search).get("redirect");
+    const safeRedirect = rawRedirect && !rawRedirect.includes("://") && !rawRedirect.startsWith("//")
+        ? rawRedirect
+        : "";
+
     const showAuth = () => {
         overlay.hidden = false;
         if (logoutBtn) logoutBtn.hidden = true;
@@ -1690,6 +1695,10 @@ const CURRENT_NEWS_VERSION = 1;
     } else {
         setWelcome(getStoredUser());
         hideAuth();
+        if (safeRedirect) {
+            window.location.href = safeRedirect;
+            return;
+        }
     }
 
     form.addEventListener("submit", (event) => {
@@ -1701,6 +1710,10 @@ const CURRENT_NEWS_VERSION = 1;
             localStorage.setItem(AUTH_KEY, userId);
             setWelcome(userId);
             hideAuth();
+            if (safeRedirect) {
+                window.location.href = safeRedirect;
+                return;
+            }
             return;
         }
 

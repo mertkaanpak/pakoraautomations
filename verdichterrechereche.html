@@ -592,73 +592,28 @@
     </div>\n
     <script>
         (function () {
-            const ACCOUNTS = {
-                'm.pak': { pass: 'admin', label: 'Mert Kaan' },
-                'k.guemuesok': { pass: 'pakora', label: 'Kaan' },
-                'l.wenzel': { pass: 'pakora', label: 'Leon' },
-                'ö.pak': { pass: 'pakora', label: 'Ömer' }
-            };
             const AUTH_KEY = "pakora_auth_user";
             const LEGACY_AUTH_KEY = "pakora_chat_user";
-            const OLD_AUTH_KEY = "pakora_auth_v1";
 
             const overlay = document.getElementById("authOverlay");
-            const form = document.getElementById("authForm");
-            const user = document.getElementById("authUser");
-            const pass = document.getElementById("authPass");
-            const error = document.getElementById("authError");
             const logoutBtn = document.getElementById("logoutBtn");
 
-            const showAuth = () => {
-                overlay.hidden = false;
-                if (logoutBtn) logoutBtn.hidden = true;
-                document.body.style.overflow = "hidden";
-                setTimeout(() => user.focus(), 50);
-            };
-            const hideAuth = () => {
-                overlay.hidden = true;
-                if (logoutBtn) logoutBtn.hidden = false;
-                document.body.style.overflow = "";
-            };
+            const getStoredUser = () => (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
+            const getLegacyUser = () => (localStorage.getItem(LEGACY_AUTH_KEY) || '').toLowerCase();
 
-            let storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
-            if (!storedUser) {
-                storedUser = (localStorage.getItem(LEGACY_AUTH_KEY) || '').toLowerCase();
-                if (storedUser) {
-                    localStorage.setItem(AUTH_KEY, storedUser);
-                    localStorage.removeItem(LEGACY_AUTH_KEY);
-                }
-            }
-            if (storedUser && ACCOUNTS[storedUser]) {
-                hideAuth();
-            } else {
-                localStorage.removeItem(OLD_AUTH_KEY);
-                showAuth();
+            const userId = getStoredUser() || getLegacyUser();
+            if (!userId) {
+                window.location.href = "index.html?redirect=verdichterrechereche.html";
+                return;
             }
 
-            form.addEventListener("submit", (event) => {
-                event.preventDefault();
-                error.textContent = "";
-                const id = user.value.trim().toLowerCase();
-                const pw = pass.value;
-                if (ACCOUNTS[id] && ACCOUNTS[id].pass === pw) {
-                    localStorage.setItem(AUTH_KEY, id);
-                    localStorage.removeItem(LEGACY_AUTH_KEY);
-                    localStorage.removeItem(OLD_AUTH_KEY);
-                    hideAuth();
-                    return;
-                }
-                error.textContent = "Falsche Zugangsdaten.";
-                pass.value = "";
-                pass.focus();
-            });
-
+            if (overlay) overlay.hidden = true;
             if (logoutBtn) {
+                logoutBtn.hidden = false;
                 logoutBtn.addEventListener("click", () => {
                     localStorage.removeItem(AUTH_KEY);
                     localStorage.removeItem(LEGACY_AUTH_KEY);
-                    localStorage.removeItem(OLD_AUTH_KEY);
-                    location.reload();
+                    window.location.href = "index.html";
                 });
             }
         })();
