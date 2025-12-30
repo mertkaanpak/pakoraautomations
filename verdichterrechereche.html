@@ -592,9 +592,15 @@
     </div>\n
     <script>
         (function () {
-            const AUTH_USER = "pakoraadmin";
-            const AUTH_PASS = "admin";
-            const AUTH_KEY = "pakora_auth_v1";
+            const ACCOUNTS = {
+                'm.pak': { pass: 'admin', label: 'Mert Kaan' },
+                'k.guemuesok': { pass: 'pakora', label: 'Kaan' },
+                'l.wenzel': { pass: 'pakora', label: 'Leon' },
+                'ö.pak': { pass: 'pakora', label: 'Ömer' }
+            };
+            const AUTH_KEY = "pakora_auth_user";
+            const LEGACY_AUTH_KEY = "pakora_chat_user";
+            const OLD_AUTH_KEY = "pakora_auth_v1";
 
             const overlay = document.getElementById("authOverlay");
             const form = document.getElementById("authForm");
@@ -603,7 +609,6 @@
             const error = document.getElementById("authError");
             const logoutBtn = document.getElementById("logoutBtn");
 
-            const isAuthed = () => localStorage.getItem(AUTH_KEY) === "1";
             const showAuth = () => {
                 overlay.hidden = false;
                 if (logoutBtn) logoutBtn.hidden = true;
@@ -616,27 +621,43 @@
                 document.body.style.overflow = "";
             };
 
-            if (!isAuthed()) {
+            let storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
+            if (!storedUser) {
+                storedUser = (localStorage.getItem(LEGACY_AUTH_KEY) || '').toLowerCase();
+                if (storedUser) {
+                    localStorage.setItem(AUTH_KEY, storedUser);
+                    localStorage.removeItem(LEGACY_AUTH_KEY);
+                }
+            }
+            if (storedUser && ACCOUNTS[storedUser]) {
+                hideAuth();
+            } else {
+                localStorage.removeItem(OLD_AUTH_KEY);
                 showAuth();
             }
 
             form.addEventListener("submit", (event) => {
                 event.preventDefault();
                 error.textContent = "";
-
-                if (user.value.trim() === AUTH_USER && pass.value === AUTH_PASS) {
-                    localStorage.setItem(AUTH_KEY, "1");
+                const id = user.value.trim().toLowerCase();
+                const pw = pass.value;
+                if (ACCOUNTS[id] && ACCOUNTS[id].pass === pw) {
+                    localStorage.setItem(AUTH_KEY, id);
+                    localStorage.removeItem(LEGACY_AUTH_KEY);
+                    localStorage.removeItem(OLD_AUTH_KEY);
                     hideAuth();
                     return;
                 }
-
                 error.textContent = "Falsche Zugangsdaten.";
                 pass.value = "";
                 pass.focus();
             });
+
             if (logoutBtn) {
                 logoutBtn.addEventListener("click", () => {
                     localStorage.removeItem(AUTH_KEY);
+                    localStorage.removeItem(LEGACY_AUTH_KEY);
+                    localStorage.removeItem(OLD_AUTH_KEY);
                     location.reload();
                 });
             }
