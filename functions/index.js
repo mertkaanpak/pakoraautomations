@@ -187,11 +187,13 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     "2) Danfoss Coolselector2 (Berechnungs- und Auswahlsoftware)",
     "3) Tecumseh tselect: https://tselect.tecumseh.com/de/",
     "4) Bitzer Websoftware: https://www.bitzer.de/websoftware/",
-    "Wenn die Quellen nicht direkt zugaenglich sind, suche nur nach offiziellen Hersteller-Datenblaettern oder PDFs.",
+    "Wenn die Quellen nicht direkt zugaenglich sind, suche nach offiziellen Hersteller-Datenblaettern oder PDFs.",
     "Nutze keine Haendler-Shops, Foren oder aggregierte Drittseiten.",
-    "Erlaube nur Hersteller-Domains: *.embraco.com, *.danfoss.com, *.tecumseh.com, *.bitzer.de, *.bitzer.com.",
-    "Wenn keine offiziellen Herstellerquellen gefunden werden, gib nur \"unbekannt\" zurueck.",
+    "Erlaubte Hersteller-Domains: *.embraco.com, *.danfoss.com, *.tecumseh.com, *.bitzer.de, *.bitzer.com.",
+    "Wenn keine Hersteller-Domains gefunden werden, darfst du PDFs von anderen Domains verwenden,",
+    "aber nur wenn es sich um technische Datenblaetter handelt (PDF) und kein Shop/Haendler ist.",
     "Pruefe Modellvarianten (z.B. Leerzeichen/Bindestriche): VNEU213U, VNEU 213 U, VNEU-213U.",
+    "Suche explizit mit 'model pdf datasheet' und 'filetype:pdf', wenn noetig.",
     "Gib nur JSON zurueck mit folgendem Format:",
     "{",
     "  \"summary\": \"kurze Zusammenfassung in Deutsch\",",
@@ -204,7 +206,8 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     "}",
     "Alle technischen Daten, die du findest, bitte in specs aufnehmen.",
     "Wenn ein Wert nicht zu finden ist, schreibe \"unbekannt\".",
-    "Wenn keine offiziellen Herstellerquellen gefunden werden, fuelle alle Felder mit \"unbekannt\" und setze summary entsprechend.",
+    "Wenn keine offiziellen Herstellerquellen gefunden werden, nutze nur PDF-Datenblaetter ohne Shop-Charakter.",
+    "Wenn gar nichts passt, fuelle alle Felder mit \"unbekannt\" und setze summary entsprechend.",
     "Gib immer beide EN12900 Zeilen aus; wenn keine Daten gefunden, nutze \"unbekannt\".",
     "",
     `Anfrage: ${query}`,
@@ -272,6 +275,25 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
       "bitzer.com"
     ];
 
+    const blockedDomainHints = [
+      "shop",
+      "store",
+      "commerce",
+      "shopify",
+      "amazon",
+      "ebay",
+      "alibaba",
+      "aliexpress"
+    ];
+
+    const normalizeToken = (value) =>
+      String(value || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "");
+
+    const normalizedQuery = normalizeToken(query);
+    const normalizedBrand = normalizeToken(brand);
+
     const isAllowedSource = (urlValue) => {
       try {
         const hostname = new URL(urlValue).hostname.toLowerCase();
@@ -281,13 +303,43 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
       }
     };
 
+    const isBlockedSource = (urlValue) => {
+      try {
+        const hostname = new URL(urlValue).hostname.toLowerCase();
+        if (blockedDomainHints.some((hint) => hostname.includes(hint))) return true;
+        if (hostname.includes("shop") || hostname.includes("store")) return true;
+        return false;
+      } catch (error) {
+        return true;
+      }
+    };
+
+    const isPdfSource = (urlValue) => /\.pdf($|\?)/i.test(String(urlValue || ""));
+
+    const isLikelyRelevantPdf = (urlValue, titleValue) => {
+      const haystack = `${urlValue || ""} ${titleValue || ""}`;
+      const normalized = normalizeToken(haystack);
+      if (normalizedQuery && !normalized.includes(normalizedQuery)) return false;
+      if (normalizedBrand && !normalized.includes(normalizedBrand)) return false;
+      return true;
+    };
+
     const rawSources = Array.isArray(payload.sources) ? payload.sources : [];
     const officialSources = rawSources.filter((source) => source && isAllowedSource(source.url));
+    const pdfSources = rawSources.filter(
+      (source) =>
+        source &&
+        isPdfSource(source.url) &&
+        !isAllowedSource(source.url) &&
+        !isBlockedSource(source.url) &&
+        isLikelyRelevantPdf(source.url, source.title)
+    );
     const hasOfficialSources = officialSources.length > 0;
+    const hasPdfSources = pdfSources.length > 0;
 
-    if (!hasOfficialSources) {
+    if (!hasOfficialSources && !hasPdfSources) {
       res.status(200).json({
-        summary: "Keine offiziellen Herstellerquellen gefunden.",
+        summary: "Keine offiziellen Herstellerquellen oder passende PDF-Datenblaetter gefunden.",
         specs: {},
         en12900: [
           { te_c: -10, tc_c: 45, capacity_w: "unbekannt", power_w: "unbekannt", cop: "unbekannt" },
@@ -302,7 +354,7 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
       summary: payload.summary || "KI Recherche abgeschlossen.",
       specs: payload.specs || {},
       en12900: Array.isArray(payload.en12900) ? payload.en12900 : [],
-      sources: officialSources
+      sources: officialSources.length ? officialSources : pdfSources
     });
   } catch (error) {
     res.status(500).json({ error: error && error.message ? error.message : String(error) });
