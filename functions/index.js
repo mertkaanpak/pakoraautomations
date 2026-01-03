@@ -245,6 +245,72 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
         model: "gpt-4o-mini",
         input: promptParts,
         tools: [{ type: "web_search" }],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "compressor_lookup",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["summary", "specs", "en12900", "sources"],
+              properties: {
+                summary: { type: "string" },
+                specs: {
+                  type: "object",
+                  additionalProperties: true,
+                  required: [
+                    "manufacturer",
+                    "refrigerant",
+                    "supply_voltage",
+                    "power_hp",
+                    "current_a",
+                    "type",
+                    "suction_connection",
+                    "discharge_connection"
+                  ],
+                  properties: {
+                    manufacturer: { type: "string" },
+                    refrigerant: { type: "string" },
+                    supply_voltage: { type: "string" },
+                    power_hp: { type: "string" },
+                    current_a: { type: "string" },
+                    type: { type: "string" },
+                    suction_connection: { type: "string" },
+                    discharge_connection: { type: "string" }
+                  }
+                },
+                en12900: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["te_c", "tc_c", "capacity_w", "power_w", "cop"],
+                    properties: {
+                      te_c: { type: "string" },
+                      tc_c: { type: "string" },
+                      capacity_w: { type: "string" },
+                      power_w: { type: "string" },
+                      cop: { type: "string" }
+                    }
+                  }
+                },
+                sources: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["title", "url"],
+                    properties: {
+                      title: { type: "string" },
+                      url: { type: "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         temperature: 0.2,
         max_output_tokens: 3000
       })
@@ -260,6 +326,18 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
 
     let text = data.output_text || "";
     if (!text && Array.isArray(data.output)) {
+      const jsonChunk = data.output
+        .flatMap((item) => item.content || [])
+        .find((content) => content.type === "output_json" || content.type === "json");
+      if (jsonChunk && jsonChunk.json) {
+        try {
+          res.status(200).json(jsonChunk.json);
+          return;
+        } catch (error) {
+          // fall through to text parsing
+        }
+      }
+
       text = data.output
         .flatMap((item) => item.content || [])
         .filter((content) => content.type === "output_text")
