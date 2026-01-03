@@ -258,7 +258,7 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
                 summary: { type: "string" },
                 specs: {
                   type: "object",
-                  additionalProperties: true,
+                  additionalProperties: false,
                   required: [
                     "manufacturer",
                     "refrigerant",
@@ -267,7 +267,8 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
                     "current_a",
                     "type",
                     "suction_connection",
-                    "discharge_connection"
+                    "discharge_connection",
+                    "notes"
                   ],
                   properties: {
                     manufacturer: { type: "string" },
@@ -277,7 +278,8 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
                     current_a: { type: "string" },
                     type: { type: "string" },
                     suction_connection: { type: "string" },
-                    discharge_connection: { type: "string" }
+                    discharge_connection: { type: "string" },
+                    notes: { type: "string" }
                   }
                 },
                 en12900: {
