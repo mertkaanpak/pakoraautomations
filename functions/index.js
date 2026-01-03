@@ -189,6 +189,9 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     "4) Bitzer Websoftware: https://www.bitzer.de/websoftware/",
     "Wenn die Quellen nicht direkt zugaenglich sind, suche nur nach offiziellen Hersteller-Datenblaettern oder PDFs.",
     "Nutze keine Haendler-Shops, Foren oder aggregierte Drittseiten.",
+    "Erlaube nur Hersteller-Domains: *.embraco.com, *.danfoss.com, *.tecumseh.com, *.bitzer.de, *.bitzer.com.",
+    "Wenn keine offiziellen Herstellerquellen gefunden werden, gib nur \"unbekannt\" zurueck.",
+    "Pruefe Modellvarianten (z.B. Leerzeichen/Bindestriche): VNEU213U, VNEU 213 U, VNEU-213U.",
     "Gib nur JSON zurueck mit folgendem Format:",
     "{",
     "  \"summary\": \"kurze Zusammenfassung in Deutsch\",",
@@ -261,11 +264,45 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
       return;
     }
 
+    const allowedDomains = [
+      "embraco.com",
+      "danfoss.com",
+      "tecumseh.com",
+      "bitzer.de",
+      "bitzer.com"
+    ];
+
+    const isAllowedSource = (urlValue) => {
+      try {
+        const hostname = new URL(urlValue).hostname.toLowerCase();
+        return allowedDomains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
+      } catch (error) {
+        return false;
+      }
+    };
+
+    const rawSources = Array.isArray(payload.sources) ? payload.sources : [];
+    const officialSources = rawSources.filter((source) => source && isAllowedSource(source.url));
+    const hasOfficialSources = officialSources.length > 0;
+
+    if (!hasOfficialSources) {
+      res.status(200).json({
+        summary: "Keine offiziellen Herstellerquellen gefunden.",
+        specs: {},
+        en12900: [
+          { te_c: -10, tc_c: 45, capacity_w: "unbekannt", power_w: "unbekannt", cop: "unbekannt" },
+          { te_c: -25, tc_c: 45, capacity_w: "unbekannt", power_w: "unbekannt", cop: "unbekannt" }
+        ],
+        sources: []
+      });
+      return;
+    }
+
     res.status(200).json({
       summary: payload.summary || "KI Recherche abgeschlossen.",
       specs: payload.specs || {},
       en12900: Array.isArray(payload.en12900) ? payload.en12900 : [],
-      sources: Array.isArray(payload.sources) ? payload.sources : []
+      sources: officialSources
     });
   } catch (error) {
     res.status(500).json({ error: error && error.message ? error.message : String(error) });
