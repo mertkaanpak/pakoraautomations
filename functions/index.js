@@ -181,7 +181,8 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
   const promptParts = [
     "Du bist ein technischer Rechercheassistent fuer Verdichter.",
     "Suche im Web nach technischen Daten zum angegebenen Modell/Typ.",
-    "Prioritaet: komplette EN12900 Leistungstabelle (alle verfuegbaren Te/Tc Kombinationen).",
+    "Prioritaet: komplette EN12900 Leistungstabelle.",
+    "Filter: Nur Zeilen mit Te zwischen 0 und -30 C sowie Tc zwischen 30 und 60 C.",
     "Nutze diese Quellen zuerst (in dieser Reihenfolge), wenn vorhanden:",
     "1) Embraco: https://products.embraco.com/compressors",
     "2) Danfoss Coolselector2 (Berechnungs- und Auswahlsoftware)",
@@ -205,11 +206,13 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     "  ],",
     "  \"sources\": [ { \"title\": \"...\", \"url\": \"...\" }, ... ]",
     "}",
+    "Wichtig: Nur Kompressoren mit deutscher Netzspannung beruecksichtigen: 230V/50Hz oder 400V/50Hz.",
+    "Fuege in specs einen Eintrag \"supply_voltage\" hinzu (z.B. \"230V/50Hz\" oder \"400V/50Hz\").",
     "Alle technischen Daten, die du findest, bitte in specs aufnehmen.",
     "Wenn ein Wert nicht zu finden ist, schreibe \"unbekannt\".",
     "Wenn keine offiziellen Herstellerquellen gefunden werden, nutze PDF-Datenblaetter als Fallback.",
     "Wenn gar nichts passt, fuelle alle Felder mit \"unbekannt\" und setze summary entsprechend.",
-    "Wenn eine EN12900 Tabelle vorhanden ist, gib alle Zeilen zurueck.",
+    "Wenn eine EN12900 Tabelle vorhanden ist, gib nur Zeilen innerhalb der Te/Tc Filter zurueck.",
     "Wenn keine EN12900 Tabelle vorhanden ist, setze en12900 auf [].",
     "",
     `Anfrage: ${query}`,
@@ -323,10 +326,36 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
       return;
     }
 
+    const specs = payload.specs || {};
+    const normalizedSupply = normalizeToken(
+      specs.supply_voltage || specs.spannung || specs.spannungversorgung || specs.voltage || ""
+    );
+    const isAllowedSupply =
+      normalizedSupply.includes("230") && normalizedSupply.includes("50") ||
+      normalizedSupply.includes("400") && normalizedSupply.includes("50");
+
+    if (!isAllowedSupply) {
+      res.status(200).json({
+        summary: "Nicht passende Netzspannung (nur 230V/50Hz oder 400V/50Hz erlaubt).",
+        specs: {},
+        en12900: [],
+        sources: officialSources.length ? officialSources : pdfSources
+      });
+      return;
+    }
+
+    const enRows = Array.isArray(payload.en12900) ? payload.en12900 : [];
+    const filteredEnRows = enRows.filter((row) => {
+      const te = Number(row && row.te_c);
+      const tc = Number(row && row.tc_c);
+      if (Number.isNaN(te) || Number.isNaN(tc)) return false;
+      return te <= 0 && te >= -30 && tc >= 30 && tc <= 60;
+    });
+
     res.status(200).json({
       summary: payload.summary || "KI Recherche abgeschlossen.",
-      specs: payload.specs || {},
-      en12900: Array.isArray(payload.en12900) ? payload.en12900 : [],
+      specs,
+      en12900: filteredEnRows,
       sources: officialSources.length ? officialSources : pdfSources
     });
   } catch (error) {
