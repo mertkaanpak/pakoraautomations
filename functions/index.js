@@ -181,8 +181,12 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
   const promptParts = [
     "Du bist ein technischer Rechercheassistent fuer Verdichter.",
     "Suche im Web nach technischen Daten zum angegebenen Modell/Typ.",
-    "Prioritaet: komplette EN12900 Leistungstabelle.",
-    "Filter: Nur Zeilen mit Te zwischen 0 und -30 C sowie Tc zwischen 30 und 60 C.",
+    "Du bist ein erfahrener Kaelteanlagenbauer mit Spezialwissen ueber kaeltetechnische Komponenten.",
+    "Ich gebe dir eine Kompressormodellnummer.",
+    "Prioritaet: Herstellerdaten oder offizielle technische Datenblaetter.",
+    "Gib die Kaelteleistung fuer:",
+    "Normalkuehlung: -10 C VT / +45 C KT",
+    "Tiefkuehlung: -25 C VT / +45 C KT (falls zutreffend)",
     "Nutze diese Quellen zuerst (in dieser Reihenfolge), wenn vorhanden:",
     "1) Embraco: https://products.embraco.com/compressors",
     "2) Danfoss Coolselector2 (Berechnungs- und Auswahlsoftware)",
@@ -199,7 +203,16 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     "Gib nur JSON zurueck mit folgendem Format:",
     "{",
     "  \"summary\": \"kurze Zusammenfassung in Deutsch\",",
-    "  \"specs\": { \"parameter\": \"wert\", ... },",
+    "  \"specs\": {",
+    "    \"manufacturer\": \"...\",",
+    "    \"refrigerant\": \"R134a|R404A|R290|unbekannt\",",
+    "    \"supply_voltage\": \"230V/50Hz oder 400V/50Hz\",",
+    "    \"power_hp\": \"...\",",
+    "    \"current_a\": \"...\",",
+    "    \"type\": \"hermetisch|halbhermetisch|scroll|hubkolben|...\",",
+    "    \"suction_connection\": \"...\",",
+    "    \"discharge_connection\": \"...\"",
+    "  },",
     "  \"en12900\": [",
     "    { \"te_c\": \"...\", \"tc_c\": \"...\", \"capacity_w\": \"...\", \"power_w\": \"...\", \"cop\": \"...\" },",
     "    { \"te_c\": \"...\", \"tc_c\": \"...\", \"capacity_w\": \"...\", \"power_w\": \"...\", \"cop\": \"...\" }",
@@ -212,7 +225,7 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     "Wenn ein Wert nicht zu finden ist, schreibe \"unbekannt\".",
     "Wenn keine offiziellen Herstellerquellen gefunden werden, nutze PDF-Datenblaetter als Fallback.",
     "Wenn gar nichts passt, fuelle alle Felder mit \"unbekannt\" und setze summary entsprechend.",
-    "Wenn eine EN12900 Tabelle vorhanden ist, gib nur Zeilen innerhalb der Te/Tc Filter zurueck.",
+    "Wenn eine EN12900 Tabelle vorhanden ist, gib nur Zeilen fuer -10/45 und -25/45 zurueck.",
     "Wenn keine EN12900 Tabelle vorhanden ist, setze en12900 auf [].",
     "",
     `Anfrage: ${query}`,
@@ -275,9 +288,12 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     const allowedDomains = [
       "embraco.com",
       "danfoss.com",
+      "secop.com",
       "tecumseh.com",
       "bitzer.de",
-      "bitzer.com"
+      "bitzer.com",
+      "copeland.com",
+      "emerson.com"
     ];
 
     const normalizeToken = (value) =>
@@ -330,9 +346,10 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     const normalizedSupply = normalizeToken(
       specs.supply_voltage || specs.spannung || specs.spannungversorgung || specs.voltage || ""
     );
-    const isAllowedSupply =
-      normalizedSupply.includes("230") && normalizedSupply.includes("50") ||
-      normalizedSupply.includes("400") && normalizedSupply.includes("50");
+    const has230 = normalizedSupply.includes("230") || normalizedSupply.includes("220240");
+    const has400 = normalizedSupply.includes("400");
+    const has50 = normalizedSupply.includes("50");
+    const isAllowedSupply = has50 && (has230 || has400);
 
     if (!isAllowedSupply) {
       res.status(200).json({
@@ -349,7 +366,7 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
       const te = Number(row && row.te_c);
       const tc = Number(row && row.tc_c);
       if (Number.isNaN(te) || Number.isNaN(tc)) return false;
-      return te <= 0 && te >= -30 && tc >= 30 && tc <= 60;
+      return tc === 45 && (te === -10 || te === -25);
     });
 
     res.status(200).json({
