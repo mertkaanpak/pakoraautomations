@@ -331,45 +331,6 @@
         </div>
 
         <div class="card">
-            <h2 style="margin-top:0; font-size:18px;">Suchparameter</h2>
-            <div class="grid-2">
-                <div>
-                    <label>Hersteller</label>
-                    <input id="brandInput" type="text" placeholder="z.B. Bitzer, Copeland">
-                </div>
-                <div>
-                    <label>Kaeltemittel</label>
-                    <select id="refrigerantSelect">
-                        <option value="">Alle</option>
-                        <option value="R134a">R134a</option>
-                        <option value="R404A">R404A</option>
-                        <option value="R449A">R449A</option>
-                        <option value="R290">R290</option>
-                    </select>
-                </div>
-                <div>
-                    <label>Temperaturbereich (EN12900)</label>
-                    <select id="tempSelect">
-                        <option value="">Egal</option>
-                        <option value="-10">Normalkuehlung (-10 C / +45 C)</option>
-                        <option value="-25">Tiefkuehlung (-25 C / +45 C)</option>
-                    </select>
-                </div>
-                <div>
-                    <label>Typbezeichnung</label>
-                    <input id="modelInput" type="text" placeholder="z.B. EMT 2130">
-                </div>
-                <div>
-                    <label>Leistung (W)</label>
-                    <input id="capacityInput" type="number" placeholder="z.B. 4500">
-                </div>
-            </div>
-            <div style="margin-top:15px;">
-                <button id="searchBtn" class="btn btn-primary">Suche starten</button>
-            </div>
-        </div>
-
-        <div class="card">
             <h2 style="margin-top:0; font-size:18px;">KI Recherche</h2>
             <div class="grid-2">
                 <div>
@@ -454,33 +415,6 @@
                 </table>
             </div>
         </div>
-
-        <div class="card">
-            <h2 style="margin-top:0; font-size:18px;">Ergebnisse</h2>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Artikel</th>
-                            <th>Hersteller</th>
-                            <th>Modell</th>
-                            <th>Serie</th>
-                            <th>Temp</th>
-                            <th>Leistung</th>
-                            <th>Preis</th>
-                            <th>Hinweis</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultsBody">
-                        <tr>
-                            <td colspan="8" style="text-align:center; padding:24px; color:#94a3b8;">
-                                Noch keine Ergebnisse. Bitte Suchparameter setzen.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
     </main>
 
     <script>
@@ -488,57 +422,6 @@
             document.querySelector('.sidebar').classList.toggle('open');
             document.querySelector('.mobile-overlay').classList.toggle('active');
         }
-
-        const PRODUCT_DB = [
-            { sku: '04.01.032', brand: 'Embraco', model: 'EMT 2130', series: 'GK', tempC: -25, capacityW: 380, price: 216.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '04.01.025', brand: 'Embraco', model: 'EMT 6170', series: 'Z', tempC: -10, capacityW: 448, price: 178.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '04.01.034', brand: 'Embraco', model: 'EMT 6152', series: 'GK', tempC: -10, capacityW: 422, price: 188.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '32.02.049', brand: 'Embraco', model: 'NEU 6187', series: 'Z', tempC: -10, capacityW: 601, price: 201.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '04.01.035', brand: 'Embraco', model: 'EMT 6165', series: 'GK', tempC: -10, capacityW: 482, price: 192.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '4663', brand: 'Embraco', model: 'NEU 2155', series: 'GK', tempC: -25, capacityW: 645, price: 215.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '5599', brand: 'Embraco', model: 'FFI 12 HB', series: 'K', tempC: -10, capacityW: 671, price: 210.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '2906212U', brand: 'Embraco', model: 'NEU 6212', series: 'U', tempC: -10, capacityW: 731, price: 220.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '32.03.077', brand: 'Embraco', model: 'NEU 6212', series: 'Z', tempC: -10, capacityW: 765, price: 222.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '32.02.65', brand: 'Embraco', model: 'NEU 6212', series: 'GK', tempC: -10, capacityW: 890, price: 240.50, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '32.03.078', brand: 'Embraco', model: 'NEU 6214', series: 'Z', tempC: -10, capacityW: 912, price: 236.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '32.03.018', brand: 'Embraco', model: 'NT 2192', series: 'GK', tempC: -25, capacityW: 1066, price: 398.50, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '4722', brand: 'Embraco', model: 'NT 6217', series: 'Z', tempC: -10, capacityW: 1052, price: 349.50, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '32.02.067', brand: 'Embraco', model: 'NEU 6215', series: 'GK', tempC: -10, capacityW: 1108, price: 211.50, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '03.02.030', brand: 'Embraco', model: 'NT 6220', series: 'Z', tempC: -10, capacityW: 1112, price: 414.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '47683', brand: 'Embraco', model: 'NT 6220', series: 'GK', tempC: -10, capacityW: 1263, price: 265.50, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '2906220U', brand: 'Embraco', model: 'NEU 6220', series: 'U', tempC: -10, capacityW: 1284, price: 300.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '4704', brand: 'Embraco', model: 'NEK 6217', series: 'GK', tempC: -10, capacityW: 1315, price: 310.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '32.03.017', brand: 'Embraco', model: 'NT 6222', series: 'GK', tempC: -10, capacityW: 1558, price: 357.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '4768', brand: 'Embraco', model: 'NJ 2212', series: 'GK', tempC: -25, capacityW: 1554, price: 600.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '47681', brand: 'Embraco', model: 'NJ 6226', series: 'Z', tempC: -10, capacityW: 1778, price: 623.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '32.03.029', brand: 'Embraco', model: 'NT 6226', series: 'GK', tempC: -25, capacityW: 1753, price: 410.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '32.02.043', brand: 'Embraco', model: 'NJ 9232', series: 'GK', tempC: -10, capacityW: 1911, price: 460.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '32.02.044', brand: 'Embraco', model: 'NJ 9238', series: 'GK', tempC: -10, capacityW: 2878, price: 483.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '54612', brand: 'Embraco', model: 'NJX 2219', series: 'GK', tempC: -25, capacityW: 2018, price: 695.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '45461', brand: 'Embraco', model: 'NJX 6250', series: 'GK', tempC: -10, capacityW: 3772, price: 788.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: 'SE2008GS', brand: 'Embraco', model: 'SE 2008', series: 'GS', tempC: -25, capacityW: 2672, price: 1200.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: 'MRS000206', brand: 'Embraco', model: 'SE 2012', series: 'GS', tempC: -25, capacityW: 3532, price: 1500.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '49876', brand: 'Embraco', model: 'SE 6015', series: 'GS', tempC: -10, capacityW: 3664, price: 1100.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: 'MRS00097', brand: 'Embraco', model: 'SE 2014', series: 'GS', tempC: -25, capacityW: 4117, price: 1800.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '49877', brand: 'Embraco', model: 'SE 6018', series: 'GS', tempC: -10, capacityW: 4445, price: 1300.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: 'MRS00155', brand: 'Embraco', model: 'SE 2017', series: 'GS', tempC: -25, capacityW: 4815, price: 1950.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: 'MRS00231', brand: 'Embraco', model: 'SE 6021', series: 'GS', tempC: -10, capacityW: 5003, price: 950.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: 'MRS00088', brand: 'Embraco', model: 'SE 2020', series: 'GS', tempC: -25, capacityW: 5623, price: 2000.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '49865', brand: 'Embraco', model: 'SE 6026', series: 'GS', tempC: -10, capacityW: 6317, price: 1100.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: 'MRS00089', brand: 'Embraco', model: 'SE 6036', series: 'GS', tempC: -10, capacityW: 8793, price: 1200.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: 'MRS00091', brand: 'Embraco', model: 'SE 6043', series: 'GS', tempC: -10, capacityW: 10446, price: 1300.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: 'SE6053GS', brand: 'Embraco', model: 'SE 6053', series: 'GS', tempC: -10, capacityW: 12685, price: 1750.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '6056GS', brand: 'Embraco', model: 'SE 6056', series: 'GS', tempC: -10, capacityW: 13327, price: 2400.00, refrigerants: ['R134a','R404A','R449A','R290'] },
-            { sku: '49878', brand: 'Embraco', model: 'SE 6078', series: 'GS', tempC: -10, capacityW: 18489, price: 2600.00, refrigerants: ['R134a','R404A','R449A','R290'] }
-        ];
-
-        const brandInput = document.getElementById('brandInput');
-        const modelInput = document.getElementById('modelInput');
-        const refrigerantSelect = document.getElementById('refrigerantSelect');
-        const tempSelect = document.getElementById('tempSelect');
-        const capacityInput = document.getElementById('capacityInput');
-        const resultsBody = document.getElementById('resultsBody');
-        const searchBtn = document.getElementById('searchBtn');
         const aiQueryInput = document.getElementById('aiQueryInput');
         const aiBrandInput = document.getElementById('aiBrandInput');
         const aiRefrigerantInput = document.getElementById('aiRefrigerantInput');
@@ -553,15 +436,6 @@
         const AI_FUNCTION_URL = "https://us-central1-pakora-automations-chat.cloudfunctions.net/aiCompressorLookup";
         let lastAiResult = null;
         let cachedLogoDataUrl = null;
-
-        function normalize(value) {
-            return String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
-        }
-
-        function formatPrice(value) {
-            if (!value && value !== 0) return '-';
-            return `${value.toFixed(2)} EUR`;
-        }
 
         function escapeHtml(value) {
             const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -836,73 +710,6 @@
             });
 
             doc.save(`pakora-verdichter-${slugify(lastAiResult.query)}.pdf`);
-        }
-
-        function renderResults(rows, capacityTarget) {
-            if (!resultsBody) return;
-            if (!rows.length) {
-                resultsBody.innerHTML = `
-                    <tr>
-                        <td colspan="8" style="text-align:center; padding:24px; color:#94a3b8;">
-                            Keine passenden Ergebnisse gefunden.
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            resultsBody.innerHTML = rows.map((item) => {
-                let hint = '-';
-                if (capacityTarget) {
-                    const diff = item.capacityW - capacityTarget;
-                    const percent = (diff / capacityTarget) * 100;
-                    const sign = diff >= 0 ? '+' : '';
-                    hint = `${sign}${diff.toFixed(0)} W (${sign}${percent.toFixed(1)}%)`;
-                }
-                return `
-                    <tr>
-                        <td>${item.sku}</td>
-                        <td>${item.brand}</td>
-                        <td>${item.model}</td>
-                        <td>${item.series}</td>
-                        <td>${item.tempC} C</td>
-                        <td>${item.capacityW} W</td>
-                        <td>${formatPrice(item.price)}</td>
-                        <td>${hint}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function runSearch() {
-            const brand = normalize(brandInput?.value);
-            const model = normalize(modelInput?.value);
-            const refrigerant = refrigerantSelect?.value || '';
-            const temp = tempSelect?.value || '';
-            const capacity = capacityInput?.value ? Number(capacityInput.value) : null;
-
-            let results = PRODUCT_DB.filter((item) => {
-                if (brand && !normalize(item.brand).includes(brand)) return false;
-                if (model && !normalize(item.model).includes(model)) return false;
-                if (refrigerant && !item.refrigerants.includes(refrigerant)) return false;
-                if (temp && item.tempC !== Number(temp)) return false;
-                return true;
-            });
-
-            if (capacity) {
-                results = results
-                    .map((item) => ({ ...item, diff: Math.abs(item.capacityW - capacity) }))
-                    .sort((a, b) => a.diff - b.diff)
-                    .slice(0, 5);
-            } else {
-                results = results.sort((a, b) => a.capacityW - b.capacityW).slice(0, 20);
-            }
-
-            renderResults(results, capacity);
-        }
-
-        if (searchBtn) {
-            searchBtn.addEventListener('click', runSearch);
         }
 
         if (aiSearchBtn) {
