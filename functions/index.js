@@ -221,6 +221,7 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     "}",
     "Wichtig: Nur Kompressoren mit deutscher Netzspannung beruecksichtigen: 230V/50Hz oder 400V/50Hz.",
     "Fuege in specs einen Eintrag \"supply_voltage\" hinzu (z.B. \"230V/50Hz\" oder \"400V/50Hz\").",
+    "Leistung in PS (hp) ist Pflicht: falls nicht direkt angegeben, berechne aus kW (1 kW = 1.341 hp) und kennzeichne es in notes.",
     "Alle technischen Daten, die du findest, bitte in specs aufnehmen.",
     "Wenn ein Wert nicht zu finden ist, schreibe \"unbekannt\".",
     "Wenn keine offiziellen Herstellerquellen gefunden werden, nutze PDF-Datenblaetter als Fallback.",

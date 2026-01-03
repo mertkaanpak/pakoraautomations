@@ -300,6 +300,10 @@
             opacity: 0.6;
             cursor: not-allowed;
         }
+
+        .card.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -357,7 +361,7 @@
             <div id="aiStatus" style="margin-top:10px; font-size:13px; color:var(--secondary);"></div>
         </div>
 
-        <div class="card">
+        <div id="aiResultsCard" class="card hidden">
             <h2 style="margin-top:0; font-size:18px;">KI Ergebnisse</h2>
             <div class="table-wrap">
                 <table>
@@ -432,6 +436,7 @@
         const aiSearchBtn = document.getElementById('aiSearchBtn');
         const aiPdfBtn = document.getElementById('aiPdfBtn');
         const aiStatus = document.getElementById('aiStatus');
+        const aiResultsCard = document.getElementById('aiResultsCard');
 
         const AI_FUNCTION_URL = "https://us-central1-pakora-automations-chat.cloudfunctions.net/aiCompressorLookup";
         let lastAiResult = null;
@@ -567,6 +572,7 @@
             setAiStatus('KI Recherche laeuft...', false);
             if (aiSearchBtn) aiSearchBtn.disabled = true;
             if (aiPdfBtn) aiPdfBtn.disabled = true;
+            if (aiResultsCard) aiResultsCard.classList.add('hidden');
             lastAiResult = null;
 
             try {
@@ -581,12 +587,14 @@
                 renderAiResults(lastAiResult.specs);
                 renderAiEn12900(lastAiResult.en12900);
                 renderAiSources(lastAiResult.sources);
+                if (aiResultsCard) aiResultsCard.classList.remove('hidden');
                 setAiStatus(data.summary || 'KI Recherche abgeschlossen.', false);
                 if (aiPdfBtn) aiPdfBtn.disabled = false;
             } catch (error) {
                 renderAiResults({});
                 renderAiEn12900([]);
                 renderAiSources([]);
+                if (aiResultsCard) aiResultsCard.classList.add('hidden');
                 setAiStatus(error.message || 'KI Anfrage fehlgeschlagen.', true);
             } finally {
                 if (aiSearchBtn) aiSearchBtn.disabled = false;
