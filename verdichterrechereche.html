@@ -106,8 +106,8 @@
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
         label { display: block; font-size: 13px; font-weight: 600; color: var(--secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        input, select { width: 100%; padding: 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; background: #fff; appearance: none; }
-        input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,0.1); }
+        input, select, textarea { width: 100%; padding: 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; background: #fff; appearance: none; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,0.1); }
 
         .btn {
             width: 100%;
@@ -201,13 +201,15 @@
         }
 
         input,
-        select {
+        select,
+        textarea {
             border-color: #d1d5db;
             background: #ffffff;
         }
 
         input:focus,
-        select:focus {
+        select:focus,
+        textarea:focus {
             box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
             border-color: #2563eb;
         }
@@ -353,6 +355,10 @@
                     <label>Zusatzinfo (optional)</label>
                     <input id="aiNotesInput" type="text" placeholder="z.B. 400V, 50Hz, Scroll">
                 </div>
+                <div style="grid-column: 1 / -1;">
+                    <label>Datenblatt Text (optional)</label>
+                    <textarea id="aiDatasheetInput" rows="6" placeholder="Hier den Inhalt aus dem technischen Datenblatt einfuegen"></textarea>
+                </div>
             </div>
             <div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
                 <button id="aiSearchBtn" class="btn btn-primary">KI Suche starten</button>
@@ -430,6 +436,7 @@
         const aiBrandInput = document.getElementById('aiBrandInput');
         const aiRefrigerantInput = document.getElementById('aiRefrigerantInput');
         const aiNotesInput = document.getElementById('aiNotesInput');
+        const aiDatasheetInput = document.getElementById('aiDatasheetInput');
         const aiResultsBody = document.getElementById('aiResultsBody');
         const aiEnBody = document.getElementById('aiEnBody');
         const aiSourcesBody = document.getElementById('aiSourcesBody');
@@ -563,6 +570,7 @@
             const brand = String(aiBrandInput?.value || '').trim();
             const refrigerant = String(aiRefrigerantInput?.value || '').trim();
             const notes = String(aiNotesInput?.value || '').trim();
+            const datasheetText = String(aiDatasheetInput?.value || '').trim();
 
             if (!query) {
                 setAiStatus('Bitte ein Modell oder einen Typ eingeben.', true);
@@ -576,7 +584,7 @@
             lastAiResult = null;
 
             try {
-                const data = await fetchAiData({ query, brand, refrigerant, notes });
+                const data = await fetchAiData({ query, brand, refrigerant, notes, datasheet_text: datasheetText });
                 lastAiResult = {
                     query,
                     specs: data.specs || {},

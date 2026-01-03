@@ -172,6 +172,7 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
   const brand = String(body.brand || "").trim();
   const refrigerant = String(body.refrigerant || "").trim();
   const notes = String(body.notes || "").trim();
+  const datasheetText = String(body.datasheet_text || "").trim();
 
   if (!query) {
     res.status(400).json({ error: "Query fehlt." });
@@ -211,7 +212,8 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     "    \"current_a\": \"...\",",
     "    \"type\": \"hermetisch|halbhermetisch|scroll|hubkolben|...\",",
     "    \"suction_connection\": \"...\",",
-    "    \"discharge_connection\": \"...\"",
+    "    \"discharge_connection\": \"...\",",
+    "    \"notes\": \"...\"",
     "  },",
     "  \"en12900\": [",
     "    { \"te_c\": \"...\", \"tc_c\": \"...\", \"capacity_w\": \"...\", \"power_w\": \"...\", \"cop\": \"...\" },",
@@ -232,8 +234,12 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     `Anfrage: ${query}`,
     brand ? `Hersteller: ${brand}` : "",
     refrigerant ? `Kaeltemittel: ${refrigerant}` : "",
-    notes ? `Zusatzinfo: ${notes}` : ""
+    notes ? `Zusatzinfo: ${notes}` : "",
+    datasheetText ? "Nutze ausschliesslich den folgenden Datenblatt-Text und keine Websuche:" : "",
+    datasheetText ? datasheetText : ""
   ].filter(Boolean).join("\n");
+
+  const tools = datasheetText ? [] : [{ type: "web_search" }];
 
   try {
     const response = await fetch("https://api.openai.com/v1/responses", {
@@ -245,7 +251,7 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         input: promptParts,
-        tools: [{ type: "web_search" }],
+        ...(tools.length ? { tools } : {}),
         text: {
           format: {
             type: "json_schema",
@@ -412,8 +418,9 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     );
     const hasOfficialSources = officialSources.length > 0;
     const hasPdfSources = pdfSources.length > 0;
+    const hasInlineDatasheet = datasheetText.length > 0;
 
-    if (!hasOfficialSources && !hasPdfSources) {
+    if (!hasInlineDatasheet && !hasOfficialSources && !hasPdfSources) {
       res.status(200).json({
         summary: "Keine offiziellen Herstellerquellen oder passende PDF-Datenblaetter gefunden.",
         specs: {},
@@ -454,7 +461,7 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
       summary: payload.summary || "KI Recherche abgeschlossen.",
       specs,
       en12900: filteredEnRows,
-      sources: officialSources.length ? officialSources : pdfSources
+      sources: hasInlineDatasheet ? (Array.isArray(payload.sources) ? payload.sources : []) : (officialSources.length ? officialSources : pdfSources)
     });
   } catch (error) {
     res.status(500).json({ error: error && error.message ? error.message : String(error) });
