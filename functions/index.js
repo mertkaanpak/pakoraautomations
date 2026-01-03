@@ -146,6 +146,123 @@ exports.notifyOnMessage = functions.firestore
     return Promise.all(deletes);
   });
 
+exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Use POST." });
+    return;
+  }
+
+  const openAiKey = functions.config().openai && functions.config().openai.key;
+  if (!openAiKey) {
+    res.status(500).json({ error: "OpenAI key fehlt. Setze functions config openai.key." });
+    return;
+  }
+
+  const body = req.body || {};
+  const query = String(body.query || "").trim();
+  const brand = String(body.brand || "").trim();
+  const refrigerant = String(body.refrigerant || "").trim();
+  const notes = String(body.notes || "").trim();
+
+  if (!query) {
+    res.status(400).json({ error: "Query fehlt." });
+    return;
+  }
+
+  const promptParts = [
+    "Du bist ein technischer Rechercheassistent fuer Verdichter.",
+    "Suche im Web nach technischen Daten zum angegebenen Modell/Typ.",
+    "Prioritaet: EN12900 Leistungsdaten bei Tc 45 C und Te -10 C sowie Te -25 C.",
+    "Gib nur JSON zurueck mit folgendem Format:",
+    "{",
+    "  \"summary\": \"kurze Zusammenfassung in Deutsch\",",
+    "  \"specs\": { \"parameter\": \"wert\", ... },",
+    "  \"en12900\": [",
+    "    { \"te_c\": -10, \"tc_c\": 45, \"capacity_w\": \"...\", \"power_w\": \"...\", \"cop\": \"...\" },",
+    "    { \"te_c\": -25, \"tc_c\": 45, \"capacity_w\": \"...\", \"power_w\": \"...\", \"cop\": \"...\" }",
+    "  ],",
+    "  \"sources\": [ { \"title\": \"...\", \"url\": \"...\" }, ... ]",
+    "}",
+    "Alle technischen Daten, die du findest, bitte in specs aufnehmen.",
+    "Falls ein Wert nicht sicher ist, schreibe \"unbekannt\".",
+    "",
+    `Anfrage: ${query}`,
+    brand ? `Hersteller: ${brand}` : "",
+    refrigerant ? `Kaeltemittel: ${refrigerant}` : "",
+    notes ? `Zusatzinfo: ${notes}` : ""
+  ].filter(Boolean).join("\n");
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${openAiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        input: promptParts,
+        tools: [{ type: "web_search" }],
+        temperature: 0.2,
+        max_output_tokens: 1200
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      res.status(response.status).json({
+        error: data && data.error && data.error.message ? data.error.message : "OpenAI Anfrage fehlgeschlagen."
+      });
+      return;
+    }
+
+    let text = data.output_text || "";
+    if (!text && Array.isArray(data.output)) {
+      text = data.output
+        .flatMap((item) => item.content || [])
+        .filter((content) => content.type === "output_text")
+        .map((content) => content.text)
+        .join("\n");
+    }
+
+    if (text.includes("```")) {
+      text = text.replace(/```(?:json)?/g, "").trim();
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch (error) {
+      res.status(200).json({
+        summary: "Antwort konnte nicht geparst werden.",
+        specs: {},
+        en12900: [],
+        sources: [],
+        raw: text
+      });
+      return;
+    }
+
+    res.status(200).json({
+      summary: payload.summary || "KI Recherche abgeschlossen.",
+      specs: payload.specs || {},
+      en12900: Array.isArray(payload.en12900) ? payload.en12900 : [],
+      sources: Array.isArray(payload.sources) ? payload.sources : []
+    });
+  } catch (error) {
+    res.status(500).json({ error: error && error.message ? error.message : String(error) });
+  }
+});
+
 exports.notifyOnImportantNote = functions.firestore
   .document("importantNotes/{noteId}")
   .onCreate(async (snap) => {

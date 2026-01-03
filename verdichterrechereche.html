@@ -6,6 +6,7 @@
     <title>Pakora | Verdichter Recherche</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
     <style>
         :root {
@@ -287,6 +288,18 @@
             color: #05120b;
             box-shadow: 0 10px 24px rgba(34, 197, 94, 0.3);
         }
+
+        .btn-secondary {
+            background: rgba(148, 163, 184, 0.14);
+            color: var(--text);
+            border: 1px solid var(--border);
+            box-shadow: none;
+        }
+
+        .btn-secondary[disabled] {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -353,6 +366,92 @@
             </div>
             <div style="margin-top:15px;">
                 <button id="searchBtn" class="btn btn-primary">Suche starten</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-top:0; font-size:18px;">KI Recherche</h2>
+            <div class="grid-2">
+                <div>
+                    <label>Modell / Typ</label>
+                    <input id="aiQueryInput" type="text" placeholder="z.B. Copeland ZB58KCE-TFD">
+                </div>
+                <div>
+                    <label>Hersteller (optional)</label>
+                    <input id="aiBrandInput" type="text" placeholder="z.B. Copeland">
+                </div>
+                <div>
+                    <label>Kaeltemittel (optional)</label>
+                    <input id="aiRefrigerantInput" type="text" placeholder="z.B. R404A">
+                </div>
+                <div>
+                    <label>Zusatzinfo (optional)</label>
+                    <input id="aiNotesInput" type="text" placeholder="z.B. 400V, 50Hz, Scroll">
+                </div>
+            </div>
+            <div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button id="aiSearchBtn" class="btn btn-primary">KI Suche starten</button>
+                <button id="aiPdfBtn" class="btn btn-secondary" disabled>PDF erstellen</button>
+            </div>
+            <div id="aiStatus" style="margin-top:10px; font-size:13px; color:var(--secondary);"></div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-top:0; font-size:18px;">KI Ergebnisse</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Wert</th>
+                        </tr>
+                    </thead>
+                    <tbody id="aiResultsBody">
+                        <tr>
+                            <td colspan="2" style="text-align:center; padding:24px; color:#94a3b8;">
+                                Noch keine KI Ergebnisse.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-wrap" style="margin-top:16px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>EN12900</th>
+                            <th>Te (C)</th>
+                            <th>Tc (C)</th>
+                            <th>Kaelteleistung (W)</th>
+                            <th>Leistungsaufnahme (W)</th>
+                            <th>COP</th>
+                        </tr>
+                    </thead>
+                    <tbody id="aiEnBody">
+                        <tr>
+                            <td colspan="6" style="text-align:center; padding:16px; color:#94a3b8;">
+                                Noch keine EN12900 Daten.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-wrap" style="margin-top:16px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Quelle</th>
+                            <th>Link</th>
+                        </tr>
+                    </thead>
+                    <tbody id="aiSourcesBody">
+                        <tr>
+                            <td colspan="2" style="text-align:center; padding:16px; color:#94a3b8;">
+                                Noch keine Quellen.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -440,6 +539,20 @@
         const capacityInput = document.getElementById('capacityInput');
         const resultsBody = document.getElementById('resultsBody');
         const searchBtn = document.getElementById('searchBtn');
+        const aiQueryInput = document.getElementById('aiQueryInput');
+        const aiBrandInput = document.getElementById('aiBrandInput');
+        const aiRefrigerantInput = document.getElementById('aiRefrigerantInput');
+        const aiNotesInput = document.getElementById('aiNotesInput');
+        const aiResultsBody = document.getElementById('aiResultsBody');
+        const aiEnBody = document.getElementById('aiEnBody');
+        const aiSourcesBody = document.getElementById('aiSourcesBody');
+        const aiSearchBtn = document.getElementById('aiSearchBtn');
+        const aiPdfBtn = document.getElementById('aiPdfBtn');
+        const aiStatus = document.getElementById('aiStatus');
+
+        const AI_FUNCTION_URL = "https://us-central1-pakora-automations-chat.cloudfunctions.net/aiCompressorLookup";
+        let lastAiResult = null;
+        let cachedLogoDataUrl = null;
 
         function normalize(value) {
             return String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -448,6 +561,281 @@
         function formatPrice(value) {
             if (!value && value !== 0) return '-';
             return `${value.toFixed(2)} EUR`;
+        }
+
+        function escapeHtml(value) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+            return String(value).replace(/[&<>"']/g, (m) => map[m]);
+        }
+
+        function toDisplayValue(value) {
+            if (Array.isArray(value)) return value.join(', ');
+            if (value && typeof value === 'object') return JSON.stringify(value);
+            if (value === null || value === undefined || value === '') return '-';
+            return String(value);
+        }
+
+        function renderAiResults(specs) {
+            if (!aiResultsBody) return;
+            const entries = specs && typeof specs === 'object' ? Object.entries(specs) : [];
+            if (!entries.length) {
+                aiResultsBody.innerHTML = `
+                    <tr>
+                        <td colspan="2" style="text-align:center; padding:24px; color:#94a3b8;">
+                            Keine KI Daten gefunden.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            aiResultsBody.innerHTML = entries.map(([key, value]) => {
+                const label = escapeHtml(key.replace(/_/g, ' '));
+                const displayValue = escapeHtml(toDisplayValue(value));
+                return `
+                    <tr>
+                        <td>${label}</td>
+                        <td>${displayValue}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderAiEn12900(rows) {
+            if (!aiEnBody) return;
+            if (!Array.isArray(rows) || !rows.length) {
+                aiEnBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding:16px; color:#94a3b8;">
+                            Keine EN12900 Daten.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            aiEnBody.innerHTML = rows.map((row) => {
+                const te = row && row.te_c !== undefined ? row.te_c : '-';
+                const tc = row && row.tc_c !== undefined ? row.tc_c : '-';
+                const q0 = row && row.capacity_w !== undefined ? row.capacity_w : '-';
+                const p1 = row && row.power_w !== undefined ? row.power_w : '-';
+                const cop = row && row.cop !== undefined ? row.cop : '-';
+                return `
+                    <tr>
+                        <td>EN12900</td>
+                        <td>${escapeHtml(toDisplayValue(te))}</td>
+                        <td>${escapeHtml(toDisplayValue(tc))}</td>
+                        <td>${escapeHtml(toDisplayValue(q0))}</td>
+                        <td>${escapeHtml(toDisplayValue(p1))}</td>
+                        <td>${escapeHtml(toDisplayValue(cop))}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderAiSources(sources) {
+            if (!aiSourcesBody) return;
+            if (!Array.isArray(sources) || !sources.length) {
+                aiSourcesBody.innerHTML = `
+                    <tr>
+                        <td colspan="2" style="text-align:center; padding:16px; color:#94a3b8;">
+                            Keine Quellen.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            aiSourcesBody.innerHTML = sources.map((source) => {
+                const title = escapeHtml(source.title || source.name || 'Quelle');
+                const url = escapeHtml(source.url || '');
+                const link = url ? `<a href="${url}" target="_blank" rel="noopener">${url}</a>` : '-';
+                return `
+                    <tr>
+                        <td>${title}</td>
+                        <td>${link}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function setAiStatus(message, isError) {
+            if (!aiStatus) return;
+            aiStatus.textContent = message || '';
+            aiStatus.style.color = isError ? '#f87171' : 'var(--secondary)';
+        }
+
+        async function fetchAiData(payload) {
+            const response = await fetch(AI_FUNCTION_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                const errorMessage = data && data.error ? data.error : 'KI Anfrage fehlgeschlagen.';
+                throw new Error(errorMessage);
+            }
+            return data;
+        }
+
+        async function runAiLookup() {
+            const query = String(aiQueryInput?.value || '').trim();
+            const brand = String(aiBrandInput?.value || '').trim();
+            const refrigerant = String(aiRefrigerantInput?.value || '').trim();
+            const notes = String(aiNotesInput?.value || '').trim();
+
+            if (!query) {
+                setAiStatus('Bitte ein Modell oder einen Typ eingeben.', true);
+                return;
+            }
+
+            setAiStatus('KI Recherche laeuft...', false);
+            if (aiSearchBtn) aiSearchBtn.disabled = true;
+            if (aiPdfBtn) aiPdfBtn.disabled = true;
+            lastAiResult = null;
+
+            try {
+                const data = await fetchAiData({ query, brand, refrigerant, notes });
+                lastAiResult = {
+                    query,
+                    specs: data.specs || {},
+                    en12900: data.en12900 || [],
+                    sources: data.sources || [],
+                    summary: data.summary || ''
+                };
+                renderAiResults(lastAiResult.specs);
+                renderAiEn12900(lastAiResult.en12900);
+                renderAiSources(lastAiResult.sources);
+                setAiStatus(data.summary || 'KI Recherche abgeschlossen.', false);
+                if (aiPdfBtn) aiPdfBtn.disabled = false;
+            } catch (error) {
+                renderAiResults({});
+                renderAiEn12900([]);
+                renderAiSources([]);
+                setAiStatus(error.message || 'KI Anfrage fehlgeschlagen.', true);
+            } finally {
+                if (aiSearchBtn) aiSearchBtn.disabled = false;
+            }
+        }
+
+        function slugify(value) {
+            return String(value || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .slice(0, 40) || 'verdichter';
+        }
+
+        async function getLogoDataUrl() {
+            if (cachedLogoDataUrl) return cachedLogoDataUrl;
+            try {
+                const response = await fetch('logo.png');
+                const blob = await response.blob();
+                const reader = new FileReader();
+                cachedLogoDataUrl = await new Promise((resolve) => {
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => resolve(null);
+                    reader.readAsDataURL(blob);
+                });
+            } catch (error) {
+                cachedLogoDataUrl = null;
+            }
+            return cachedLogoDataUrl;
+        }
+
+        async function generateAiPdf() {
+            if (!lastAiResult) {
+                setAiStatus('Keine KI Daten fuer PDF vorhanden.', true);
+                return;
+            }
+
+            const jspdfRef = window.jspdf;
+            if (!jspdfRef || !jspdfRef.jsPDF) {
+                setAiStatus('PDF Bibliothek nicht geladen.', true);
+                return;
+            }
+
+            const doc = new jspdfRef.jsPDF();
+            const logoDataUrl = await getLogoDataUrl();
+            if (logoDataUrl) {
+                doc.addImage(logoDataUrl, 'PNG', 10, 8, 30, 20);
+            }
+
+            doc.setFontSize(16);
+            doc.text('Pakora - Verdichter Recherche', 50, 18);
+            doc.setFontSize(11);
+            doc.text(`Anfrage: ${lastAiResult.query}`, 10, 35);
+
+            let y = 45;
+            doc.setFontSize(12);
+            doc.text('Technische Daten', 10, y);
+            y += 8;
+
+            const entries = Object.entries(lastAiResult.specs || {});
+            if (!entries.length) {
+                doc.setFontSize(11);
+                doc.text('Keine Daten gefunden.', 10, y);
+                y += 8;
+            } else {
+                doc.setFontSize(10);
+                entries.forEach(([key, value]) => {
+                    const line = `${key}: ${toDisplayValue(value)}`;
+                    const lines = doc.splitTextToSize(line, 180);
+                    lines.forEach((textLine) => {
+                        if (y > 280) {
+                            doc.addPage();
+                            y = 15;
+                        }
+                        doc.text(textLine, 10, y);
+                        y += 6;
+                    });
+                });
+            }
+
+            y += 6;
+            doc.setFontSize(12);
+            doc.text('EN12900 Leistungsdaten', 10, y);
+            y += 8;
+            doc.setFontSize(10);
+            const enRows = Array.isArray(lastAiResult.en12900) ? lastAiResult.en12900 : [];
+            if (!enRows.length) {
+                doc.text('Keine EN12900 Daten gefunden.', 10, y);
+                y += 6;
+            } else {
+                enRows.forEach((row) => {
+                    const line = `Te ${toDisplayValue(row.te_c)} C / Tc ${toDisplayValue(row.tc_c)} C: Q0 ${toDisplayValue(row.capacity_w)} W, P1 ${toDisplayValue(row.power_w)} W, COP ${toDisplayValue(row.cop)}`;
+                    const lines = doc.splitTextToSize(line, 180);
+                    lines.forEach((textLine) => {
+                        if (y > 280) {
+                            doc.addPage();
+                            y = 15;
+                        }
+                        doc.text(textLine, 10, y);
+                        y += 6;
+                    });
+                });
+            }
+
+            y += 4;
+            doc.setFontSize(12);
+            doc.text('Quellen', 10, y);
+            y += 8;
+            doc.setFontSize(10);
+            (lastAiResult.sources || []).forEach((source) => {
+                const line = `${source.title || 'Quelle'}: ${source.url || '-'}`;
+                const lines = doc.splitTextToSize(line, 180);
+                lines.forEach((textLine) => {
+                    if (y > 280) {
+                        doc.addPage();
+                        y = 15;
+                    }
+                    doc.text(textLine, 10, y);
+                    y += 6;
+                });
+            });
+
+            doc.save(`pakora-verdichter-${slugify(lastAiResult.query)}.pdf`);
         }
 
         function renderResults(rows, capacityTarget) {
@@ -515,6 +903,14 @@
 
         if (searchBtn) {
             searchBtn.addEventListener('click', runSearch);
+        }
+
+        if (aiSearchBtn) {
+            aiSearchBtn.addEventListener('click', runAiLookup);
+        }
+
+        if (aiPdfBtn) {
+            aiPdfBtn.addEventListener('click', generateAiPdf);
         }
     </script>
 
