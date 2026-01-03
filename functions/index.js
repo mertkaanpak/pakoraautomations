@@ -181,7 +181,7 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
   const promptParts = [
     "Du bist ein technischer Rechercheassistent fuer Verdichter.",
     "Suche im Web nach technischen Daten zum angegebenen Modell/Typ.",
-    "Prioritaet: EN12900 Leistungsdaten bei Tc 45 C und Te -10 C sowie Te -25 C.",
+    "Prioritaet: komplette EN12900 Leistungstabelle (alle verfuegbaren Te/Tc Kombinationen).",
     "Nutze diese Quellen zuerst (in dieser Reihenfolge), wenn vorhanden:",
     "1) Embraco: https://products.embraco.com/compressors",
     "2) Danfoss Coolselector2 (Berechnungs- und Auswahlsoftware)",
@@ -200,8 +200,8 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     "  \"summary\": \"kurze Zusammenfassung in Deutsch\",",
     "  \"specs\": { \"parameter\": \"wert\", ... },",
     "  \"en12900\": [",
-    "    { \"te_c\": -10, \"tc_c\": 45, \"capacity_w\": \"...\", \"power_w\": \"...\", \"cop\": \"...\" },",
-    "    { \"te_c\": -25, \"tc_c\": 45, \"capacity_w\": \"...\", \"power_w\": \"...\", \"cop\": \"...\" }",
+    "    { \"te_c\": \"...\", \"tc_c\": \"...\", \"capacity_w\": \"...\", \"power_w\": \"...\", \"cop\": \"...\" },",
+    "    { \"te_c\": \"...\", \"tc_c\": \"...\", \"capacity_w\": \"...\", \"power_w\": \"...\", \"cop\": \"...\" }",
     "  ],",
     "  \"sources\": [ { \"title\": \"...\", \"url\": \"...\" }, ... ]",
     "}",
@@ -209,7 +209,8 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     "Wenn ein Wert nicht zu finden ist, schreibe \"unbekannt\".",
     "Wenn keine offiziellen Herstellerquellen gefunden werden, nutze PDF-Datenblaetter als Fallback.",
     "Wenn gar nichts passt, fuelle alle Felder mit \"unbekannt\" und setze summary entsprechend.",
-    "Gib immer beide EN12900 Zeilen aus; wenn keine Daten gefunden, nutze \"unbekannt\".",
+    "Wenn eine EN12900 Tabelle vorhanden ist, gib alle Zeilen zurueck.",
+    "Wenn keine EN12900 Tabelle vorhanden ist, setze en12900 auf [].",
     "",
     `Anfrage: ${query}`,
     brand ? `Hersteller: ${brand}` : "",
@@ -229,7 +230,7 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
         input: promptParts,
         tools: [{ type: "web_search" }],
         temperature: 0.2,
-        max_output_tokens: 1200
+        max_output_tokens: 3000
       })
     });
 
@@ -316,10 +317,7 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
       res.status(200).json({
         summary: "Keine offiziellen Herstellerquellen oder passende PDF-Datenblaetter gefunden.",
         specs: {},
-        en12900: [
-          { te_c: -10, tc_c: 45, capacity_w: "unbekannt", power_w: "unbekannt", cop: "unbekannt" },
-          { te_c: -25, tc_c: 45, capacity_w: "unbekannt", power_w: "unbekannt", cop: "unbekannt" }
-        ],
+        en12900: [],
         sources: []
       });
       return;
