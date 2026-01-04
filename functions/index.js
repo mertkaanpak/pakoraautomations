@@ -1,5 +1,6 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const pdfParse = require("pdf-parse");
 
 admin.initializeApp();
 
@@ -201,6 +202,7 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     "Pruefe Modellvarianten (z.B. Leerzeichen/Bindestriche): VNEU213U, VNEU 213 U, VNEU-213U.",
     "Suche explizit mit 'model pdf datasheet' und 'filetype:pdf', wenn noetig.",
     "Nutze mehrere Suchanfragen mit Varianten des Modells (Gross/Klein, Leerzeichen, Bindestrich).",
+    "Wenn du ein offizielles PDF-Datenblatt findest, fuehre es in sources auf.",
     "Gib nur JSON zurueck mit folgendem Format:",
     "{",
     "  \"summary\": \"kurze Zusammenfassung in Deutsch\",",
@@ -449,6 +451,54 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
       return;
     }
 
+    const extractEn12900FromText = (pdfText) => {
+      if (!pdfText) return [];
+      const normalized = String(pdfText).replace(/\r/g, "");
+      const matchIndex = normalized.search(/Condensing Temperature\s*45/i);
+      if (matchIndex === -1) return [];
+      const segment = normalized.slice(matchIndex);
+      const endIndex = segment.search(/Condensing Temperature\s*55|ENVELOPE|EXTERNAL DIMENSIONS/i);
+      const section = endIndex === -1 ? segment : segment.slice(0, endIndex);
+      const lines = section.split("\n").map((line) => line.trim()).filter(Boolean);
+      const rowRegex = /^\s*(-?\d+)\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(\d+)\b/;
+      const rows = [];
+      lines.forEach((line) => {
+        const match = line.match(rowRegex);
+        if (!match) return;
+        const te = Number(match[1]);
+        if (te !== -10 && te !== -25) return;
+        rows.push({
+          te_c: String(te),
+          tc_c: "45",
+          capacity_w: match[2],
+          cop: match[3],
+          power_w: match[4]
+        });
+      });
+      return rows;
+    };
+
+    const pdfUrl = rawSources
+      .map((source) => source && source.url)
+      .filter((urlValue) => isPdfSource(urlValue || ""))[0];
+
+    let parsedEnRows = [];
+    if (pdfUrl) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+        const pdfResponse = await fetch(pdfUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (pdfResponse.ok) {
+          const buffer = Buffer.from(await pdfResponse.arrayBuffer());
+          const parsed = await pdfParse(buffer);
+          parsedEnRows = extractEn12900FromText(parsed.text || "");
+        }
+      } catch (error) {
+        parsedEnRows = [];
+      }
+    }
+
     const enRows = Array.isArray(payload.en12900) ? payload.en12900 : [];
     const filteredEnRows = enRows.filter((row) => {
       const te = Number(row && row.te_c);
@@ -457,10 +507,12 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
       return tc === 45 && (te === -10 || te === -25);
     });
 
+    const finalEnRows = parsedEnRows.length ? parsedEnRows : filteredEnRows;
+
     res.status(200).json({
       summary: payload.summary || "KI Recherche abgeschlossen.",
       specs,
-      en12900: filteredEnRows,
+      en12900: finalEnRows,
       sources: hasInlineDatasheet ? (Array.isArray(payload.sources) ? payload.sources : []) : (officialSources.length ? officialSources : pdfSources)
     });
   } catch (error) {
