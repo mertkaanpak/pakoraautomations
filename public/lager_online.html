@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pakora Lager Live (Cloud)</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        /* --- DESIGN SYSTEM (IDENTISCH ZUR HAUPT-APP) --- */
+        :root { 
+            --primary: #2563eb; 
+            --primary-dark: #1e40af; 
+            --secondary: #64748b; 
+            --accent: #f59e0b; 
+            --bg: #f8fafc; 
+            --surface: #ffffff; 
+            --text: #0f172a; 
+            --border: #e2e8f0; 
+            --radius: 16px; 
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            display: flex; 
+            height: 100vh; 
+            background: var(--bg); 
+            color: var(--text); 
+            overflow: hidden; 
+        }
+
+        /* SIDEBAR */
+        .sidebar { 
+            width: 280px; 
+            background: #0f172a; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 25px 20px; 
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            z-index: 1000; 
+            flex-shrink: 0;
+            height: 100%;
+        }
+        
+        .logo { 
+            display: flex; 
+            align-items: center; 
+            gap: 30px; 
+            margin-bottom: 60px; 
+            color: #fff; 
+        }
+        .logo img { max-width: 100%; height: auto; max-height: 150px; object-fit: contain; }
+
+        .nav-item { 
+            padding: 14px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            color: #94a3b8; 
+            font-weight: 500; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            transition: 0.2s; 
+            margin-bottom: 5px; 
+            font-size: 15px;
+            text-decoration: none;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.1); color: white; }
+        .nav-item.active { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(37,99,235,0.4); }
+
+        /* MAIN AREA */
+        .main { 
+            flex: 1; 
+            padding: 30px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            position: relative;
+        }
+
+        /* DASHBOARD GRID */
+        .header-card {
+            background: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            border-left: 5px solid var(--primary);
+        }
+        .stat-val { font-size: 24px; font-weight: 800; color: var(--text); }
+        .stat-label { font-size: 13px; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* TABLE & CONTROLS */
+        .card { 
+            background: var(--surface); 
+            padding: 25px; 
+            border-radius: var(--radius); 
+            border: 1px solid var(--border); 
+            box-shadow: var(--shadow); 
+            flex: 1; /* Füllt den Rest */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .controls { display: grid; grid-template-columns: 1fr auto auto; gap: 15px; margin-bottom: 20px; }
+        
+        input[type="text"] { 
+            width: 100%; padding: 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; outline: none;
+        }
+        input:focus { border-color: var(--primary); }
+
+        .btn { 
+            padding: 14px 20px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; color: white; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: 0.2s;
+        }
+        .btn-primary { background: var(--primary); }
+        .btn-upload { background: var(--accent); }
+        
+        .stock-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .stock-table th { text-align: left; padding: 12px; background: #f1f5f9; color: #475569; font-size: 12px; text-transform: uppercase; border-radius: 6px; }
+        .stock-table td { padding: 15px 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        .stock-table tr:last-child td { border-bottom: none; }
+
+        /* STOCK CONTROLLER */
+        .stock-ctrl { display: flex; align-items: center; gap: 5px; }
+        .btn-qty { width: 32px; height: 32px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--primary); }
+        .btn-qty:active { background: #eff6ff; }
+        .val-qty { font-weight: 700; width: 40px; text-align: center; }
+
+        /* STATUS BADGE */
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .st-ok { background: #dcfce7; color: #166534; }
+        .st-low { background: #fee2e2; color: #991b1b; }
+        
+        .online-dot { width: 10px; height: 10px; background: #ccc; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .online-dot.active { background: #16a34a; box-shadow: 0 0 10px #16a34a; }
+
+        /* MOBILE */
+        .mobile-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 2000; background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 50%; font-size: 20px; box-shadow: 0 4px 12px rgba(37,99,235,0.4); }
+        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 900; }
+
+        @media (max-width: 900px) {
+            .sidebar { position: fixed; transform: translateX(-100%); width: 85%; max-width: 320px; box-shadow: 10px 0 30px rgba(0,0,0,0.2); }
+            .sidebar.open { transform: translateX(0); }
+            .mobile-toggle { display: block; }
+            .mobile-overlay.active { display: block; }
+            .main { padding: 80px 15px 20px 15px; }
+            .controls { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+    
+        /* Modern refresh */
+        :root {
+            --bg: #f5f7fb;
+            --surface: #ffffff;
+            --border: #e5e7eb;
+            --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            --shadow-soft: 0 4px 14px rgba(15, 23, 42, 0.06);
+        }
+
+        body {
+            background:
+                radial-gradient(900px 400px at 10% -10%, rgba(37, 99, 235, 0.12), transparent 45%),
+                radial-gradient(800px 350px at 90% 0%, rgba(245, 158, 11, 0.12), transparent 45%),
+                linear-gradient(180deg, #f8fafc, #eef2f7 60%, #f8fafc);
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #0b1220, #111827);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 12px 0 30px rgba(15, 23, 42, 0.35);
+        }
+
+        .logo { margin-bottom: 60px; }
+
+        .nav-item {
+            position: relative;
+            border: 1px solid transparent;
+        }
+
+        .nav-item.active {
+            background: rgba(37, 99, 235, 0.18);
+            border-color: rgba(37, 99, 235, 0.35);
+            box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.15);
+        }
+
+        .nav-item.active::before {
+            content: "";
+            position: absolute;
+            left: 6px;
+            top: 8px;
+            bottom: 8px;
+            width: 4px;
+            border-radius: 999px;
+            background: #60a5fa;
+        }
+
+        .main { gap: 20px; }
+
+        .card,
+        .dash-card,
+        .news-card,
+        .stat-card,
+        .config-card,
+        .admin-panel,
+        .header-card,
+        .selection-card,
+        .summary-box {
+            box-shadow: var(--shadow);
+            border-color: var(--border);
+        }
+
+        .dash-card:hover,
+        .selection-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+        }
+
+        .news-card {
+            background: linear-gradient(180deg, #ffffff, #f8fafc);
+        }
+
+        input,
+        select,
+        textarea {
+            border-color: #d1d5db;
+            background: #ffffff;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+            border-color: #2563eb;
+        }
+
+        .btn,
+        .btn-primary,
+        .btn-send,
+        .btn-calc,
+        .btn-upload {
+            transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+        }
+
+        .btn-primary,
+        .btn-send,
+        .btn-calc {
+            background: linear-gradient(120deg, #2563eb, #1d4ed8);
+            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn-upload {
+            background: linear-gradient(120deg, #f59e0b, #f97316);
+        }
+
+        .btn-primary:hover,
+        .btn-send:hover,
+        .btn-calc:hover,
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.02);
+        }
+
+        /* Communication theme overrides */
+        :root {
+            --primary: #22c55e;
+            --primary-dark: #16a34a;
+            --secondary: #94a3b8;
+            --accent: #22c55e;
+            --bg: #0f172a;
+            --surface: #111827;
+            --text: #e5e7eb;
+            --border: rgba(148, 163, 184, 0.16);
+            --shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
+        }
+
+        body {
+            font-family: 'Sora', sans-serif;
+            background:
+                radial-gradient(700px 360px at 15% -10%, rgba(34, 197, 94, 0.2), transparent 55%),
+                radial-gradient(900px 420px at 90% 0%, rgba(59, 130, 246, 0.18), transparent 45%),
+                linear-gradient(180deg, #0b1220, #0f172a 50%, #0b1220);
+            color: var(--text);
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #0b1220, #0f172a);
+            border-right: 1px solid rgba(148, 163, 184, 0.12);
+            box-shadow: 10px 0 30px rgba(2, 6, 23, 0.55);
+        }
+
+        .nav-item { color: #cbd5f5; }
+        .nav-item:hover { background: rgba(148, 163, 184, 0.12); color: white; }
+        .nav-item.active {
+            background: rgba(34, 197, 94, 0.16);
+            border-color: rgba(34, 197, 94, 0.25);
+            box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.08);
+        }
+        .nav-item.active::before { background: #22c55e; }
+
+        .card,
+        .dash-card,
+        .news-card,
+        .stat-card,
+        .config-card,
+        .admin-panel,
+        .header-card,
+        .selection-card,
+        .summary-box {
+            background: rgba(15, 23, 42, 0.7);
+            border-color: var(--border);
+            box-shadow: var(--shadow);
+            color: var(--text);
+        }
+
+        input,
+        select,
+        textarea {
+            background: rgba(15, 23, 42, 0.6);
+            color: #e2e8f0;
+            border-color: rgba(148, 163, 184, 0.25);
+        }
+        input::placeholder,
+        textarea::placeholder { color: #94a3b8; }
+
+        table th { background: rgba(148, 163, 184, 0.12); color: #cbd5f5; }
+        table td { border-color: rgba(148, 163, 184, 0.12); color: #e2e8f0; }
+
+        .btn-primary,
+        .btn-send,
+        .btn-calc,
+        .btn-upload {
+            background: linear-gradient(120deg, #22c55e, #16a34a);
+            color: #05120b;
+            box-shadow: 0 10px 24px rgba(34, 197, 94, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-overlay" onclick="toggleSidebar()"></div>
+    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+
+        <nav class="sidebar">
+        <div class="logo">
+            <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+            <span style="display:none; font-size: 22px; font-weight:700;">Pakora</span>
+        </div>
+        <a href="index.html" class="nav-item" data-section="dashboard">Uebersicht</a>
+        <a href="index.html#calc" class="nav-item" data-section="calc">Smart-Kalkulation</a>
+        <a href="konfigurator.html" class="nav-item">Kuehlzellen Kalkulator</a>
+        <a href="index.html#db" class="nav-item" data-section="db">Produkt-Datenbank</a>
+        <a href="lager_online.html" class="nav-item">Lagerbestand</a>
+        <a href="kalender.html?v=2" class="nav-item">Kalender</a>
+        <a href="whatsapp_anfragen.html" class="nav-item">WhatsApp Anfragen</a>
+        <a href="kommunikation.html" class="nav-item">Kommunikation</a>
+        <a href="whatsapp_bot.html" class="nav-item">WhatsApp Bot</a>
+        <a href="verdichterrechereche.html" class="nav-item">Verdichter Recherche</a>
+        <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
+    </nav>
+
+    <main class="main">
+        
+        <div class="header-card">
+            <div>
+                <h1 style="margin:0; font-size:22px; font-weight:800;">Zentrallager Live</h1>
+                <div style="font-size:13px; color:var(--secondary); margin-top:5px;">
+                    <span class="online-dot" id="onlineDot"></span> 
+                    <span id="connectionText">Verbinde mit Cloud...</span>
+                </div>
+            </div>
+            <div id="lastSync" style="font-size:12px; color:#94a3b8; font-family:monospace;">
+                Sync: --:--:--
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-val" id="countTotal">0</div>
+                <div class="stat-label">Positionen</div>
+            </div>
+            <div class="stat-card" style="border-left-color: #f59e0b;">
+                <div class="stat-val" id="countLow">0</div>
+                <div class="stat-label">Kritisch (Leer)</div>
+            </div>
+            </div>
+
+        <div class="card">
+            <div class="controls">
+                <input type="text" id="searchInput" placeholder="🔍 Artikel, EAN oder Nummer suchen..." onkeyup="renderTable()">
+                <button class="btn btn-upload" onclick="document.getElementById('csvInput').click()">
+                    📂 Liste hochladen
+                </button>
+                <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="handleCSV(this)">
+            </div>
+
+            <div style="overflow-x:auto; flex:1;">
+                <table class="stock-table">
+                    <thead>
+                        <tr>
+                            <th>Art.Nr</th>
+                            <th>Bezeichnung</th>
+                            <th>Bestand</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="4" style="text-align:center; padding:30px; color:#94a3b8;">Lade Daten...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // ==========================================
+        // 1. FIREBASE CONFIGURATION (HIER EINFÜGEN!)
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "HIER_API_KEY_EINFÜGEN",
+            authDomain: "DEIN_PROJEKT.firebaseapp.com",
+            databaseURL: "https://DEIN_PROJEKT-default-rtdb.firebaseio.com",
+            projectId: "DEIN_PROJEKT",
+            storageBucket: "DEIN_PROJEKT.appspot.com",
+            messagingSenderId: "NUMMER",
+            appId: "APP_ID"
+        };
+        // ==========================================
+
+        // --- UI LOGIK (Sidebar) ---
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.mobile-overlay').classList.toggle('active');
+        }
+
+        // --- FIREBASE LOGIK ---
+        if (firebase.apps.length === 0) {
+            try {
+                firebase.initializeApp(firebaseConfig);
+            } catch(e) {
+                document.getElementById('connectionText').innerText = "Konfigurations-Fehler (siehe Code)";
+                console.error("Firebase Config fehlt!", e);
+            }
+        }
+        
+        let db, stockRef;
+        let localData = {}; // Lokale Kopie der Daten für schnelle Suche
+
+        if(firebase.apps.length > 0) {
+            db = firebase.database();
+            stockRef = db.ref('lagerbestand');
+
+            // Verbindungs-Status
+            db.ref(".info/connected").on("value", (snap) => {
+                const dot = document.getElementById('onlineDot');
+                const txt = document.getElementById('connectionText');
+                if (snap.val() === true) {
+                    dot.classList.add('active');
+                    txt.innerText = "Online & Synchron";
+                    txt.style.color = "#166534";
+                } else {
+                    dot.classList.remove('active');
+                    txt.innerText = "Offline (Verbindung verloren)";
+                    txt.style.color = "#dc2626";
+                }
+            });
+
+            // ECHTZEIT LISTENER
+            stockRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if(data) {
+                    localData = data;
+                    renderTable();
+                    updateStats();
+                    
+                    const now = new Date();
+                    document.getElementById('lastSync').innerText = "Sync: " + now.toLocaleTimeString();
+                } else {
+                    localData = {};
+                    renderTable();
+                }
+            });
+        }
+
+        // --- RENDERING ---
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            tbody.innerHTML = "";
+
+            const keys = Object.keys(localData).sort(); // Sortiert nach ID
+
+            if(keys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:40px; color:#94a3b8;">
+                    Das Lager ist leer.<br>
+                    <span style="font-size:12px">Lade eine CSV-Datei hoch, um zu starten.</span>
+                </td></tr>`;
+                return;
+            }
+
+            let visibleCount = 0;
+
+            keys.forEach(key => {
+                const item = localData[key];
+                
+                // Filterlogik
+                if(search && !key.toLowerCase().includes(search) && !item.name.toLowerCase().includes(search)) return;
+
+                visibleCount++;
+
+                // Status Badge
+                let statusBadge = item.qty > 0 
+                    ? `<span class="status-badge st-ok">Lagernd</span>` 
+                    : `<span class="status-badge st-low">Leer</span>`;
+
+                // Warnung bei geringem Bestand
+                if(item.qty > 0 && item.qty <= 2) {
+                    statusBadge = `<span class="status-badge" style="background:#ffedd5; color:#9a3412;">Wenig</span>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family:monospace; color:#64748b; font-weight:600;">${item.originalId || key}</td>
+                    <td style="font-weight:600; color:#0f172a;">${item.name}</td>
+                    <td>
+                        <div class="stock-ctrl">
+                            <div class="btn-qty" onclick="updateStock('${key}', -1)">−</div>
+                            <div class="val-qty">${item.qty}</div>
+                            <div class="btn-qty" onclick="updateStock('${key}', 1)">+</div>
+                        </div>
+                    </td>
+                    <td>${statusBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if(visibleCount === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:#94a3b8;">Keine Treffer für "${search}"</td></tr>`;
+            }
+        }
+
+        function updateStats() {
+            const keys = Object.keys(localData);
+            document.getElementById('countTotal').innerText = keys.length;
+            
+            let low = 0;
+            keys.forEach(k => {
+                if(localData[k].qty <= 0) low++;
+            });
+            document.getElementById('countLow').innerText = low;
+        }
+
+        // --- ACTIONS ---
+        function updateStock(key, delta) {
+            if(!localData[key]) return;
+            let newQty = (localData[key].qty || 0) + delta;
+            if(newQty < 0) newQty = 0;
+
+            // UPDATE IN DER CLOUD (Passiert sofort überall)
+            db.ref('lagerbestand/' + key + '/qty').set(newQty);
+        }
+
+        // --- CSV UPLOAD ---
+        function handleCSV(input) {
+            const file = input.files[0];
+            if(!file) return;
+
+            if(!confirm("⚠️ ACHTUNG CHEF:\nHiermit wird der gesamte Online-Lagerbestand überschrieben!
+
+Fortfahren?")) {
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n');
+                let uploadObj = {};
+                let count = 0;
+
+                lines.forEach((line, idx) => {
+                    // Header überspringen, leere Zeilen ignorieren
+                    if(idx === 0 && line.toLowerCase().includes('id')) return;
+                    if(!line.trim()) return;
+
+                    const sep = line.includes(';') ? ';' : ',';
+                    const cols = line.split(sep);
+                    
+                    // Wir erwarten: ID | Name | Preis | Menge
+                    if(cols.length >= 2) {
+                        let rawId = cols[0].trim();
+                        if(!rawId) return;
+
+                        // Firebase mag keine . # $ [ ] in Keys -> Ersetzen durch _
+                        let safeId = rawId.replace(/[.#$/\[\]]/g, "_"); 
+                        
+                        let name = cols[1].trim();
+                        let qty = parseInt(cols[3]) || 0; // Spalte 4 in Excel ist Menge
+
+                        uploadObj[safeId] = {
+                            originalId: rawId,
+                            name: name,
+                            qty: qty
+                        };
+                        count++;
+                    }
+                });
+
+                // Hochladen
+                stockRef.set(uploadObj, (error) => {
+                    if (error) {
+                        alert("Fehler: " + error);
+                    } else {
+                        alert(`✅ ${count} Artikel erfolgreich hochgeladen und synchronisiert!`);
+                        input.value = ''; // Reset
+                    }
+                });
+            };
+            reader.readAsText(file, 'ISO-8859-1'); // Wichtig für Umlaute aus Excel
+        }
+
+    </script>
+
+    <style>
+        #authOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            backdrop-filter: blur(6px);
+        }
+        #authOverlay[hidden] { display: none; }
+        #authCard {
+            width: min(420px, 92vw);
+            background: #0b1220;
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(2, 6, 23, 0.6);
+        }
+        #authCard h2 { margin: 0 0 8px 0; font-size: 20px; }
+        #authCard p { margin: 0 0 18px 0; color: #94a3b8; font-size: 14px; }
+        #authCard label { display: block; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+        #authCard input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 16px;
+            margin-bottom: 14px;
+        }
+        #authCard button {
+            width: 100%;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(120deg, #2563eb, #1d4ed8);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #authError {
+            color: #f87171;
+            font-size: 13px;
+            min-height: 18px;
+        }            .logout-btn {
+            margin-top: auto;
+            background: rgba(148, 163, 184, 0.12);
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            text-align: left;
+        }
+        .logout-btn:hover { background: rgba(239, 68, 68, 0.15); color: #fecaca; border-color: rgba(239, 68, 68, 0.35); }
+</style>
+
+    <div id="authOverlay" hidden>
+        <div id="authCard">
+            <h2>Zugriff gesperrt</h2>
+            <p>Bitte anmelden, um fortzufahren.</p>
+            <form id="authForm">
+                <label for="authUser">Benutzername</label>
+                <input id="authUser" type="text" autocomplete="username" required />
+                <label for="authPass">Passwort</label>
+                <input id="authPass" type="password" autocomplete="current-password" required />
+                <div id="authError"></div>
+                <button type="submit">Anmelden</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        (function () {
+            const AUTH_KEY = "pakora_auth_user";
+            const ACCOUNTS = {
+                "m.pak": { pass: "admin", label: "Mert Kaan" },
+                "k.guemuesok": { pass: "pakora", label: "Kaan" },
+                "l.wenzel": { pass: "pakora", label: "Leon" },
+                "\u00f6.pak": { pass: "pakora", label: "\u00d6mer" }
+            };
+
+            const overlay = document.getElementById("authOverlay");
+            const form = document.getElementById("authForm");
+            const user = document.getElementById("authUser");
+            const pass = document.getElementById("authPass");
+            const error = document.getElementById("authError");
+            const logoutBtn = document.getElementById("logoutBtn");
+
+            const getStoredUser = () => (localStorage.getItem(AUTH_KEY) || "").toLowerCase();
+            const isAuthed = () => !!ACCOUNTS[getStoredUser()];
+            const showAuth = () => {
+                overlay.hidden = false;
+                if (logoutBtn) logoutBtn.hidden = true;
+                document.body.style.overflow = "hidden";
+                setTimeout(() => user.focus(), 50);
+            };
+            const hideAuth = () => {
+                overlay.hidden = true;
+                if (logoutBtn) logoutBtn.hidden = false;
+                document.body.style.overflow = "";
+            };
+
+            if (!isAuthed()) {
+                showAuth();
+            }
+
+            form.addEventListener("submit", (event) => {
+                event.preventDefault();
+                error.textContent = "";
+                const userId = user.value.trim().toLowerCase();
+
+                const password = pass.value.trim();
+
+                if (ACCOUNTS[userId] && password === ACCOUNTS[userId].pass) {
+                    localStorage.setItem(AUTH_KEY, userId);
+                    hideAuth();
+                    return;
+                }
+
+                error.textContent = "Falsche Zugangsdaten.";
+                pass.value = "";
+                pass.focus();
+            });
+            if (logoutBtn) {
+                logoutBtn.addEventListener("click", () => {
+                    localStorage.removeItem(AUTH_KEY);
+                    location.reload();
+                });
+            }
+        })();
+    </script>
+    <script>
+        (function () {
+            const path = (window.location.pathname.split('/').pop() || 'index.html');
+            const links = document.querySelectorAll('.sidebar .nav-item[href]');
+            let activeSet = false;
+            links.forEach((link) => {
+                const href = link.getAttribute('href') || '';
+                const cleanHref = href.split('#')[0].split('?')[0];
+                if (cleanHref && cleanHref === path) {
+                    link.classList.add('active');
+                    activeSet = true;
+                }
+            });
+
+            if (path === 'index.html') {
+                const hash = (window.location.hash || '').replace('#', '');
+                if (hash && typeof nav === 'function') {
+                    nav(hash);
+                    const targetLink = document.querySelector(`.sidebar .nav-item[data-section="${hash}"]`);
+                    if (targetLink) {
+                        links.forEach((link) => link.classList.remove('active'));
+                        targetLink.classList.add('active');
+                        activeSet = true;
+                    }
+                }
+            }
+
+            if (!activeSet) {
+                const defaultLink = document.querySelector('.sidebar .nav-item[data-section="dashboard"]');
+                if (defaultLink) defaultLink.classList.add('active');
+            }
+        })();
+    </script>
+</body>
+</html>
+
+
+
+

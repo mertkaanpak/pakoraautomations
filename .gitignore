@@ -3,6 +3,7 @@
 Thumbs.db
 *.log
 firebase-debug.log
+.firebase/
 
 # --- ABHÄNGIGKEITEN (Müll) ---
 node_modules/

@@ -1,0 +1,17 @@
+{
+  "name": "Pakora Automations",
+  "short_name": "Pakora",
+  "id": "https://pakora-automations-chat.web.app/index.html",
+  "start_url": "https://pakora-automations-chat.web.app/index.html?source=pwa",
+  "scope": "https://pakora-automations-chat.web.app/",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#22c55e",
+  "icons": [
+    {
+      "src": "https://pakora-automations-chat.web.app/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

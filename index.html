@@ -593,25 +593,21 @@
 
     <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
 
-   <nav class="sidebar">
+           <nav class="sidebar">
         <div class="logo">
             <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-            <span style="display:none; font-size: 24px; font-weight:800;">Pakora</span>
+            <span style="display:none; font-size: 22px; font-weight:700;">Pakora</span>
         </div>
-        
-        <div class="nav-item active" onclick="nav('dashboard'); toggleSidebar(false)">🏠 Übersicht</div>
-        
-        <div class="nav-item" onclick="nav('calc'); toggleSidebar(false)">❄️ Smart-Kalkulation</div>
-
-        <div class="nav-item" onclick="window.location.href='konfigurator.html'">📐 Kühlzellen Kalkulator</div>
-        <div class="nav-item" onclick="nav('db'); toggleSidebar(false)">⚙️ Produkt-Datenbank</div>
-        
-        <div class="nav-item" onclick="window.location.href='lager_online.html'">📦 Lagerbestand</div>
-        <div class="nav-item" onclick="window.location.href='kommunikation.html'">💬 Kommunikation</div>
-        <div class="nav-item" onclick="window.location.href='whatsapp_anfragen.html'">💡 WhatsApp Anfragen</div>
-        <div class="nav-item" onclick="window.location.href='whatsapp_bot.html'">🤖 WhatsApp Bot</div>
-        <div class="nav-item" onclick="window.location.href='kalender.html?v=2'">📅 Kalender</div>
-        <div class="nav-item" onclick="window.location.href='verdichterrechereche.html'">🧰 Verdichter Recherche</div>
+        <a href="index.html" class="nav-item" data-section="dashboard">Uebersicht</a>
+        <a href="index.html#calc" class="nav-item" data-section="calc">Smart-Kalkulation</a>
+        <a href="konfigurator.html" class="nav-item">Kuehlzellen Kalkulator</a>
+        <a href="index.html#db" class="nav-item" data-section="db">Produkt-Datenbank</a>
+        <a href="lager_online.html" class="nav-item">Lagerbestand</a>
+        <a href="kalender.html?v=2" class="nav-item">Kalender</a>
+        <a href="whatsapp_anfragen.html" class="nav-item">WhatsApp Anfragen</a>
+        <a href="kommunikation.html" class="nav-item">Kommunikation</a>
+        <a href="whatsapp_bot.html" class="nav-item">WhatsApp Bot</a>
+        <a href="verdichterrechereche.html" class="nav-item">Verdichter Recherche</a>
         <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
     </nav>
 
@@ -1737,6 +1733,39 @@ const CURRENT_NEWS_VERSION = 1;
         });
     }
 })();
+    </script>
+    <script>
+        (function () {
+            const path = (window.location.pathname.split('/').pop() || 'index.html');
+            const links = document.querySelectorAll('.sidebar .nav-item[href]');
+            let activeSet = false;
+            links.forEach((link) => {
+                const href = link.getAttribute('href') || '';
+                const cleanHref = href.split('#')[0].split('?')[0];
+                if (cleanHref && cleanHref === path) {
+                    link.classList.add('active');
+                    activeSet = true;
+                }
+            });
+
+            if (path === 'index.html') {
+                const hash = (window.location.hash || '').replace('#', '');
+                if (hash && typeof nav === 'function') {
+                    nav(hash);
+                    const targetLink = document.querySelector(`.sidebar .nav-item[data-section="${hash}"]`);
+                    if (targetLink) {
+                        links.forEach((link) => link.classList.remove('active'));
+                        targetLink.classList.add('active');
+                        activeSet = true;
+                    }
+                }
+            }
+
+            if (!activeSet) {
+                const defaultLink = document.querySelector('.sidebar .nav-item[data-section="dashboard"]');
+                if (defaultLink) defaultLink.classList.add('active');
+            }
+        })();
     </script>
 </body>
 </html>
