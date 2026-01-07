@@ -11,6 +11,7 @@ functions/node_modules/
 # --- GEHEIMNISSE (WICHTIG!) ---
 # Das hier darf auf keinen Fall auf GitHub landen:
 serviceAccountKey.json
+index.js
 .env
 
 # --- WHATSAPP SITZUNG ---
@@ -18,3 +19,6 @@ serviceAccountKey.json
 # sonst loggt sich der Server ständig aus/ein.
 .wwebjs_auth/
 .wwebjs_cache/
+
+# --- ABHÄNGIGKEITEN (Konfliktvermeidung) ---
+package-lock.json
