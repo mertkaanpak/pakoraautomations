@@ -661,3 +661,260 @@ exports.notifyOnImportantNote = functions.firestore
 
     return Promise.all(deletes);
   });
+
+
+function normalizePhone(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+async function sendWhatsappText(token, phoneNumberId, to, text) {
+  const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "text",
+      text: { body: text }
+    })
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`WhatsApp API Fehler ${response.status}: ${body}`);
+  }
+}
+
+async function buildAiReply({ apiKey, styleSamples, history, messageText }) {
+  const systemPrompt = [
+    "Du bist der WhatsApp Assistent von Mert Kaan (Pakora Automations).",
+    "Antworte freundlich, kurz und professionell, so als wuerdest du selbst schreiben.",
+    "Sprache der Antwort muss der Sprache der Kundenanfrage entsprechen (Deutsch, Englisch oder Tuerkisch).",
+    "Wenn Informationen fehlen, stelle 1-3 kurze Rueckfragen.",
+    "Bei Kuehlzellen-Anfragen frage nach Innenmass (LxBxH), Solltemperatur, Standort und Zeitrahmen.",
+    "Nutze keine Markdown-Listen oder Ueberschriften.",
+    "Gib deine Ausgabe nur als JSON im Format: {\"language\":\"de|en|tr\",\"reply\":\"...\"}"
+  ].join("
+");
+
+  const historyLines = history
+    .map((item) => `${item.role === "assistant" ? "Mert" : "Kunde"}: ${item.text}`)
+    .join("
+");
+
+  const userPrompt = [
+    styleSamples ? `Stilbeispiele von Mert:
+${styleSamples}` : "",
+    historyLines ? `Letzte Nachrichten:
+${historyLines}` : "",
+    `Neue Nachricht vom Kunden: ${messageText}`,
+    "Antwort als JSON:"
+  ].filter(Boolean).join("
+
+");
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      temperature: 0.4,
+      max_tokens: 180,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`OpenAI Fehler ${response.status}: ${body}`);
+  }
+
+  const data = await response.json();
+  const content = data && data.choices && data.choices[0] && data.choices[0].message
+    ? data.choices[0].message.content
+    : "";
+
+  if (!content) {
+    return { reply: "", language: "" };
+  }
+
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      reply: String(parsed.reply || "").trim(),
+      language: String(parsed.language || "").trim()
+    };
+  } catch (error) {
+    return { reply: String(content).trim(), language: "" };
+  }
+}
+
+exports.whatsappWebhook = functions.https.onRequest(async (req, res) => {
+  const config = functions.config();
+  const verifyToken = config.whatsapp && config.whatsapp.verify_token;
+
+  if (req.method === "GET") {
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+    if (mode === "subscribe" && token && token === verifyToken) {
+      res.status(200).send(challenge);
+      return;
+    }
+    res.status(403).send("Verification failed");
+    return;
+  }
+
+  if (req.method !== "POST") {
+    res.status(405).send("Use POST");
+    return;
+  }
+
+  try {
+    const payload = req.body || {};
+    const entry = payload.entry && payload.entry[0];
+    const change = entry && entry.changes && entry.changes[0] && entry.changes[0].value;
+    const messages = change && change.messages ? change.messages : [];
+    const contacts = change && change.contacts ? change.contacts : [];
+
+    if (!messages.length) {
+      res.status(200).send("No messages");
+      return;
+    }
+
+    const message = messages[0];
+    const messageId = message.id || "";
+    const from = message.from || "";
+    const timestamp = message.timestamp ? Number(message.timestamp) * 1000 : Date.now();
+    const name = contacts[0] && contacts[0].profile ? contacts[0].profile.name : "";
+    const text = message.text && message.text.body ? message.text.body.trim() : "";
+    const normalizedFrom = normalizePhone(from);
+
+    const isText = message.type === "text" && text;
+
+    if (messageId) {
+      const dedupeRef = admin.firestore().collection("whatsappMessageIds").doc(messageId);
+      const dedupeSnap = await dedupeRef.get();
+      if (dedupeSnap.exists) {
+        res.status(200).send("Duplicate");
+        return;
+      }
+      await dedupeRef.set({
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        from: normalizedFrom,
+        messageId
+      });
+    }
+
+    const requestRef = await admin.firestore().collection("whatsappRequests").add({
+      phone: normalizedFrom || from,
+      name: name || "Unbekannt",
+      message: text || "(kein Text)",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      status: "open",
+      source: "whatsapp",
+      messageId
+    });
+
+    const convoRef = admin.firestore().collection("whatsappConversations").doc(normalizedFrom || from);
+    await convoRef.set({
+      phone: normalizedFrom || from,
+      name: name || "Unbekannt",
+      lastMessage: text || "(kein Text)",
+      lastTimestamp: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    await convoRef.collection("messages").add({
+      direction: "inbound",
+      text: text || "(kein Text)",
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      rawTimestamp: timestamp,
+      messageId
+    });
+
+    if (!isText) {
+      res.status(200).send("Non-text");
+      return;
+    }
+
+    const settingsSnap = await admin.firestore().collection("whatsappBotSettings").doc("global").get();
+    const settings = settingsSnap.exists ? settingsSnap.data() : {};
+    const enabled = !!settings.enabled;
+    const excluded = Array.isArray(settings.excludedNumbers) ? settings.excludedNumbers : [];
+    const excludedSet = new Set(excluded.map((item) => normalizePhone(item)).filter(Boolean));
+
+    if (!enabled || excludedSet.has(normalizedFrom)) {
+      res.status(200).send("Bot disabled or excluded");
+      return;
+    }
+
+    const apiKey = config.openai && config.openai.key;
+    const waToken = config.whatsapp && config.whatsapp.token;
+    const waPhoneId = config.whatsapp && config.whatsapp.phone_number_id;
+
+    if (!apiKey || !waToken || !waPhoneId) {
+      res.status(200).send("Missing config");
+      return;
+    }
+
+    const historySnap = await convoRef.collection("messages")
+      .orderBy("timestamp", "desc")
+      .limit(8)
+      .get();
+    const history = [];
+    historySnap.forEach((doc) => {
+      const data = doc.data() || {};
+      history.push({
+        role: data.direction === "outbound" ? "assistant" : "user",
+        text: data.text || ""
+      });
+    });
+    history.reverse();
+
+    const aiResult = await buildAiReply({
+      apiKey,
+      styleSamples: settings.styleSamples || "",
+      history,
+      messageText: text || ""
+    });
+
+    const reply = (aiResult.reply || "").trim();
+    if (!reply) {
+      res.status(200).send("No reply");
+      return;
+    }
+
+    await sendWhatsappText(waToken, waPhoneId, from, reply);
+
+    await convoRef.collection("messages").add({
+      direction: "outbound",
+      text: reply,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      rawTimestamp: Date.now(),
+      messageId: `${messageId}_reply`
+    });
+
+    await requestRef.set({
+      reply,
+      language: aiResult.language || "",
+      respondedAt: admin.firestore.FieldValue.serverTimestamp(),
+      status: "done"
+    }, { merge: true });
+
+    res.status(200).send("OK");
+  } catch (error) {
+    console.error("WhatsApp webhook error:", error);
+    res.status(200).send("Error");
+  }
+});

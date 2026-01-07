@@ -732,7 +732,9 @@
         <a href="index.html" class="nav-item">Produkt-Datenbank</a>
         <a href="lager_online.html" class="nav-item">Lagerbestand</a>
         <a href="kalender.html?v=2" class="nav-item">Kalender</a>
-        <div class="nav-item active">Kommunikation</div>
+        <a href="whatsapp_anfragen.html" class="nav-item">WhatsApp Anfragen</a>
+        <a href="kommunikation.html" class="nav-item active">Kommunikation</a>
+        <a href="whatsapp_bot.html" class="nav-item">WhatsApp Bot</a>
         <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
     </nav>
 
@@ -790,6 +792,14 @@
                 </form>
                 <div class="notes-list" id="notesList">
                     <div class="empty-state">Keine Hinweise angepinnt.</div>
+                </div>
+
+                <div class="notes-header">
+                    <h3>WhatsApp Anfragen</h3>
+                    <p>Eingehende Anfragen fuer das Team</p>
+                </div>
+                <div class="notes-list" id="whatsappList">
+                    <div class="empty-state">Keine WhatsApp-Anfragen.</div>
                 </div>
             </aside>
         </section>
@@ -888,6 +898,7 @@
         const noteForm = document.getElementById('noteForm');
         const noteInput = document.getElementById('noteInput');
         const notesList = document.getElementById('notesList');
+        const whatsappList = document.getElementById('whatsappList');
         const pushPrompt = document.getElementById('pushPrompt');
         const pushPromptEnable = document.getElementById('pushPromptEnable');
         const pushPromptLater = document.getElementById('pushPromptLater');
@@ -1219,6 +1230,70 @@
                 });
         }
 
+
+        function renderWhatsappRequests(requests) {
+            if (!whatsappList) return;
+            whatsappList.innerHTML = '';
+            if (!requests.length) {
+                whatsappList.innerHTML = '<div class="empty-state">Keine WhatsApp-Anfragen.</div>';
+                return;
+            }
+
+            requests.forEach((req) => {
+                const card = document.createElement('div');
+                card.className = 'note-card';
+                const author = document.createElement('strong');
+                const name = req.name || 'Unbekannt';
+                const phone = req.phone || '-';
+                author.textContent = `${name} (${phone})`;
+                const text = document.createElement('p');
+                text.textContent = req.message || '';
+                const meta = document.createElement('span');
+                const lang = req.language ? req.language.toUpperCase() : 'AUTO';
+                const status = req.status === 'done' ? 'Erledigt' : 'Offen';
+                meta.textContent = `${lang} | ${status} | ${formatTime(req.createdAt)}`;
+                card.appendChild(author);
+                card.appendChild(text);
+                card.appendChild(meta);
+
+                const actions = document.createElement('div');
+                actions.className = 'admin-actions';
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'admin-delete';
+                copyBtn.type = 'button';
+                copyBtn.textContent = 'Kopieren';
+                copyBtn.dataset.copyRequestId = req.id;
+                actions.appendChild(copyBtn);
+
+                const doneBtn = document.createElement('button');
+                doneBtn.className = 'admin-delete';
+                doneBtn.type = 'button';
+                doneBtn.textContent = 'Erledigt';
+                doneBtn.dataset.doneRequestId = req.id;
+                actions.appendChild(doneBtn);
+
+                card.appendChild(actions);
+                whatsappList.appendChild(card);
+            });
+        }
+
+        function listenWhatsappRequests() {
+            if (!whatsappList) return;
+            db.collection('whatsappRequests')
+                .orderBy('createdAt', 'desc')
+                .limit(50)
+                .onSnapshot((snapshot) => {
+                    const requests = [];
+                    snapshot.forEach((doc) => {
+                        requests.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderWhatsappRequests(requests);
+                }, (error) => {
+                    console.error('WhatsApp-Anfragen Fehler:', error);
+                });
+        }
+
         function renderNotes(notes) {
             if (!notesList) return;
             notesList.innerHTML = '';
@@ -1389,6 +1464,33 @@
             });
         }
 
+
+        if (whatsappList) {
+            whatsappList.addEventListener('click', async (event) => {
+                const target = event.target;
+                if (!target || !target.dataset) return;
+                if (target.dataset.copyRequestId) {
+                    const id = target.dataset.copyRequestId;
+                    const doc = await db.collection('whatsappRequests').doc(id).get();
+                    if (!doc.exists) return;
+                    const data = doc.data() || {};
+                    const payload = `${data.name || ''} ${data.phone || ''} - ${data.message || ''}`.trim();
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(payload);
+                    } else {
+                        alert(payload);
+                    }
+                }
+                if (target.dataset.doneRequestId) {
+                    const id = target.dataset.doneRequestId;
+                    await db.collection('whatsappRequests').doc(id).set({
+                        status: 'done',
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                }
+            });
+        }
+
         if (notesList) {
             notesList.addEventListener('click', async (event) => {
                 const target = event.target;
@@ -1413,6 +1515,8 @@
                 hideAuth();
                 await initializeChatSession();
                 listenNotes();
+                listenWhatsappRequests();
+                listenWhatsappRequests();
                 registerPush(false);
                 showPushPrompt();
                 return;
@@ -1583,6 +1687,8 @@
                 hideAuth();
                 await initializeChatSession();
                 listenNotes();
+                listenWhatsappRequests();
+                listenWhatsappRequests();
                 registerPush(false);
                 showPushPrompt();
             } else {

@@ -1,2 +1,20 @@
-.firebase/
+# --- SYSTEM & LOGS ---
+.DS_Store
+Thumbs.db
+*.log
+firebase-debug.log
+
+# --- ABHÄNGIGKEITEN (Müll) ---
+node_modules/
 functions/node_modules/
+
+# --- GEHEIMNISSE (WICHTIG!) ---
+# Das hier darf auf keinen Fall auf GitHub landen:
+serviceAccountKey.json
+.env
+
+# --- WHATSAPP SITZUNG ---
+# Das hier speichert deinen Login. Nicht hochladen, 
+# sonst loggt sich der Server ständig aus/ein.
+.wwebjs_auth/
+.wwebjs_cache/

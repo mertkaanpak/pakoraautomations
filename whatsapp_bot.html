@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pakora WhatsApp Bot</title>
+
+  <script>
+    if (window.location.origin.includes('github.io')) {
+      const path = window.location.pathname.replace(/^\/pakoraautomations/, '');
+      const target = 'https://pakora-automations-chat.web.app' + path + window.location.search + window.location.hash;
+      window.location.replace(target);
+    }
+  </script>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root { --bg:#e9edf1; --panel:#fff; --text:#111b21; --muted:#667781; --accent:#008069; --border:#d1d7db; --shadow:0 10px 26px rgba(11,20,26,.12); }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:'Sora',sans-serif; background:linear-gradient(180deg,#f7f8f8,#e9edf1 45%,#f7f8f8); color:var(--text); }
+    header { display:flex; justify-content:space-between; align-items:center; padding:18px 22px; }
+    header h1 { margin:0; font-size:22px; }
+    header p { margin:6px 0 0; color:var(--muted); font-size:12px; }
+    .status { padding:6px 12px; border-radius:999px; font-size:11px; border:1px solid var(--border); background:#fff; }
+    .status.active { background:#d1f4cc; border-color:rgba(0,128,105,.35); color:#0b3220; }
+    .back { text-decoration:none; color:#0b3220; font-size:12px; border:1px solid var(--border); padding:6px 10px; border-radius:999px; background:#fff; }
+    main { padding:0 22px 24px; display:grid; gap:16px; }
+    .card { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow); display:grid; gap:12px; }
+    label { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+    textarea { width:100%; min-height:90px; border:1px solid var(--border); border-radius:12px; padding:10px 12px; font-size:13px; resize:vertical; }
+    .row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:#f7f8f8; }
+    .switch { position:relative; width:52px; height:28px; }
+    .switch input { opacity:0; width:0; height:0; }
+    .slider { position:absolute; inset:0; background:#d1d7db; border-radius:999px; transition:.2s; }
+    .slider:before { content:""; position:absolute; width:22px; height:22px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
+    input:checked + .slider { background:#00a884; }
+    input:checked + .slider:before { transform:translateX(24px); }
+    .actions { display:flex; justify-content:flex-end; }
+    .btn { background:linear-gradient(120deg,#00a884,#008069); color:#fff; border:none; padding:10px 18px; border-radius:12px; font-weight:700; cursor:pointer; }
+    #authOverlay { position:fixed; inset:0; background:rgba(2,6,23,.72); display:flex; align-items:center; justify-content:center; z-index:3000; }
+    #authOverlay[hidden] { display:none; }
+    #authCard { width:min(420px,92vw); background:#fff; border:1px solid var(--border); border-radius:16px; padding:22px; box-shadow:0 20px 60px rgba(11,20,26,.2); }
+    #authCard input { width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); margin-bottom:12px; font-size:16px; }
+    #authCard button { width:100%; padding:12px 14px; border:none; border-radius:10px; background:#00a884; color:#fff; font-weight:600; }
+    #authError { color:#f87171; font-size:13px; min-height:18px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <a class="back" href="kommunikation.html">Zurueck</a>
+      <h1>WhatsApp Bot</h1>
+      <p>Nur fuer m.pak. Hier steuerst du den KI-Bot.</p>
+    </div>
+    <div id="botStatus" class="status">Status: aus</div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="row">
+        <div>
+          <strong>Automatische Antworten</strong><br>
+          <span style="font-size:12px; color:var(--muted);">Der Bot antwortet immer, ausser fuer gesperrte Kontakte.</span>
+        </div>
+        <label class="switch">
+          <input id="botEnabled" type="checkbox">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div>
+        <label for="excludedNumbers">Ausgeschlossene Nummern</label>
+        <textarea id="excludedNumbers" placeholder="Eine Nummer pro Zeile, z.B. +491701234567"></textarea>
+      </div>
+
+      <div>
+        <label for="styleSamples">Stilbeispiele</label>
+        <textarea id="styleSamples" placeholder="Merhabalar hemen bakip donecegim."></textarea>
+      </div>
+
+      <div class="actions">
+        <button id="saveBot" class="btn">Speichern</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <strong>Cloud API Setup (Kurz)</strong>
+      <div style="font-size:12px; color:var(--muted);">
+        1) Meta Business Manager anlegen und WhatsApp Cloud API aktivieren.<br>
+        2) Webhook URL: <strong>https://us-central1-pakora-automations-chat.cloudfunctions.net/whatsappWebhook</strong><br>
+        3) Verify Token frei waehlen und spaeter in Functions config setzen.<br>
+        4) Phone Number ID + Access Token in Functions config setzen.
+      </div>
+    </section>
+  </main>
+
+  <div id="authOverlay" hidden>
+    <div id="authCard">
+      <h2>Zugriff gesperrt</h2>
+      <p style="color:var(--muted); font-size:14px;">Bitte mit deinem Account anmelden.</p>
+      <form id="authForm">
+        <label for="authUser">Benutzername</label>
+        <input id="authUser" type="text" autocomplete="username" required />
+        <label for="authPass">Passwort</label>
+        <input id="authPass" type="password" autocomplete="current-password" required />
+        <div id="authError"></div>
+        <button type="submit">Anmelden</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCjIggzBA4NaMNm1FSfTUzvZLBquvd9P40",
+      authDomain: "pakora-automations-chat.firebaseapp.com",
+      projectId: "pakora-automations-chat",
+      storageBucket: "pakora-automations-chat.firebasestorage.app",
+      messagingSenderId: "281325034328",
+      appId: "1:281325034328:web:e05c04bac6b8558560632d"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const ACCOUNTS = {
+      'm.pak': { pass: 'admin', label: 'Mert Kaan' },
+      'k.guemuesok': { pass: 'pakora', label: 'Kaan' },
+      'l.wenzel': { pass: 'pakora', label: 'Leon' },
+      '\u00f6.pak': { pass: 'pakora', label: '\u00d6mer' }
+    };
+    const ADMIN_USER = 'm.pak';
+    const AUTH_KEY = 'pakora_auth_user';
+    const LEGACY_AUTH_KEY = 'pakora_chat_user';
+
+    const overlay = document.getElementById('authOverlay');
+    const form = document.getElementById('authForm');
+    const userInput = document.getElementById('authUser');
+    const passInput = document.getElementById('authPass');
+    const error = document.getElementById('authError');
+
+    const botEnabled = document.getElementById('botEnabled');
+    const excludedNumbers = document.getElementById('excludedNumbers');
+    const styleSamples = document.getElementById('styleSamples');
+    const saveBot = document.getElementById('saveBot');
+    const botStatus = document.getElementById('botStatus');
+
+    function showAuth() { overlay.hidden = false; document.body.style.overflow = 'hidden'; }
+    function hideAuth() { overlay.hidden = true; document.body.style.overflow = ''; }
+    function isAdmin(user) { return user === ADMIN_USER; }
+    function normalizePhone(value) { return String(value || '').replace(/\D/g, ''); }
+    function updateStatus(enabled) {
+      botStatus.textContent = enabled ? 'Status: aktiv' : 'Status: aus';
+      botStatus.classList.toggle('active', !!enabled);
+    }
+
+    function loadSettings() {
+      db.collection('whatsappBotSettings').doc('global').onSnapshot((doc) => {
+        const data = doc.exists ? doc.data() : {};
+        botEnabled.checked = !!data.enabled;
+        updateStatus(!!data.enabled);
+        const list = Array.isArray(data.excludedNumbers) ? data.excludedNumbers : [];
+        excludedNumbers.value = list.join('\n');
+        styleSamples.value = data.styleSamples || '';
+      });
+    }
+
+    async function saveSettings(currentUser) {
+      const rawLines = excludedNumbers.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const normalized = Array.from(new Set(rawLines.map(normalizePhone).filter(Boolean)));
+      await db.collection('whatsappBotSettings').doc('global').set({
+        enabled: !!botEnabled.checked,
+        excludedNumbers: normalized,
+        styleSamples: styleSamples.value.trim(),
+        updatedBy: currentUser,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      error.textContent = '';
+      const user = userInput.value.trim().toLowerCase();
+      const pass = passInput.value;
+      if (ACCOUNTS[user] && ACCOUNTS[user].pass === pass) {
+        if (!isAdmin(user)) { error.textContent = 'Nur m.pak hat Zugriff.'; passInput.value = ''; return; }
+        localStorage.setItem(AUTH_KEY, user);
+        localStorage.removeItem(LEGACY_AUTH_KEY);
+        hideAuth();
+        loadSettings();
+        return;
+      }
+      error.textContent = 'Falsche Zugangsdaten.';
+      passInput.value = '';
+      passInput.focus();
+    });
+
+    saveBot.addEventListener('click', async () => {
+      const user = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
+      if (!isAdmin(user)) { alert('Kein Zugriff.'); return; }
+      await saveSettings(user);
+      alert('Gespeichert.');
+    });
+
+    (function bootstrap() {
+      let storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
+      if (!storedUser) {
+        storedUser = (localStorage.getItem(LEGACY_AUTH_KEY) || '').toLowerCase();
+        if (storedUser) { localStorage.setItem(AUTH_KEY, storedUser); localStorage.removeItem(LEGACY_AUTH_KEY); }
+      }
+      if (storedUser && ACCOUNTS[storedUser]) {
+        if (!isAdmin(storedUser)) { showAuth(); error.textContent = 'Nur m.pak hat Zugriff.'; return; }
+        hideAuth();
+        loadSettings();
+      } else {
+        showAuth();
+      }
+    })();
+  </script>
+</body>
+</html>

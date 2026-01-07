@@ -1,0 +1,177 @@
+    <title>Pakora WhatsApp Anfragen</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+    <style>
+        :root {
+            --bg: #e9edf1;
+            --surface: #f0f2f5;
+            --panel: #ffffff;
+            --text: #111b21;
+            --muted: #667781;
+            --accent: #008069;
+            --border: #d1d7db;
+            --shadow: 0 10px 26px rgba(11, 20, 26, 0.12);
+        }
+        body {
+            font-family: 'Sora', sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            color: var(--text);
+            overflow: hidden;
+            background: linear-gradient(180deg, #f7f8f8, #e9edf1 45%, #f7f8f8);
+        }
+        .main {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .header-title h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .header-title p { margin: 6px 0 0 0; color: var(--muted); font-size: 13px; }
+        .request-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        .request-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .request-card strong { font-size: 14px; color: #0b4b2f; }
+        .request-card p { margin: 0; font-size: 14px; color: #111b21; }
+        .request-card span { font-size: 12px; color: var(--muted); }
+        .request-card .actions { align-self: flex-end; display: flex; gap: 8px; margin-top: 8px; }
+        .admin-btn {
+            border: 1px solid var(--border);
+            background: #f7f8f8;
+            color: #1f2a33;
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            cursor: pointer;
+        }
+        .admin-btn.done { background: #d1f4cc; border-color: rgba(0,128,105,.35); color:#0b3220; }
+        .empty-state { text-align: center; color: var(--muted); font-size: 14px; margin-top: 40px; }
+    </style>
+</head>
+<body>
+    <main class="main">
+        <div class="header-section">
+            <div class="header-title">
+                <h1>WhatsApp Anfragen</h1>
+                <p>Eingehende Kundenanfragen via WhatsApp</p>
+            </div>
+            <a href="kommunikation.html" style="text-decoration: none; color: var(--accent); font-weight: 600;">Zum Team-Chat</a>
+        </div>
+        <section class="request-list" id="requestList">
+            <div class="empty-state">Lade Anfragen...</div>
+        </section>
+    </main>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjIggzBA4NaMNm1FSfTUzvZLBquvd9P40",
+            authDomain: "pakora-automations-chat.firebaseapp.com",
+            projectId: "pakora-automations-chat",
+            storageBucket: "pakora-automations-chat.firebasestorage.app",
+            messagingSenderId: "281325034328",
+            appId: "1:281325034328:web:e05c04bac6b8558560632d"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function formatTime(ts) {
+            if (!ts) return '--:--';
+            const date = ts.toDate ? ts.toDate() : new Date(ts);
+            return date.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function renderRequests(requests) {
+            const listEl = document.getElementById('requestList');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+            if (!requests.length) {
+                listEl.innerHTML = '<div class="empty-state">Keine WhatsApp-Anfragen vorhanden.</div>';
+                return;
+            }
+
+            requests.forEach((req) => {
+                const card = document.createElement('div');
+                card.className = 'request-card';
+                const author = document.createElement('strong');
+                author.textContent = `${req.name || 'Unbekannt'} (${req.phone || '-'})`;
+                const text = document.createElement('p');
+                text.textContent = req.message || '';
+                const meta = document.createElement('span');
+                const status = req.status === 'done' ? 'Erledigt' : 'Offen';
+                meta.textContent = `${status} | ${formatTime(req.createdAt)}`;
+                
+                const actions = document.createElement('div');
+                actions.className = 'actions';
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'admin-btn';
+                copyBtn.textContent = 'Inhalt kopieren';
+                copyBtn.onclick = () => {
+                    const payload = `${req.name || ''} ${req.phone || ''} - ${req.message || ''}`.trim();
+                    navigator.clipboard.writeText(payload).then(() => alert('Kopiert!'));
+                };
+                
+                const doneBtn = document.createElement('button');
+                doneBtn.className = `admin-btn ${req.status === 'done' ? 'done' : ''}`;
+                doneBtn.textContent = 'Erledigt';
+                doneBtn.onclick = () => {
+                     db.collection('whatsappRequests').doc(req.id).set({
+                        status: 'done',
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                };
+
+                actions.appendChild(copyBtn);
+actions.appendChild(doneBtn);
+                card.appendChild(author);
+                card.appendChild(text);
+                card.appendChild(meta);
+                card.appendChild(actions);
+                listEl.appendChild(card);
+            });
+        }
+
+        function listenWhatsappRequests() {
+            db.collection('whatsappRequests')
+                .orderBy('createdAt', 'desc')
+                .limit(100)
+                .onSnapshot((snapshot) => {
+                    const requests = [];
+                    snapshot.forEach((doc) => {
+                        requests.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderRequests(requests);
+                }, (error) => {
+                    console.error('Fehler beim Laden der WhatsApp-Anfragen:', error);
+                    const listEl = document.getElementById('requestList');
+                    if(listEl) listEl.innerHTML = '<div class="empty-state">Fehler beim Laden.</div>';
+                });
+        }
+
+        listenWhatsappRequests();
+    </script>
+</body>
+</html>

@@ -608,6 +608,8 @@
         
         <div class="nav-item" onclick="window.location.href='lager_online.html'">📦 Lagerbestand</div>
         <div class="nav-item" onclick="window.location.href='kommunikation.html'">💬 Kommunikation</div>
+        <div class="nav-item" onclick="window.location.href='whatsapp_anfragen.html'">💡 WhatsApp Anfragen</div>
+        <div class="nav-item" onclick="window.location.href='whatsapp_bot.html'">🤖 WhatsApp Bot</div>
         <div class="nav-item" onclick="window.location.href='kalender.html?v=2'">📅 Kalender</div>
         <div class="nav-item" onclick="window.location.href='verdichterrechereche.html'">🧰 Verdichter Recherche</div>
         <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
@@ -1691,7 +1693,14 @@ const CURRENT_NEWS_VERSION = 1;
     };
 
     if (!isAuthed()) {
-        showAuth();
+        const defaultUser = "m.pak"; // Automatically try to log in m.pak
+        if (ACCOUNTS[defaultUser]) {
+            localStorage.setItem(AUTH_KEY, defaultUser);
+            setWelcome(defaultUser);
+            hideAuth();
+        } else {
+            showAuth(); // Fallback to normal login if m.pak account is not configured or other issue
+        }
     } else {
         setWelcome(getStoredUser());
         hideAuth();
