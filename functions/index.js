@@ -1,4 +1,4 @@
-const functions = require("firebase-functions");
+﻿const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const pdfParse = require("pdf-parse");
 
@@ -909,7 +909,8 @@ exports.whatsappWebhook = functions.https.onRequest(async (req, res) => {
       reply,
       language: aiResult.language || "",
       respondedAt: admin.firestore.FieldValue.serverTimestamp(),
-      status: "done"
+      status: "open",
+      autoReplied: true
     }, { merge: true });
 
     res.status(200).send("OK");
@@ -918,3 +919,4 @@ exports.whatsappWebhook = functions.https.onRequest(async (req, res) => {
     res.status(200).send("Error");
   }
 });
+

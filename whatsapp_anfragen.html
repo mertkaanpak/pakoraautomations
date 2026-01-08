@@ -123,7 +123,8 @@
                 const text = document.createElement('p');
                 text.textContent = req.message || '';
                 const meta = document.createElement('span');
-                const status = req.status === 'done' ? 'Erledigt' : 'Offen';
+                let status = req.status === 'done' ? 'Erledigt' : 'Offen';
+                if (req.autoReplied) status = 'Bot Antwort';
                 meta.textContent = `${status} | ${formatTime(req.createdAt)}`;
                 
                 const actions = document.createElement('div');
@@ -211,4 +212,5 @@ actions.appendChild(doneBtn);
     </script>
 </body>
 </html>
+
 
