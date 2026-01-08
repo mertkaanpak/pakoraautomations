@@ -1719,14 +1719,7 @@ const CURRENT_NEWS_VERSION = 1;
     };
 
     if (!isAuthed()) {
-        const defaultUser = "m.pak"; // Automatically try to log in m.pak
-        if (ACCOUNTS[defaultUser]) {
-            localStorage.setItem(AUTH_KEY, defaultUser);
-            setWelcome(defaultUser);
-            hideAuth();
-        } else {
-            showAuth(); // Fallback to normal login if m.pak account is not configured or other issue
-        }
+        showAuth();
     } else {
         setWelcome(getStoredUser());
         hideAuth();
@@ -1759,7 +1752,10 @@ const CURRENT_NEWS_VERSION = 1;
     if (logoutBtn) {
         logoutBtn.addEventListener("click", () => {
             localStorage.removeItem(AUTH_KEY);
-            location.reload();
+            if (user) user.value = "";
+            if (pass) pass.value = "";
+            if (error) error.textContent = "";
+            showAuth();
         });
     }
 })();
@@ -1799,6 +1795,8 @@ const CURRENT_NEWS_VERSION = 1;
     </script>
 </body>
 </html>
+
+
 
 
 
