@@ -48,6 +48,24 @@
   </style>
 </head>
 <body>
+    <nav class="sidebar">
+        <div class="logo"><img src="logo.png" alt="Pakora"></div>
+        <a href="index.html" class="nav-item" data-section="dashboard"><span class="nav-icon">🏠</span><span class="nav-text">Uebersicht</span></a>
+        <a href="index.html#calc" class="nav-item" data-section="calc"><span class="nav-icon">📐</span><span class="nav-text">Smart-Kalkulation</span></a>
+        <a href="konfigurator.html" class="nav-item"><span class="nav-icon">🧊</span><span class="nav-text">Kuehlzellen Kalkulator</span></a>
+        <a href="whatsapp_bot.html" class="nav-item only-mpak"><span class="nav-icon">🤖</span><span class="nav-text">WhatsApp Bot</span></a>
+        <a href="whatsapp_anfragen.html" class="nav-item"><span class="nav-icon">💬</span><span class="nav-text">WhatsApp Anfragen</span></a>
+        <a href="kommunikation.html" class="nav-item"><span class="nav-icon">📨</span><span class="nav-text">Kommunikation</span></a>
+        <a href="verdichterrechereche.html" class="nav-item"><span class="nav-icon">🔍</span><span class="nav-text">Verdichter Recherche</span></a>
+        <a href="index.html#db" class="nav-item" data-section="db"><span class="nav-icon">🗃</span><span class="nav-text">Produkt-Datenbank</span></a>
+        <a href="lager_online.html" class="nav-item"><span class="nav-icon">📦</span><span class="nav-text">Lagerbestand</span></a>
+        <a href="kalender.html?v=2" class="nav-item"><span class="nav-icon">📅</span><span class="nav-text">Kalender</span></a>
+        <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
+    </nav>
+    <div class="mobile-overlay" onclick="toggleSidebar()"></div>
+    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+    <div class="main">
+
   <header>
     <div>
       <a class="back" href="index.html">Zurueck zur Uebersicht</a>
@@ -57,7 +75,7 @@
     <div id="botStatus" class="status">Status: aus</div>
   </header>
 
-  <main>
+  <div class="content">
     <section class="card">
       <div class="row">
         <div>
@@ -99,7 +117,8 @@
         4) Phone Number ID + Access Token in Functions config setzen.
       </div>
     </section>
-  </main>
+  </div>
+    </div>
 
   <div id="authOverlay" hidden>
     <div id="authCard">
@@ -295,6 +314,47 @@
     background: var(--primary, #2563eb);
     color: #ffffff;
     box-shadow: 0 4px 15px rgba(37,99,235,0.4);
+}
+</style>
+
+    <script>
+        function toggleSidebar(forceOpen) {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.mobile-overlay');
+            if (!sidebar || !overlay) return;
+            if (forceOpen === undefined) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+            } else if (forceOpen) {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+            } else {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+            }
+        }
+    </script>
+
+<style>
+/* WHATSAPP MOBILE */
+body { display: flex; height: 100vh; overflow: hidden; }
+.main { flex: 1; overflow-y: auto; padding: 18px 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+.content { display: grid; gap: 16px; }
+.logo { margin-bottom: 60px; }
+.logo img { max-width: 100%; height: auto; max-height: 150px; object-fit: contain; }
+.nav-item .nav-icon { width: 22px; display: inline-flex; justify-content: center; font-size: 16px; line-height: 1; }
+.nav-item .nav-text { flex: 1; }
+.mobile-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 2000; background: #2563eb; color: #fff; border: none; padding: 10px 14px; border-radius: 50%; box-shadow: 0 4px 12px rgba(37,99,235,0.4); font-size: 20px; cursor: pointer; }
+.mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 900; }
+@media (max-width: 900px) {
+    .sidebar { position: fixed; height: 100%; transform: translateX(-100%); width: 85%; max-width: 320px; box-shadow: 10px 0 30px rgba(0,0,0,0.2); }
+    .sidebar.open { transform: translateX(0); }
+    .mobile-toggle { display: flex; align-items: center; justify-content: center; }
+    .mobile-overlay.active { display: block; }
+    header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 16px 0 6px; }
+    .main { padding: 16px; }
+    .actions { width: 100%; }
+    .actions .btn { width: 100%; }
 }
 </style>
 </body>
