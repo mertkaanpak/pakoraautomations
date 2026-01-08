@@ -628,16 +628,16 @@
             <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
             <span style="display:none; font-size: 22px; font-weight:700;">Pakora</span>
         </div>
-                <a href="index.html" class="nav-item" data-section="dashboard"><span class="nav-icon">&#x1F3E0;</span><span class="nav-text">Uebersicht</span></a>
+                                <a href="index.html" class="nav-item" data-section="dashboard"><span class="nav-icon">&#x1F3E0;</span><span class="nav-text">Uebersicht</span></a>
         <a href="index.html#calc" class="nav-item" data-section="calc"><span class="nav-icon">&#x1F4D0;</span><span class="nav-text">Smart-Kalkulation</span></a>
         <a href="konfigurator.html" class="nav-item"><span class="nav-icon">&#x1F9CA;</span><span class="nav-text">Kuehlzellen Kalkulator</span></a>
+        <a href="whatsapp_bot.html" class="nav-item only-mpak"><span class="nav-icon">&#x1F916;</span><span class="nav-text">WhatsApp Bot</span></a>
+        <a href="whatsapp_anfragen.html" class="nav-item"><span class="nav-icon">&#x1F4AC;</span><span class="nav-text">WhatsApp Anfragen</span></a>
+        <a href="kommunikation.html" class="nav-item"><span class="nav-icon">&#x1F4E8;</span><span class="nav-text">Kommunikation</span></a>
+        <a href="verdichterrechereche.html" class="nav-item"><span class="nav-icon">&#x1F50D;</span><span class="nav-text">Verdichter Recherche</span></a>
         <a href="index.html#db" class="nav-item" data-section="db"><span class="nav-icon">&#x1F5C3;</span><span class="nav-text">Produkt-Datenbank</span></a>
         <a href="lager_online.html" class="nav-item"><span class="nav-icon">&#x1F4E6;</span><span class="nav-text">Lagerbestand</span></a>
         <a href="kalender.html?v=2" class="nav-item"><span class="nav-icon">&#x1F4C5;</span><span class="nav-text">Kalender</span></a>
-        <a href="whatsapp_anfragen.html" class="nav-item"><span class="nav-icon">&#x1F4AC;</span><span class="nav-text">WhatsApp Anfragen</span></a>
-        <a href="kommunikation.html" class="nav-item"><span class="nav-icon">&#x1F4E8;</span><span class="nav-text">Kommunikation</span></a>
-        <a href="whatsapp_bot.html" class="nav-item"><span class="nav-icon">&#x1F916;</span><span class="nav-text">WhatsApp Bot</span></a>
-        <a href="verdichterrechereche.html" class="nav-item"><span class="nav-icon">&#x1F50D;</span><span class="nav-text">Verdichter Recherche</span></a>
         <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
     </nav>
 
@@ -649,47 +649,82 @@
                 <div class="dashboard-date" id="currentDate">Lade System...</div>
             </div>
 
-            <div class="dash-grid">
-                <div class="dash-card" onclick="nav('calc')">
+                        <div class="dash-grid">
+                <div class="dash-card card-blue" onclick="nav('calc')">
                     <div>
-                        <div class="dash-icon">❄️</div>
+                        <div class="dash-icon">&#x1F4D0;</div>
                         <div class="dash-title">Smart Kalkulation</div>
                         <div class="dash-desc">Erstelle Angebote basierend auf Raumvolumen & Temperatur.</div>
                     </div>
                     <div class="dash-stat">
-                        <span class="stat-badge badge-blue">Kühllast Berechnung</span>
+                        <span class="stat-badge badge-blue">Kuehllast Berechnung</span>
                     </div>
                 </div>
 
                 <div class="dash-card card-purple" onclick="window.location.href='konfigurator.html'">
-                    <div class="bg-icon">📐</div>
-                    <div class="dash-icon">📐</div>
-                    <div class="dash-content">
-                        <div class="dash-title">Zellen-Konfigurator</div>
-                        <div class="dash-desc">Individuelle Planung und Maßeingabe für Kühlzellen.</div>
+                    <div>
+                        <div class="dash-icon">&#x1F9CA;</div>
+                        <div class="dash-title">Kuehlzellen Kalkulator</div>
+                        <div class="dash-desc">Individuelle Planung und Maßeingabe fuer Kuehlzellen.</div>
                     </div>
                     <div class="dash-footer">
                         <span style="font-size:12px; color:#94a3b8;">Externe App</span>
-                        <span style="color:#7c3aed;">➔</span>
+                        <span style="color:#7c3aed;">&#x2794;</span>
                     </div>
                 </div>
 
-                <div class="dash-card card-green" onclick="window.location.href='lager_online.html'">
+                <div class="dash-card card-green only-mpak" onclick="window.location.href='whatsapp_bot.html'">
                     <div>
-                        <div class="dash-icon">📦</div>
-                        <div class="dash-title">Lagerverwaltung</div>
-                        <div class="dash-desc">Direkt zum Online-Lagerbestand wechseln.</div>
+                        <div class="dash-icon">&#x1F916;</div>
+                        <div class="dash-title">WhatsApp Bot</div>
+                        <div class="dash-desc">Automatisierte Antworten und Bot-Steuerung.</div>
                     </div>
                     <div class="dash-footer">
-                        <span style="font-size:12px; color:#94a3b8;">Externe Datei</span>
-                        <span style="color:#16a34a;">➔</span>
+                        <span style="font-size:12px; color:#94a3b8;">Externe App</span>
+                        <span style="color:#16a34a;">&#x2794;</span>
+                    </div>
+                </div>
+
+                <div class="dash-card card-orange" onclick="window.location.href='whatsapp_anfragen.html'">
+                    <div>
+                        <div class="dash-icon">&#x1F4AC;</div>
+                        <div class="dash-title">WhatsApp Anfragen</div>
+                        <div class="dash-desc">Neue Kundenanfragen sammeln und beantworten.</div>
+                    </div>
+                    <div class="dash-footer">
+                        <span style="font-size:12px; color:#94a3b8;">Externe App</span>
+                        <span style="color:#f59e0b;">&#x2794;</span>
+                    </div>
+                </div>
+
+                <div class="dash-card card-orange" onclick="window.location.href='kommunikation.html'">
+                    <div>
+                        <div class="dash-icon">&#x1F4E8;</div>
+                        <div class="dash-title">Kommunikation</div>
+                        <div class="dash-desc">Chat, E-Mail & Notizen.</div>
+                    </div>
+                    <div class="dash-footer">
+                        <span style="font-size:12px; color:#94a3b8;">Externe App</span>
+                        <span style="color:#f59e0b;">&#x2794;</span>
+                    </div>
+                </div>
+
+                <div class="dash-card card-blue" onclick="window.location.href='verdichterrechereche.html'">
+                    <div>
+                        <div class="dash-icon">&#x1F50D;</div>
+                        <div class="dash-title">Verdichter Recherche</div>
+                        <div class="dash-desc">Verdichterdaten schnell vergleichen und finden.</div>
+                    </div>
+                    <div class="dash-footer">
+                        <span style="font-size:12px; color:#94a3b8;">Externe App</span>
+                        <span style="color:#2563eb;">&#x2794;</span>
                     </div>
                 </div>
 
                 <div class="dash-card" onclick="nav('db')">
                     <div>
-                        <div class="dash-icon">⚙️</div>
-                        <div class="dash-title">Produkte</div>
+                        <div class="dash-icon">&#x1F5C3;</div>
+                        <div class="dash-title">Produkt Datenbank</div>
                         <div class="dash-desc">Preise, Artikelnummern und technische Daten verwalten.</div>
                     </div>
                     <div class="dash-stat" id="dashDbStat">
@@ -697,15 +732,27 @@
                     </div>
                 </div>
 
-                <div class="dash-card card-orange" onclick="window.location.href='kommunikation.html'">
+                <div class="dash-card card-green" onclick="window.location.href='lager_online.html'">
                     <div>
-                        <div class="dash-icon">💬</div>
-                        <div class="dash-title">Kommunikation</div>
-                        <div class="dash-desc">Chat, E-Mail & Notizen.</div>
+                        <div class="dash-icon">&#x1F4E6;</div>
+                        <div class="dash-title">Lagerbestand</div>
+                        <div class="dash-desc">Direkt zum Online-Lagerbestand wechseln.</div>
+                    </div>
+                    <div class="dash-footer">
+                        <span style="font-size:12px; color:#94a3b8;">Externe Datei</span>
+                        <span style="color:#16a34a;">&#x2794;</span>
+                    </div>
+                </div>
+
+                <div class="dash-card card-purple" onclick="window.location.href='kalender.html?v=2'">
+                    <div>
+                        <div class="dash-icon">&#x1F4C5;</div>
+                        <div class="dash-title">Kalender</div>
+                        <div class="dash-desc">Termine und Aufgaben im Blick behalten.</div>
                     </div>
                     <div class="dash-footer">
                         <span style="font-size:12px; color:#94a3b8;">Externe App</span>
-                        <span style="color:#f59e0b;">➔</span>
+                        <span style="color:#7c3aed;">&#x2794;</span>
                     </div>
                 </div>
             </div>
@@ -1560,12 +1607,12 @@
             const sidebarLinks = document.querySelectorAll('.nav-item');
             
             // Indizes angepasst an neue Sidebar Struktur
-            if(id === 'dashboard') sidebarLinks[0].classList.add('active'); 
-            if(id === 'calc') sidebarLinks[1].classList.add('active');      
-            // 2 = Konfigurator Link (extern)
-            if(id === 'db') sidebarLinks[3].classList.add('active');        
-            // 4 = Lager Link (extern)
-            // 5 = Kommunikation Link (extern)
+            if(id === 'dashboard') sidebarLinks[0].classList.add('active');
+            if(id === 'calc') sidebarLinks[1].classList.add('active');
+            // 2 = Kuehlzellen (extern), 3 = WhatsApp Bot (m.pak), 4 = WhatsApp Anfragen, 5 = Kommunikation, 6 = Verdichter (extern)
+            if(id === 'db') sidebarLinks[7].classList.add('active');
+            // 8 = Lager (extern)
+            // 9 = Kalender (extern)
             
             if(id === 'db') renderDatabase();
             if(id === 'dashboard') updateDashboardStats();
@@ -1807,8 +1854,30 @@ const overlay = document.getElementById("authOverlay");
             }
         })();
     </script>
+    <script>
+        (function () {
+            const AUTH_KEY = "pakora_auth_user";
+            const LEGACY_AUTH_KEY = "pakora_chat_user";
+            let lastUser = null;
+
+            function applyRoleVisibility() {
+                const stored = (localStorage.getItem(AUTH_KEY) || localStorage.getItem(LEGACY_AUTH_KEY) || "").toLowerCase();
+                if (stored === lastUser) return;
+                lastUser = stored;
+                const showBot = stored === "m.pak";
+                document.querySelectorAll('.only-mpak').forEach((el) => {
+                    el.style.display = showBot ? "" : "none";
+                });
+            }
+
+            applyRoleVisibility();
+            setInterval(applyRoleVisibility, 1000);
+        })();
+    </script>
 </body>
 </html>
+
+
 
 
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -386,16 +386,16 @@
             <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
             <span style="display:none; font-size: 22px; font-weight:700;">Pakora</span>
         </div>
-        <a href="index.html" class="nav-item" data-section="dashboard">Uebersicht</a>
+                <a href="index.html" class="nav-item" data-section="dashboard">Uebersicht</a>
         <a href="index.html#calc" class="nav-item" data-section="calc">Smart-Kalkulation</a>
         <a href="konfigurator.html" class="nav-item">Kuehlzellen Kalkulator</a>
+        <a href="whatsapp_bot.html" class="nav-item only-mpak">WhatsApp Bot</a>
+        <a href="whatsapp_anfragen.html" class="nav-item">WhatsApp Anfragen</a>
+        <a href="kommunikation.html" class="nav-item">Kommunikation</a>
+        <a href="verdichterrechereche.html" class="nav-item">Verdichter Recherche</a>
         <a href="index.html#db" class="nav-item" data-section="db">Produkt-Datenbank</a>
         <a href="lager_online.html" class="nav-item">Lagerbestand</a>
         <a href="kalender.html?v=2" class="nav-item">Kalender</a>
-        <a href="whatsapp_anfragen.html" class="nav-item">WhatsApp Anfragen</a>
-        <a href="kommunikation.html" class="nav-item">Kommunikation</a>
-        <a href="whatsapp_bot.html" class="nav-item">WhatsApp Bot</a>
-        <a href="verdichterrechereche.html" class="nav-item">Verdichter Recherche</a>
         <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
     </nav>
 
@@ -767,8 +767,29 @@
             }
         })();
     </script>
+    <script>
+        (function () {
+            const AUTH_KEY = "pakora_auth_user";
+            const LEGACY_AUTH_KEY = "pakora_chat_user";
+            let lastUser = null;
+
+            function applyRoleVisibility() {
+                const stored = (localStorage.getItem(AUTH_KEY) || localStorage.getItem(LEGACY_AUTH_KEY) || "").toLowerCase();
+                if (stored === lastUser) return;
+                lastUser = stored;
+                const showBot = stored === "m.pak";
+                document.querySelectorAll('.only-mpak').forEach((el) => {
+                    el.style.display = showBot ? "" : "none";
+                });
+            }
+
+            applyRoleVisibility();
+            setInterval(applyRoleVisibility, 1000);
+        })();
+    </script>
 </body>
 </html>
+
 
 
 
