@@ -881,7 +881,13 @@ exports.whatsappWebhook = functions.https.onRequest(async (req, res) => {
     });
     history.reverse();
 
-    const aiResult = await buildAiReply({\n      apiKey,\n      styleSamples: settings.styleSamples || "",\n      customPrompt: settings.customPrompt || "",\n      history,\n      messageText: text || ""\n    });
+    const aiResult = await buildAiReply({
+      apiKey,
+      styleSamples: settings.styleSamples || "",
+      customPrompt: settings.customPrompt || "",
+      history,
+      messageText: text || ""
+    });
 
     const reply = (aiResult.reply || "").trim();
     if (!reply) {
@@ -913,6 +919,7 @@ exports.whatsappWebhook = functions.https.onRequest(async (req, res) => {
     res.status(200).send("Error");
   }
 });
+
 
 
 
