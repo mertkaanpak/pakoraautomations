@@ -1,23 +1,34 @@
-{
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
-  "functions": {
-    "source": "functions",
-    "runtime": "nodejs20"
-  },
-  "storage": {
-    "rules": "storage.rules"
-  },
-  "hosting": {
-    "public": "public",
-    "ignore": [
-      "firebase.json",
-      ".firebaserc",
-      "**/.*",
-      "**/node_modules/**",
-      "functions/**"
-    ]
-  }
+﻿{
+    "firestore":  {
+                      "rules":  "firestore.rules",
+                      "indexes":  "firestore.indexes.json"
+                  },
+    "functions":  {
+                      "source":  "functions",
+                      "runtime":  "nodejs20"
+                  },
+    "storage":  {
+                    "rules":  "storage.rules"
+                },
+    "hosting":  {
+                    "public":  "public",
+                    "ignore":  [
+                                   "firebase.json",
+                                   ".firebaserc",
+                                   "**/.*",
+                                   "**/node_modules/**",
+                                   "functions/**"
+                               ],
+                    "headers":  [
+                                    {
+                                        "headers":  [
+                                                        {
+                                                            "key":  "Cache-Control",
+                                                            "value":  "no-cache, no-store, must-revalidate"
+                                                        }
+                                                    ],
+                                        "source":  "**/*.html"
+                                    }
+                                ]
+                }
 }
