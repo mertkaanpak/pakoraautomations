@@ -99,6 +99,19 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const ADMIN_USER = 'm.pak';
+        const AUTH_KEY = 'pakora_auth_user';
+        const LEGACY_AUTH_KEY = 'pakora_chat_user';
+        const getStoredUser = () =>
+            (localStorage.getItem(AUTH_KEY) || localStorage.getItem(LEGACY_AUTH_KEY) || '').toLowerCase();
+        const isAdmin = () => getStoredUser() === ADMIN_USER;
+        const ACCOUNTS = {
+            'm.pak': { label: 'Mert Kaan' },
+            'k.guemuesok': { label: 'Kaan' },
+            'l.wenzel': { label: 'Leon' },
+            'oe.pak': { label: 'Oemer' }
+        };
+        const accountLabel = (id) => (ACCOUNTS[id] && ACCOUNTS[id].label) ? ACCOUNTS[id].label : (id || '-');
 
         function formatTime(ts) {
             if (!ts) return '--:--';
@@ -125,6 +138,10 @@
                 const meta = document.createElement('span');
                 let status = req.status === 'done' ? 'Erledigt' : 'Offen';
                 if (req.autoReplied) status = 'Bot Antwort';
+                if (req.status === 'done') {
+                    const doneByLabel = req.doneBy ? accountLabel(req.doneBy) : '';
+                    status = doneByLabel ? `Erledigt (${doneByLabel})` : 'Erledigt';
+                }
                 meta.textContent = `${status} | ${formatTime(req.createdAt)}`;
                 
                 const actions = document.createElement('div');
@@ -138,18 +155,34 @@
                     navigator.clipboard.writeText(payload).then(() => alert('Kopiert!'));
                 };
                 
-                const doneBtn = document.createElement('button');
-                doneBtn.className = `admin-btn ${req.status === 'done' ? 'done' : ''}`;
-                doneBtn.textContent = 'Erledigt';
-                doneBtn.onclick = () => {
-                     db.collection('whatsappRequests').doc(req.id).set({
-                        status: 'done',
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                };
-
                 actions.appendChild(copyBtn);
-actions.appendChild(doneBtn);
+
+                if (isAdmin()) {
+                    const doneBtn = document.createElement('button');
+                    doneBtn.className = `admin-btn ${req.status === 'done' ? 'done' : ''}`;
+                    doneBtn.textContent = 'Erledigt';
+                    doneBtn.onclick = () => {
+                        if (!isAdmin()) { alert('Nur m.pak darf loeschen.'); return; }
+                        const userId = getStoredUser();
+                        db.collection('whatsappRequests').doc(req.id).set({
+                            status: 'done',
+                            doneBy: userId,
+                            doneAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                    };
+                    actions.appendChild(doneBtn);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'admin-btn';
+                    deleteBtn.textContent = 'Loeschen';
+                    deleteBtn.onclick = () => {
+                        if (!isAdmin()) { alert('Nur m.pak darf loeschen.'); return; }
+                        if (!confirm('Anfrage wirklich loeschen?')) return;
+                        db.collection('whatsappRequests').doc(req.id).delete();
+                    };
+                    actions.appendChild(deleteBtn);
+                }
                 card.appendChild(author);
                 card.appendChild(text);
                 card.appendChild(meta);
