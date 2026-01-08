@@ -12,7 +12,7 @@ functions/node_modules/
 # --- GEHEIMNISSE (WICHTIG!) ---
 # Das hier darf auf keinen Fall auf GitHub landen:
 serviceAccountKey.json
-index.js
+config.json
 .env
 
 # --- WHATSAPP SITZUNG ---
