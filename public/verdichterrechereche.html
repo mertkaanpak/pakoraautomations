@@ -896,6 +896,33 @@
             setInterval(applyRoleVisibility, 1000);
         })();
     </script>
+
+<style>
+/* SIDEBAR UNIFY */
+.sidebar {
+    background: #0f172a;
+    color: #ffffff;
+}
+.sidebar .nav-item {
+    text-decoration: none;
+    color: #94a3b8;
+    padding: 14px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: 500;
+}
+.sidebar .nav-item:hover {
+    background: rgba(255,255,255,0.1);
+    color: #ffffff;
+}
+.sidebar .nav-item.active {
+    background: var(--primary, #2563eb);
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(37,99,235,0.4);
+}
+</style>
 </body>
 </html>
 
