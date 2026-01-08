@@ -75,9 +75,14 @@
         <textarea id="excludedNumbers" placeholder="Eine Nummer pro Zeile, z.B. +491701234567"></textarea>
       </div>
 
-      <div>
+            <div>
         <label for="styleSamples">Stilbeispiele</label>
         <textarea id="styleSamples" placeholder="Merhabalar hemen bakip donecegim."></textarea>
+      </div>
+
+      <div>
+        <label for="customPrompt">Prompt / Tonalitaet</label>
+        <textarea id="customPrompt" placeholder="z.B. Schreib kurz, freundlich und wie Mert. Keine Floskeln."></textarea>
       </div>
 
       <div class="actions">
@@ -142,6 +147,7 @@
     const botEnabled = document.getElementById('botEnabled');
     const excludedNumbers = document.getElementById('excludedNumbers');
     const styleSamples = document.getElementById('styleSamples');
+    const customPrompt = document.getElementById('customPrompt');
     const saveBot = document.getElementById('saveBot');
     const botStatus = document.getElementById('botStatus');
 
@@ -162,6 +168,7 @@
         const list = Array.isArray(data.excludedNumbers) ? data.excludedNumbers : [];
         excludedNumbers.value = list.join('\n');
         styleSamples.value = data.styleSamples || '';
+        customPrompt.value = data.customPrompt || '';
       });
     }
 
@@ -172,6 +179,7 @@
         enabled: !!botEnabled.checked,
         excludedNumbers: normalized,
         styleSamples: styleSamples.value.trim(),
+        customPrompt: customPrompt.value.trim(),
         updatedBy: currentUser,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
@@ -252,4 +260,6 @@
     </script>
 </body>
 </html>
+
+
 

@@ -689,16 +689,19 @@ async function sendWhatsappText(token, phoneNumberId, to, text) {
   }
 }
 
-async function buildAiReply({ apiKey, styleSamples, history, messageText }) {
+async function buildAiReply({ apiKey, styleSamples, customPrompt, history, messageText }) {
   const systemPrompt = [
     "Du bist der WhatsApp Assistent von Mert Kaan (Pakora Automations).",
     "Antworte freundlich, kurz und professionell, so als wuerdest du selbst schreiben.",
+    "Klinge menschlich und natuerlich, keine Roboter-Floskeln.",
     "Sprache der Antwort muss der Sprache der Kundenanfrage entsprechen (Deutsch, Englisch oder Tuerkisch).",
     "Wenn Informationen fehlen, stelle 1-3 kurze Rueckfragen.",
     "Bei Kuehlzellen-Anfragen frage nach Innenmass (LxBxH), Solltemperatur, Standort und Zeitrahmen.",
     "Nutze keine Markdown-Listen oder Ueberschriften.",
     "Gib deine Ausgabe nur als JSON im Format: {\"language\":\"de|en|tr\",\"reply\":\"...\"}"
-  ].join("\n");
+  ]
+    .concat(customPrompt ? ["Zusatzregeln von Mert: " + customPrompt] : [])
+    .join("\n");
 
   const historyLines = history
     .map((item) => `${item.role === "assistant" ? "Mert" : "Kunde"}: ${item.text}`)
@@ -878,12 +881,7 @@ exports.whatsappWebhook = functions.https.onRequest(async (req, res) => {
     });
     history.reverse();
 
-    const aiResult = await buildAiReply({
-      apiKey,
-      styleSamples: settings.styleSamples || "",
-      history,
-      messageText: text || ""
-    });
+    const aiResult = await buildAiReply({\n      apiKey,\n      styleSamples: settings.styleSamples || "",\n      customPrompt: settings.customPrompt || "",\n      history,\n      messageText: text || ""\n    });
 
     const reply = (aiResult.reply || "").trim();
     if (!reply) {
@@ -915,6 +913,8 @@ exports.whatsappWebhook = functions.https.onRequest(async (req, res) => {
     res.status(200).send("Error");
   }
 });
+
+
 
 
 
