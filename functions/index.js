@@ -698,13 +698,11 @@ async function buildAiReply({ apiKey, styleSamples, history, messageText }) {
     "Bei Kuehlzellen-Anfragen frage nach Innenmass (LxBxH), Solltemperatur, Standort und Zeitrahmen.",
     "Nutze keine Markdown-Listen oder Ueberschriften.",
     "Gib deine Ausgabe nur als JSON im Format: {\"language\":\"de|en|tr\",\"reply\":\"...\"}"
-  ].join("
-");
+  ].join("\n");
 
   const historyLines = history
     .map((item) => `${item.role === "assistant" ? "Mert" : "Kunde"}: ${item.text}`)
-    .join("
-");
+    .join("\n");
 
   const userPrompt = [
     styleSamples ? `Stilbeispiele von Mert:
@@ -713,9 +711,7 @@ ${styleSamples}` : "",
 ${historyLines}` : "",
     `Neue Nachricht vom Kunden: ${messageText}`,
     "Antwort als JSON:"
-  ].filter(Boolean).join("
-
-");
+  ].filter(Boolean).join("\n\n");
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -919,4 +915,6 @@ exports.whatsappWebhook = functions.https.onRequest(async (req, res) => {
     res.status(200).send("Error");
   }
 });
+
+
 
