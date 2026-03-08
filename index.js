@@ -36,7 +36,7 @@ const client = new Client({
 
 client.on('qr', (qr) => {
     console.log('QR CODE WIRD GENERIERT...');
-    qrcode.generate(qr, { small: true });
+    qrcode.generate(qr, { small: false });
     console.log('--> Bitte jetzt mit WhatsApp Business (m.pak) scannen!');
 });
 

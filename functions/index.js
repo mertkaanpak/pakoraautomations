@@ -1,8 +1,94 @@
-﻿const functions = require("firebase-functions");
+const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const pdfParse = require("pdf-parse");
+const fetch = require("node-fetch");
+const xlsx = require("xlsx");
 
-admin.initializeApp();
+admin.initializeApp({
+  databaseURL: "https://pakora-automations-chat-default-rtdb.europe-west1.firebasedatabase.app"
+});
+
+// +++ START: OneDrive Excel Sync Function +++
+
+const MS_GRAPH_CREDS = {
+    auth: {
+        clientId: functions.config().onedrive.client_id,
+        clientSecret: functions.config().onedrive.client_secret,
+        tenantId: functions.config().onedrive.tenant_id || "consumers",
+        refreshToken: functions.config().onedrive.refresh_token
+    },
+    excelFilePath: functions.config().onedrive.excel_path
+};
+
+async function getGraphToken() {
+    if (!MS_GRAPH_CREDS.auth.refreshToken) {
+        throw new Error("Missing OneDrive refresh token. Set functions config onedrive.refresh_token.");
+    }
+
+    const url = `https://login.microsoftonline.com/${MS_GRAPH_CREDS.auth.tenantId}/oauth2/v2.0/token`;
+    const body = new URLSearchParams();
+    body.append("client_id", MS_GRAPH_CREDS.auth.clientId);
+    if (MS_GRAPH_CREDS.auth.clientSecret) {
+        body.append("client_secret", MS_GRAPH_CREDS.auth.clientSecret);
+    }
+    body.append("grant_type", "refresh_token");
+    body.append("refresh_token", MS_GRAPH_CREDS.auth.refreshToken);
+    body.append("scope", "Files.Read offline_access");
+
+    const response = await fetch(url, { method: "POST", body });
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Token Error: ${error}`);
+    }
+    const data = await response.json();
+    return data.access_token;
+}
+
+exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
+    try {
+        const token = await getGraphToken();
+        const driveItemUrl = `https://graph.microsoft.com/v1.0/me/drive/root:${MS_GRAPH_CREDS.excelFilePath}:/content`;
+        
+        const fileResponse = await fetch(driveItemUrl, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!fileResponse.ok) {
+            const error = await fileResponse.text();
+            throw new Error(`OneDrive Error: ${error}`);
+        }
+
+        const arrayBuffer = await fileResponse.arrayBuffer();
+        const workbook = xlsx.read(Buffer.from(arrayBuffer), { type: "buffer" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = xlsx.utils.sheet_to_json(worksheet);
+
+        const updates = {};
+        let count = 0;
+        jsonData.forEach(row => {
+            const id = row.ID || row.ArtNr;
+            const qty = parseInt(row.Menge, 10);
+
+            if (id && !isNaN(qty)) {
+                const safeId = String(id).replace(/[.#$/\[\]]/g, "_");
+                updates[`/products/${safeId}/qty`] = qty;
+                count++;
+            }
+        });
+
+        await admin.database().ref().update(updates);
+        console.log(`OK: ${count} products updated.`);
+        res.status(200).send(`OK: ${count} products updated.`);
+
+    } catch (error) {
+        console.error("Sync failed:", error);
+        res.status(500).send(`Error: ${error.message}`);
+    }
+});
+
+// +++ END: OneDrive Excel Sync Function +++
+
 
 exports.notifyOnMessage = functions.firestore
   .document("messages/{messageId}")
@@ -919,9 +1005,4 @@ exports.whatsappWebhook = functions.https.onRequest(async (req, res) => {
     res.status(200).send("Error");
   }
 });
-
-
-
-
-
 
