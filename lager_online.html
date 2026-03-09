@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -124,7 +124,7 @@
             border-radius: var(--radius); 
             border: 1px solid var(--border); 
             box-shadow: var(--shadow); 
-            flex: 1; /* Füllt den Rest */
+            flex: 1; /* F�llt den Rest */
             display: flex;
             flex-direction: column;
         }
@@ -191,17 +191,17 @@
 <body>
 
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
-    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+    <button class="mobile-toggle" onclick="toggleSidebar()">?</button>
 
     <nav class="sidebar">
         <div class="logo">
             <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
             <span style="display:none; font-size: 22px; font-weight:700;">Pakora</span>
         </div>
-        <a href="index.html" class="nav-item">Übersicht</a>
+        <a href="index.html" class="nav-item">�bersicht</a>
         <a href="lager_online.html" class="nav-item active">Lagerbestand</a>
         <a href="index.html#calc" class="nav-item">Smart-Kalkulation</a>
-        <a href="konfigurator.html" class="nav-item">Kühlzellen Kalkulator</a>
+        <a href="konfigurator.html" class="nav-item">K�hlzellen Kalkulator</a>
     </nav>
 
     <main class="main">
@@ -232,9 +232,9 @@
 
         <div class="card">
             <div class="controls">
-                <input type="text" id="searchInput" placeholder="🔍 Artikel, EAN oder Nummer suchen..." onkeyup="renderTable()">
+                <input type="text" id="searchInput" placeholder="?? Artikel, EAN oder Nummer suchen..." onkeyup="renderTable()">
                 <button class="btn btn-upload" onclick="document.getElementById('csvInput').click()">
-                    📂 Liste Abgleichen
+                    ?? Liste Abgleichen
                 </button>
                 <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="handleCSV(this)">
                 <button class="btn btn-new" onclick="openModal()">
@@ -265,7 +265,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title" id="modalTitle">Neuer Artikel</div>
-                <button class="close-btn" onclick="closeModal()">×</button>
+                <button class="close-btn" onclick="closeModal()">�</button>
             </div>
             
             <input type="hidden" id="modalKey">
@@ -278,7 +278,7 @@
             
             <div class="grid-2">
                 <div>
-                    <label>Preis (€)</label>
+                    <label>Preis (�)</label>
                     <input type="number" step="0.01" id="modalPrice" placeholder="0.00">
                 </div>
                 <div>
@@ -290,10 +290,10 @@
             <label>Kategorie</label>
             <select id="modalCat">
                 <option value="compressor">Kompressor</option>
-                <option value="condensing_unit">Verflüssigungssatz</option>
-                <option value="cp_box">CP-Box (Gehäuse)</option>
+                <option value="condensing_unit">Verfl�ssigungssatz</option>
+                <option value="cp_box">CP-Box (Geh�use)</option>
                 <option value="evaporator">Verdampfer</option>
-                <option value="accessory">Zubehör</option>
+                <option value="accessory">Zubeh�r</option>
             </select>
 
             <div class="grid-2">
@@ -307,7 +307,7 @@
                 </div>
             </div>
 
-            <button class="btn btn-primary" onclick="saveProduct()" style="width:100%; margin-top:20px;">💾 Speichern</button>
+            <button class="btn btn-primary" onclick="saveProduct()" style="width:100%; margin-top:20px;">?? Speichern</button>
         </div>
     </div>
 
@@ -316,13 +316,13 @@
         // 1. FIREBASE CONFIGURATION
         // ==========================================
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT",
-            storageBucket: "YOUR_PROJECT.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyCjIggzBA4NaMNm1FSfTUzvZLBquvd9P40",
+            authDomain: "pakora-automations-chat.firebaseapp.com",
+            databaseURL: "https://pakora-automations-chat-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "pakora-automations-chat",
+            storageBucket: "pakora-automations-chat.firebasestorage.app",
+            messagingSenderId: "281325034328",
+            appId: "1:281325034328:web:e05c04bac6b8558560632d"
         };
         // ==========================================
 
@@ -403,22 +403,22 @@
                     <td style="font-weight:600;">${item.name}</td>
                     <td>
                         <div class="stock-ctrl">
-                            <button class="btn-qty" onclick="updateStock('${key}', -1)">−</button>
+                            <button class="btn-qty" onclick="updateStock('${key}', -1)">-</button>
                             <div class="val-qty">${item.qty}</div>
                             <button class="btn-qty" onclick="updateStock('${key}', 1)">+</button>
                         </div>
                     </td>
                     <td>${statusBadge}</td>
                     <td class="action-col">
-                        <button class="btn" style="background:#64748b; padding: 5px 10px;" onclick="openModal('${key}')">✏️</button>
-                        <button class="btn" style="background:#dc2626; padding: 5px 10px;" onclick="deleteProduct('${key}')">🗑️</button>
+                        <button class="btn" style="background:#64748b; padding: 5px 10px;" onclick="openModal('${key}')">??</button>
+                        <button class="btn" style="background:#dc2626; padding: 5px 10px;" onclick="deleteProduct('${key}')">???</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
 
             if(visibleCount === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">Keine Treffer für "${search}"</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">Keine Treffer f�r "${search}"</td></tr>`;
             }
         }
 
@@ -481,7 +481,7 @@
         }
 
         function deleteProduct(key) {
-            if (confirm(`Soll der Artikel "${localData[key].name}" wirklich gelöscht werden?`)) {
+            if (confirm(`Soll der Artikel "${localData[key].name}" wirklich gel�scht werden?`)) {
                 stockRef.child(key).remove();
             }
         }
@@ -490,7 +490,7 @@
             const file = input.files[0];
             if (!file) return;
 
-            if (!confirm("CSV-Abgleich:\nBestehende Artikel werden aktualisiert, neue hinzugefügt. Fortfahren?")) {
+            if (!confirm("CSV-Abgleich:\nBestehende Artikel werden aktualisiert, neue hinzugef�gt. Fortfahren?")) {
                 input.value = '';
                 return;
             }
@@ -527,7 +527,7 @@
 
                 stockRef.update(updates, (error) => {
                     if (error) alert("Fehler: " + error);
-                    else alert(`✅ ${count} Artikel abgeglichen!`);
+                    else alert(`? ${count} Artikel abgeglichen!`);
                     input.value = '';
                 });
             };
@@ -540,6 +540,7 @@
     </script>
 </body>
 </html>
+
 
 
 

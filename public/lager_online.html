@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -124,7 +124,7 @@
             border-radius: var(--radius); 
             border: 1px solid var(--border); 
             box-shadow: var(--shadow); 
-            flex: 1; /* Füllt den Rest */
+            flex: 1; /* F�llt den Rest */
             display: flex;
             flex-direction: column;
         }
@@ -365,7 +365,7 @@
 <body>
 
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
-    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+    <button class="mobile-toggle" onclick="toggleSidebar()">?</button>
 
         <nav class="sidebar">
         <div class="logo">
@@ -413,9 +413,9 @@
 
         <div class="card">
             <div class="controls">
-                <input type="text" id="searchInput" placeholder="🔍 Artikel, EAN oder Nummer suchen..." onkeyup="renderTable()">
+                <input type="text" id="searchInput" placeholder="?? Artikel, EAN oder Nummer suchen..." onkeyup="renderTable()">
                 <button class="btn btn-upload" onclick="document.getElementById('csvInput').click()">
-                    📂 Liste hochladen
+                    ?? Liste hochladen
                 </button>
                 <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="handleCSV(this)">
             </div>
@@ -441,16 +441,16 @@
 
     <script>
         // ==========================================
-        // 1. FIREBASE CONFIGURATION (HIER EINFÜGEN!)
+        // 1. FIREBASE CONFIGURATION (HIER EINF�GEN!)
         // ==========================================
         const firebaseConfig = {
-            apiKey: "HIER_API_KEY_EINFÜGEN",
-            authDomain: "DEIN_PROJEKT.firebaseapp.com",
-            databaseURL: "https://DEIN_PROJEKT-default-rtdb.firebaseio.com",
-            projectId: "DEIN_PROJEKT",
-            storageBucket: "DEIN_PROJEKT.appspot.com",
-            messagingSenderId: "NUMMER",
-            appId: "APP_ID"
+            apiKey: "AIzaSyCjIggzBA4NaMNm1FSfTUzvZLBquvd9P40",
+            authDomain: "pakora-automations-chat.firebaseapp.com",
+            databaseURL: "https://pakora-automations-chat-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "pakora-automations-chat",
+            storageBucket: "pakora-automations-chat.firebasestorage.app",
+            messagingSenderId: "281325034328",
+            appId: "1:281325034328:web:e05c04bac6b8558560632d"
         };
         // ==========================================
 
@@ -471,7 +471,7 @@
         }
         
         let db, stockRef;
-        let localData = {}; // Lokale Kopie der Daten für schnelle Suche
+        let localData = {}; // Lokale Kopie der Daten f�r schnelle Suche
 
         if(firebase.apps.length > 0) {
             db = firebase.database();
@@ -551,7 +551,7 @@
                     <td style="font-weight:600; color:#0f172a;">${item.name}</td>
                     <td>
                         <div class="stock-ctrl">
-                            <div class="btn-qty" onclick="updateStock('${key}', -1)">−</div>
+                            <div class="btn-qty" onclick="updateStock('${key}', -1)">-</div>
                             <div class="val-qty">${item.qty}</div>
                             <div class="btn-qty" onclick="updateStock('${key}', 1)">+</div>
                         </div>
@@ -562,7 +562,7 @@
             });
 
             if(visibleCount === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:#94a3b8;">Keine Treffer für "${search}"</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:#94a3b8;">Keine Treffer f�r "${search}"</td></tr>`;
             }
         }
 
@@ -583,7 +583,7 @@
             let newQty = (localData[key].qty || 0) + delta;
             if(newQty < 0) newQty = 0;
 
-            // UPDATE IN DER CLOUD (Passiert sofort überall)
+            // UPDATE IN DER CLOUD (Passiert sofort �berall)
             db.ref('lagerbestand/' + key + '/qty').set(newQty);
         }
 
@@ -592,7 +592,7 @@
             const file = input.files[0];
             if(!file) return;
 
-            if(!confirm("⚠️ ACHTUNG CHEF:\nHiermit wird der gesamte Online-Lagerbestand überschrieben!
+            if(!confirm("?? ACHTUNG CHEF:\nHiermit wird der gesamte Online-Lagerbestand �berschrieben!
 
 Fortfahren?")) {
                 input.value = '';
@@ -607,7 +607,7 @@ Fortfahren?")) {
                 let count = 0;
 
                 lines.forEach((line, idx) => {
-                    // Header überspringen, leere Zeilen ignorieren
+                    // Header �berspringen, leere Zeilen ignorieren
                     if(idx === 0 && line.toLowerCase().includes('id')) return;
                     if(!line.trim()) return;
 
@@ -639,12 +639,12 @@ Fortfahren?")) {
                     if (error) {
                         alert("Fehler: " + error);
                     } else {
-                        alert(`✅ ${count} Artikel erfolgreich hochgeladen und synchronisiert!`);
+                        alert(`? ${count} Artikel erfolgreich hochgeladen und synchronisiert!`);
                         input.value = ''; // Reset
                     }
                 });
             };
-            reader.readAsText(file, 'ISO-8859-1'); // Wichtig für Umlaute aus Excel
+            reader.readAsText(file, 'ISO-8859-1'); // Wichtig f�r Umlaute aus Excel
         }
 
     </script>
@@ -875,6 +875,7 @@ Fortfahren?")) {
 </style>
 </body>
 </html>
+
 
 
 

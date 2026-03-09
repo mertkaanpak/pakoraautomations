@@ -1,4 +1,4 @@
-Ôªø
+
 
 <!DOCTYPE html>
 <html lang="de">
@@ -22,6 +22,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
         /* --- DESIGN SYSTEM --- */
@@ -388,7 +390,7 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-        /* SCH√ñNERER ANGEBOTS-BEREICH */
+        /* SCH÷NERER ANGEBOTS-BEREICH */
         .offer-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 15px; font-size: 14px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
         .offer-table th { text-align: left; padding: 12px 15px; background: #f1f5f9; color: #475569; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; }
         .offer-table td { padding: 12px 15px; border-bottom: 1px solid #e2e8f0; color: #334155; }
@@ -621,7 +623,7 @@
 <body> 
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
 
-    <button class="mobile-toggle" onclick="toggleSidebar()">‚ò∞</button>
+    <button class="mobile-toggle" onclick="toggleSidebar()">?</button>
 
            <nav class="sidebar">
         <div class="logo">
@@ -645,7 +647,7 @@
 
         <div id="dashboard" class="section active">
             <div class="dashboard-header">
-                <h1 class="dashboard-welcome">Willkommen zur√ºck, <span id="welcomeName">Chef</span>!</h1>
+                <h1 class="dashboard-welcome">Willkommen zur¸ck, <span id="welcomeName">Chef</span>!</h1>
                 <div class="dashboard-date" id="currentDate">Lade System...</div>
             </div>
 
@@ -665,7 +667,7 @@
                     <div>
                         <div class="dash-icon">&#x1F9CA;</div>
                         <div class="dash-title">Kuehlzellen Kalkulator</div>
-                        <div class="dash-desc">Individuelle Planung und Ma√üeingabe fuer Kuehlzellen.</div>
+                        <div class="dash-desc">Individuelle Planung und Maﬂeingabe fuer Kuehlzellen.</div>
                     </div>
                     <div class="dash-footer">
                         <span style="font-size:12px; color:#94a3b8;">Externe App</span>
@@ -758,44 +760,44 @@
             </div>
         </div>
         <div id="calc" class="section">
-            <h2>Pr√§zisions-Kalkulation</h2>
-            <p class="subtitle">Automatische Wahl: Normal (‚â• 0¬∞C) oder Tief (< 0¬∞C).</p>
+            <h2>Pr‰zisions-Kalkulation</h2>
+            <p class="subtitle">Automatische Wahl: Normal (= 0∞C) oder Tief (< 0∞C).</p>
 
             <div class="grid-offer">
                 <div>
                     <div class="card">
                         <div class="card-header">1. Technische Daten</div>
                         
-                        <label>Raumvolumen (m¬≥)</label>
+                        <label>Raumvolumen (m≥)</label>
                         <input type="number" inputmode="decimal" id="calcVol" placeholder="z.B. 150" onchange="resetOffer()">
-                        <div style="font-size:12px; color:#15803d; margin-top:-15px; margin-bottom:15px;">‚úÖ Datenbank aktiv: 100% Exakt bis 250m¬≥</div>
+                        <div style="font-size:12px; color:#15803d; margin-top:-15px; margin-bottom:15px;">? Datenbank aktiv: 100% Exakt bis 250m≥</div>
                         
-                        <label>Au√üentemperatur (¬∞C)</label>
+                        <label>Auﬂentemperatur (∞C)</label>
                         <input type="number" inputmode="decimal" id="calcAmb" value="35" onchange="resetOffer()">
                         
                         <label>Raumtemperatur</label>
                         <select id="calcTemp" onchange="resetOffer()">
-                            <option value="16">+16 ¬∞C</option>
-                            <option value="15">+15 ¬∞C</option>
-                            <option value="12">+12 ¬∞C</option>
-                            <option value="10">+10 ¬∞C</option>
-                            <option value="5">+5 ¬∞C</option>
-                            <option value="4">+4 ¬∞C</option>
-                            <option value="2">+2 ¬∞C</option>
-                            <option value="0">0 ¬∞C (Normalk√ºhlung)</option>
-                            <option value="-1">-1 ¬∞C (Tiefk√ºhlung)</option>
-                            <option value="-2">-2 ¬∞C</option>
-                            <option value="-5">-5 ¬∞C</option>
-                            <option value="-10">-10 ¬∞C</option>
-                            <option value="-15">-15 ¬∞C</option>
-                            <option value="-18" selected>-18 ¬∞C (Tiefk√ºhlung)</option>
-                            <option value="-20">-20 ¬∞C</option>
-                            <option value="-21">-21 ¬∞C</option>
-                            <option value="-25">-25 ¬∞C</option>
+                            <option value="16">+16 ∞C</option>
+                            <option value="15">+15 ∞C</option>
+                            <option value="12">+12 ∞C</option>
+                            <option value="10">+10 ∞C</option>
+                            <option value="5">+5 ∞C</option>
+                            <option value="4">+4 ∞C</option>
+                            <option value="2">+2 ∞C</option>
+                            <option value="0">0 ∞C (Normalk¸hlung)</option>
+                            <option value="-1">-1 ∞C (Tiefk¸hlung)</option>
+                            <option value="-2">-2 ∞C</option>
+                            <option value="-5">-5 ∞C</option>
+                            <option value="-10">-10 ∞C</option>
+                            <option value="-15">-15 ∞C</option>
+                            <option value="-18" selected>-18 ∞C (Tiefk¸hlung)</option>
+                            <option value="-20">-20 ∞C</option>
+                            <option value="-21">-21 ∞C</option>
+                            <option value="-25">-25 ∞C</option>
                         </select>
                         
                         <button class="btn btn-primary" onclick="calculateWatts()">
-                            ‚ö° Exakt Berechnen
+                            ? Exakt Berechnen
                         </button>
                     </div>
                 </div>
@@ -803,19 +805,19 @@
                 <div id="resultSection" style="display:none;">
                     
                     <div class="info-bar" id="calcInfo">
-                        ‚ÑπÔ∏è Datenquelle: Interne DB
+                        ?? Datenquelle: Interne DB
                     </div>
 
                     <div class="result-box">
                         <div class="res-card" id="resNormal" onclick="selectMode('normal')">
                             <span class="res-label">Normaler Betrieb</span>
                             <span class="res-val" id="valNormal">0 W</span>
-                            <span class="res-sub" id="baseNormal">Basis 35¬∞C: 0 W</span>
+                            <span class="res-sub" id="baseNormal">Basis 35∞C: 0 W</span>
                         </div>
                         <div class="res-card" id="resHeavy" onclick="selectMode('heavy')">
                             <span class="res-label">Starker Betrieb</span>
                             <span class="res-val" id="valHeavy">0 W</span>
-                            <span class="res-sub" id="baseHeavy">Basis 35¬∞C: 0 W</span>
+                            <span class="res-sub" id="baseHeavy">Basis 35∞C: 0 W</span>
                         </div>
                     </div>
 
@@ -852,21 +854,21 @@
                         <div class="totals-area">
                             <div class="total-row">
                                 <span>Zwischensumme (Netto)</span>
-                                <span id="subTotal">0,00 ‚Ç¨</span>
+                                <span id="subTotal">0,00 Ä</span>
                             </div>
                             <div class="total-row discount-text">
                                 <span>Rabatt (<span id="dispDisc">0</span>%)</span>
-                                <span id="discAmount">-0,00 ‚Ç¨</span>
+                                <span id="discAmount">-0,00 Ä</span>
                             </div>
                             <div class="total-row total-final">
                                 <span>GESAMTBETRAG</span>
-                                <span id="finalTotal">0,00 ‚Ç¨</span>
+                                <span id="finalTotal">0,00 Ä</span>
                             </div>
                         </div>
 
                         <div style="margin-top:20px;">
                             <button class="btn btn-offer" onclick="generatePDF()">
-                                üìÑ PDF Erstellen
+                                ?? PDF Erstellen
                             </button>
                         </div>
                     </div>
@@ -910,11 +912,11 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title" id="modalTitle">Details</div>
-                <button class="close-btn" onclick="closeProductModal()">√ó</button>
+                <button class="close-btn" onclick="closeProductModal()">◊</button>
             </div>
             <div id="modalBody"></div>
             <div style="margin-top: 20px;">
-                <button class="btn btn-primary" onclick="closeProductModal()">Schlie√üen</button>
+                <button class="btn btn-primary" onclick="closeProductModal()">Schlieﬂen</button>
             </div>
         </div>
     </div>
@@ -923,7 +925,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title">Neues Produkt</div>
-                <button class="close-btn" onclick="closeAddModal()">√ó</button>
+                <button class="close-btn" onclick="closeAddModal()">◊</button>
             </div>
             
             <label>Barcode / EAN</label>
@@ -932,8 +934,8 @@
             <label>Kategorie</label>
             <select id="newCat">
                 <option value="compressor">Kompressor (Nur Lager)</option>
-                <option value="condensing_unit" selected>Verfl√ºssigungssatz</option>
-                <option value="cp_box">CP-Box (Geh√§use)</option>
+                <option value="condensing_unit" selected>Verfl¸ssigungssatz</option>
+                <option value="cp_box">CP-Box (Geh‰use)</option>
                 <option value="evaporator">Verdampfer</option>
             </select>
 
@@ -943,7 +945,7 @@
                     <input type="text" id="newId" placeholder="ID-123">
                 </div>
                 <div>
-                    <label>Preis (‚Ç¨)</label>
+                    <label>Preis (Ä)</label>
                     <input type="number" inputmode="decimal" id="newPrice" placeholder="0.00">
                 </div>
             </div>
@@ -962,12 +964,12 @@
                 </div>
             </div>
 
-            <button class="btn btn-primary" onclick="saveNewProduct()">üíæ Speichern</button>
+            <button class="btn btn-primary" onclick="saveNewProduct()">?? Speichern</button>
         </div>
     </div>
 
    <script>
-        // --- MOBILE MEN√ú STEUERUNG ---
+        // --- MOBILE MEN‹ STEUERUNG ---
         function toggleSidebar(forceOpen) {
             const sidebar = document.querySelector('.sidebar');
             const overlay = document.querySelector('.mobile-overlay');
@@ -1092,30 +1094,30 @@
         ];
 
         const LISTE_VERDAMPFER = [
-            // --- G√úNAY ---
-            { id: "GNKF650Yan", name: "G√ºnay GNKF 650 YAN", capacityNK: 500, capacityTK: 0, price: 195.00, category: 'evaporator' },
-            { id: "GNKF650Orta", name: "G√ºnay GNKF 650 ORTA", capacityNK: 500, capacityTK: 0, price: 195.00, category: 'evaporator' },
-            { id: "GNKF850Yan", name: "G√ºnay GNKF 850 YAN", capacityNK: 600, capacityTK: 0, price: 215.00, category: 'evaporator' },
-            { id: "GNKF850Orta", name: "G√ºnay GNKF 850 ORTA", capacityNK: 600, capacityTK: 0, price: 215.00, category: 'evaporator' },
-            { id: "GKE120", name: "G√ºnay GKE 120", capacityNK: 705, capacityTK: 0, price: 280.00, category: 'evaporator' },
-            { id: "GKE220", name: "G√ºnay GKE 220", capacityNK: 1393, capacityTK: 0, price: 400.00, category: 'evaporator' },
-            { id: "CP-GNKY 750", name: "G√ºnay GNKY 750", capacityNK: 436, capacityTK: 0, price: 220.00, category: 'evaporator' },
-            { id: "CP-GNK 1800-1", name: "G√ºnay GNK 1800-1", capacityNK: 1400, capacityTK: 0, price: 350.00, category: 'evaporator' },
-            { id: "GYE130-6B", name: "G√ºnay GYE 130-6B", capacityNK: 1200, capacityTK: 0, price: 500.00, category: 'evaporator' },
-            { id: "GYE130-6C", name: "G√ºnay GYE 130-6C", capacityNK: 1419, capacityTK: 871, price: 580.00, category: 'evaporator' },
-            { id: "GNE-130.8B", name: "G√ºnay GNE 130.8B", capacityNK: 2299, capacityTK: 1308, price: 645.00, category: 'evaporator' },
-            { id: "GNE-135.8B", name: "G√ºnay GNE 135.8B", capacityNK: 2900, capacityTK: 1800, price: 730.00, category: 'evaporator' },
-            { id: "GYE230-6C", name: "G√ºnay GYE 230-6C", capacityNK: 2604, capacityTK: 1568, price: 720.00, category: 'evaporator' },
-            { id: "GEO225-5A", name: "G√ºnay GEO 225-5A", capacityNK: 3060, capacityTK: 0, price: 920.00, category: 'evaporator' },
-            { id: "GND1.250-1", name: "G√ºnay GND 1.250-1", capacityNK: 2550, capacityTK: 1540, price: 730.00, category: 'evaporator' },
-            { id: "GYE330-6C", name: "G√ºnay GYE 330-6C", capacityNK: 4014, capacityTK: 0, price: 950.00, category: 'evaporator' },
-            { id: "GND3.000-2", name: "G√ºnay GND 3.000-2", capacityNK: 5440, capacityTK: 3390, price: 1230.00, category: 'evaporator' },
-            { id: "GND4.000-2", name: "G√ºnay GND 4.000-2", capacityNK: 7280, capacityTK: 4580, price: 1599.00, category: 'evaporator' },
-            { id: "GND6.000-2", name: "G√ºnay GND 6.000-2", capacityNK: 11050, capacityTK: 6978, price: 2010.00, category: 'evaporator' },
-            { id: "GND7.000-3", name: "G√ºnay GND 7.000-3", capacityNK: 13040, capacityTK: 8120, price: 2399.00, category: 'evaporator' },
-            { id: "GND8.000-3", name: "G√ºnay GND 8.000-3", capacityNK: 14980, capacityTK: 9290, price: 2599.00, category: 'evaporator' },
-            { id: "GND12.000-3", name: "G√ºnay GND 12.000-3", capacityNK: 22170, capacityTK: 13960, price: 3160.00, category: 'evaporator' },
-            { id: "GND17.000-4", name: "G√ºnay GND 17.000-4", capacityNK: 31840, capacityTK: 19320, price: 4900.00, category: 'evaporator' },
+            // --- G‹NAY ---
+            { id: "GNKF650Yan", name: "G¸nay GNKF 650 YAN", capacityNK: 500, capacityTK: 0, price: 195.00, category: 'evaporator' },
+            { id: "GNKF650Orta", name: "G¸nay GNKF 650 ORTA", capacityNK: 500, capacityTK: 0, price: 195.00, category: 'evaporator' },
+            { id: "GNKF850Yan", name: "G¸nay GNKF 850 YAN", capacityNK: 600, capacityTK: 0, price: 215.00, category: 'evaporator' },
+            { id: "GNKF850Orta", name: "G¸nay GNKF 850 ORTA", capacityNK: 600, capacityTK: 0, price: 215.00, category: 'evaporator' },
+            { id: "GKE120", name: "G¸nay GKE 120", capacityNK: 705, capacityTK: 0, price: 280.00, category: 'evaporator' },
+            { id: "GKE220", name: "G¸nay GKE 220", capacityNK: 1393, capacityTK: 0, price: 400.00, category: 'evaporator' },
+            { id: "CP-GNKY 750", name: "G¸nay GNKY 750", capacityNK: 436, capacityTK: 0, price: 220.00, category: 'evaporator' },
+            { id: "CP-GNK 1800-1", name: "G¸nay GNK 1800-1", capacityNK: 1400, capacityTK: 0, price: 350.00, category: 'evaporator' },
+            { id: "GYE130-6B", name: "G¸nay GYE 130-6B", capacityNK: 1200, capacityTK: 0, price: 500.00, category: 'evaporator' },
+            { id: "GYE130-6C", name: "G¸nay GYE 130-6C", capacityNK: 1419, capacityTK: 871, price: 580.00, category: 'evaporator' },
+            { id: "GNE-130.8B", name: "G¸nay GNE 130.8B", capacityNK: 2299, capacityTK: 1308, price: 645.00, category: 'evaporator' },
+            { id: "GNE-135.8B", name: "G¸nay GNE 135.8B", capacityNK: 2900, capacityTK: 1800, price: 730.00, category: 'evaporator' },
+            { id: "GYE230-6C", name: "G¸nay GYE 230-6C", capacityNK: 2604, capacityTK: 1568, price: 720.00, category: 'evaporator' },
+            { id: "GEO225-5A", name: "G¸nay GEO 225-5A", capacityNK: 3060, capacityTK: 0, price: 920.00, category: 'evaporator' },
+            { id: "GND1.250-1", name: "G¸nay GND 1.250-1", capacityNK: 2550, capacityTK: 1540, price: 730.00, category: 'evaporator' },
+            { id: "GYE330-6C", name: "G¸nay GYE 330-6C", capacityNK: 4014, capacityTK: 0, price: 950.00, category: 'evaporator' },
+            { id: "GND3.000-2", name: "G¸nay GND 3.000-2", capacityNK: 5440, capacityTK: 3390, price: 1230.00, category: 'evaporator' },
+            { id: "GND4.000-2", name: "G¸nay GND 4.000-2", capacityNK: 7280, capacityTK: 4580, price: 1599.00, category: 'evaporator' },
+            { id: "GND6.000-2", name: "G¸nay GND 6.000-2", capacityNK: 11050, capacityTK: 6978, price: 2010.00, category: 'evaporator' },
+            { id: "GND7.000-3", name: "G¸nay GND 7.000-3", capacityNK: 13040, capacityTK: 8120, price: 2399.00, category: 'evaporator' },
+            { id: "GND8.000-3", name: "G¸nay GND 8.000-3", capacityNK: 14980, capacityTK: 9290, price: 2599.00, category: 'evaporator' },
+            { id: "GND12.000-3", name: "G¸nay GND 12.000-3", capacityNK: 22170, capacityTK: 13960, price: 3160.00, category: 'evaporator' },
+            { id: "GND17.000-4", name: "G¸nay GND 17.000-4", capacityNK: 31840, capacityTK: 19320, price: 4900.00, category: 'evaporator' },
 
             // --- EVACOND ---
             { id: "EPA-120-64", name: "Evacond EPA-120-64", capacityNK: 476, capacityTK: 0, price: 275.00, category: 'evaporator' },
@@ -1157,7 +1159,7 @@
 
         // TEIL 4: CP-BOXEN
         const LISTE_CP_BOXEN = [
-            // --- NK (Normalk√ºhlung) ---
+            // --- NK (Normalk¸hlung) ---
             { id: "CN.10.215", name: "CP-Box Embraco 9232 GK (R404/R449)", capacityNK: 1800, capacityTK: 0, price: 1850.00, category: 'cp_box' },
             { id: "CN.10.220", name: "CP-Box Embraco 9238 GK (R404/R449)", capacityNK: 2300, capacityTK: 0, price: 2100.00, category: 'cp_box' },
             { id: "FH4524Z", name: "CP-Box Tecumseh FH4524 Z (R404/R449)", capacityNK: 2700, capacityTK: 0, price: 2500.00, category: 'cp_box' },
@@ -1181,7 +1183,7 @@
             { id: "4711", name: "CP-Box Embraco SE 6067 GS (R404/R449)", capacityNK: 17600, capacityTK: 0, price: 7000.00, category: 'cp_box' },
             { id: "FN.10.319", name: "CP-Box Embraco SE 6078 GS (R404/R449)", capacityNK: 18500, capacityTK: 0, price: 8500.00, category: 'cp_box' },
 
-            // --- TK (Tiefk√ºhlung) ---
+            // --- TK (Tiefk¸hlung) ---
             { id: "WIN2446Z", name: "CP-Box Tecumseh WIN 2446 Z (R404)", capacityNK: 0, capacityTK: 1000, price: 2400.00, category: 'cp_box' },
             { id: "80.15.049", name: "CP-Box Danfoss NTZ 048 (R404)", capacityNK: 0, capacityTK: 1500, price: 2200.00, category: 'cp_box' },
             { id: "L013-K01.SC4135", name: "CP-Box Embraco NJX 2219 GS (R404)", capacityNK: 0, capacityTK: 1700, price: 2500.00, category: 'cp_box' },
@@ -1231,7 +1233,7 @@
         }
 
         function deleteCustomProduct(id) {
-            if(!confirm("M√∂chtest du dieses Produkt wirklich l√∂schen?")) return;
+            if(!confirm("Mˆchtest du dieses Produkt wirklich lˆschen?")) return;
             customProducts = customProducts.filter(p => p.id !== id);
             localStorage.setItem('pakoraCustomProducts', JSON.stringify(customProducts));
             location.reload();
@@ -1240,14 +1242,53 @@
         function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
         function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
 
-        // AUTOMATISCHE ZUSAMMENF√úHRUNG
+        // AUTOMATISCHE ZUSAMMENF‹HRUNG
         const customUnits = customProducts.filter(p => ['compressor', 'condensing_unit', 'cp_box'].includes(p.category));
         const customEvaps = customProducts.filter(p => p.category === 'evaporator');
 
-        const products = {
+        let products = {
             units: [...LISTE_VERDICHTER, ...LISTE_AGGREGATE, ...LISTE_CP_BOXEN, ...customUnits], 
             evaporators: [...LISTE_VERDAMPFER, ...customEvaps]
         };
+        let allProducts = [];
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjIggzBA4NaMNm1FSfTUzvZLBquvd9P40",
+            authDomain: "pakora-automations-chat.firebaseapp.com",
+            databaseURL: "https://pakora-automations-chat-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "pakora-automations-chat",
+            storageBucket: "pakora-automations-chat.firebasestorage.app",
+            messagingSenderId: "281325034328",
+            appId: "1:281325034328:web:e05c04bac6b8558560632d"
+        };
+
+        function applyLiveProducts(data) {
+            if (!data) return;
+            allProducts = Object.values(data);
+            const units = allProducts.filter(p => p.category && p.category !== 'evaporator');
+            const evaps = allProducts.filter(p => p.category === 'evaporator');
+            products = {
+                units: [...units, ...customUnits],
+                evaporators: [...evaps, ...customEvaps]
+            };
+            if (document.getElementById('db')?.classList.contains('active')) {
+                renderDatabase();
+            }
+            updateDashboardStats();
+        }
+
+        if (firebase.apps.length === 0) {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                const db = firebase.database();
+                const productsRef = db.ref('products');
+                productsRef.on('value', (snapshot) => {
+                    applyLiveProducts(snapshot.val());
+                });
+            } catch (e) {
+                console.error("Firebase Config fehlt in public/index.html!", e);
+            }
+        }
 
         // =========================================================================
         // --- 3. DIE LOGIK (CALCULATION & UI) ---
@@ -1262,7 +1303,7 @@
             const amb = parseFloat(document.getElementById('calcAmb').value) || 35;
             const temp = document.getElementById('calcTemp').value;
 
-            if(!vol || vol < 5) return alert("Volumen zu klein (min 5m¬≥)!");
+            if(!vol || vol < 5) return alert("Volumen zu klein (min 5m≥)!");
 
             let baseNormal = 0, baseHeavy = 0, infoText = "";
             
@@ -1283,19 +1324,19 @@
                 if (lower === upper) {
                     baseNormal = db[lower][idx];
                     baseHeavy = db[lower][idx+1];
-                    infoText = "‚ÑπÔ∏è Datenquelle: Interne DB (Exakter Treffer)";
+                    infoText = "?? Datenquelle: Interne DB (Exakter Treffer)";
                 } else {
                     const ratio = (vol - lower) / (upper - lower);
                     baseNormal = db[lower][idx] + (db[upper][idx] - db[lower][idx]) * ratio;
                     baseHeavy = db[lower][idx+1] + (db[upper][idx+1] - db[lower][idx+1]) * ratio;
-                    infoText = `‚ÑπÔ∏è Datenquelle: Interne DB (Interpoliert zw. ${lower}-${upper}m¬≥)`;
+                    infoText = `?? Datenquelle: Interne DB (Interpoliert zw. ${lower}-${upper}m≥)`;
                 }
             } else {
                 const slopeN = (db[250][idx] - db[225][idx]) / 25;
                 const slopeH = (db[250][idx+1] - db[225][idx+1]) / 25;
                 baseNormal = db[250][idx] + (vol - 250) * slopeN;
                 baseHeavy = db[250][idx+1] + (vol - 250) * slopeH;
-                infoText = "‚ÑπÔ∏è Datenquelle: Extrapolation (Linearer Trend > 250m¬≥)";
+                infoText = "?? Datenquelle: Extrapolation (Linearer Trend > 250m≥)";
             }
 
             const tRoom = parseFloat(temp);
@@ -1308,9 +1349,9 @@
             calculatedValues.heavy = Math.round(baseHeavy * factor);
 
             document.getElementById('valNormal').innerText = calculatedValues.normal.toLocaleString() + " W";
-            document.getElementById('baseNormal').innerText = `Basis 35¬∞C: ${calculatedValues.baseNormal.toLocaleString()} W`;
+            document.getElementById('baseNormal').innerText = `Basis 35∞C: ${calculatedValues.baseNormal.toLocaleString()} W`;
             document.getElementById('valHeavy').innerText = calculatedValues.heavy.toLocaleString() + " W";
-            document.getElementById('baseHeavy').innerText = `Basis 35¬∞C: ${calculatedValues.baseHeavy.toLocaleString()} W`;
+            document.getElementById('baseHeavy').innerText = `Basis 35∞C: ${calculatedValues.baseHeavy.toLocaleString()} W`;
             document.getElementById('calcInfo').innerText = infoText;
             
             document.getElementById('resultSection').style.display = 'block';
@@ -1354,14 +1395,14 @@
             let usedCap = 0;
             
             if(!unit) {
-                if(products.units.length === 0) items.push({ type: "Hinweis", name: "‚ö†Ô∏è Keine Produkte in DB", price: 0 });
-                else items.push({ type: "Warnung", name: `‚ö†Ô∏è Keine passende Au√üeneinheit (${type}) gefunden`, price: 0 });
+                if(products.units.length === 0) items.push({ type: "Hinweis", name: "?? Keine Produkte in DB", price: 0 });
+                else items.push({ type: "Warnung", name: `?? Keine passende Auﬂeneinheit (${type}) gefunden`, price: 0 });
             } else {
                 usedCap = type === 'NK' ? unit.capacityNK : unit.capacityTK;
-                let catLabel = unit.category === 'cp_box' ? 'CP-Box' : 'Verfl√ºssigungssatz';
+                let catLabel = unit.category === 'cp_box' ? 'CP-Box' : 'Verfl¸ssigungssatz';
                 items.push({ 
                     type: catLabel, 
-                    name: `${unit.name} (${usedCap}W @ ${type==='NK'?'-10':'-25'}¬∞C)`, 
+                    name: `${unit.name} (${usedCap}W @ ${type==='NK'?'-10':'-25'}∞C)`, 
                     price: unit.price 
                 });
                 subTotal += unit.price;
@@ -1380,13 +1421,13 @@
                     items.push({ type: "Verdampfer", name: evap.name, price: evap.price });
                     subTotal += evap.price;
                 } else {
-                    items.push({ type: "Warnung", name: "‚ö†Ô∏è Kein passender Verdampfer gefunden", price: 0 });
+                    items.push({ type: "Warnung", name: "?? Kein passender Verdampfer gefunden", price: 0 });
                 }
             }
 
-            items.push({ type: "Zubeh√∂r", name: "Expansionsventil & D√ºse", price: 120.00 });
+            items.push({ type: "Zubehˆr", name: "Expansionsventil & D¸se", price: 120.00 });
             subTotal += 120.00;
-            items.push({ type: "Zubeh√∂r", name: "K√§lteanlagensteuerung", price: 200.00 });
+            items.push({ type: "Zubehˆr", name: "K‰lteanlagensteuerung", price: 200.00 });
             subTotal += 200.00;
 
             currentOffer.items = items;
@@ -1403,7 +1444,7 @@
                     <tr>
                         <td style="font-weight:500; color:#64748b;">${item.type}</td>
                         <td>${item.name}</td>
-                        <td class="price-col">${item.price.toFixed(2)} ‚Ç¨</td>
+                        <td class="price-col">${item.price.toFixed(2)} Ä</td>
                     </tr>`;
             });
             updateTotals();
@@ -1415,10 +1456,10 @@
             const final = currentOffer.subTotal - discAmount;
             currentOffer.discount = discAmount;
             currentOffer.total = final;
-            document.getElementById('subTotal').innerText = currentOffer.subTotal.toFixed(2) + " ‚Ç¨";
+            document.getElementById('subTotal').innerText = currentOffer.subTotal.toFixed(2) + " Ä";
             document.getElementById('dispDisc').innerText = discPercent;
-            document.getElementById('discAmount').innerText = "-" + discAmount.toFixed(2) + " ‚Ç¨";
-            document.getElementById('finalTotal').innerText = final.toFixed(2) + " ‚Ç¨";
+            document.getElementById('discAmount').innerText = "-" + discAmount.toFixed(2) + " Ä";
+            document.getElementById('finalTotal').innerText = final.toFixed(2) + " Ä";
         }
 
         function resetOffer() {
@@ -1458,17 +1499,17 @@
             const temp = document.getElementById('calcTemp').value;
             const vol = document.getElementById('calcVol').value;
             const amb = document.getElementById('calcAmb').value;
-            doc.text(`Projekt: K√ºhlraum ${vol}m¬≥ bei ${temp}¬∞C (Au√üen: ${amb}¬∞C)`, 15, 62);
+            doc.text(`Projekt: K¸hlraum ${vol}m≥ bei ${temp}∞C (Auﬂen: ${amb}∞C)`, 15, 62);
             doc.text(`Berechnete Last: ${currentOffer.watts.toLocaleString()} W (${currentMode === 'normal' ? 'Normal' : 'Stark'})`, 15, 68);
 
-            const body = currentOffer.items.map(i => ["Position", i.name, i.price.toFixed(2) + " ‚Ç¨"]);
-            body.push(["", "Zwischensumme", currentOffer.subTotal.toFixed(2) + " ‚Ç¨"]);
+            const body = currentOffer.items.map(i => ["Position", i.name, i.price.toFixed(2) + " Ä"]);
+            body.push(["", "Zwischensumme", currentOffer.subTotal.toFixed(2) + " Ä"]);
             
             if(currentOffer.discount > 0) {
                 const percent = document.getElementById('discountPercent').value;
-                body.push(["", `Rabatt (${percent}%)`, "-" + currentOffer.discount.toFixed(2) + " ‚Ç¨"]);
+                body.push(["", `Rabatt (${percent}%)`, "-" + currentOffer.discount.toFixed(2) + " Ä"]);
             }
-            body.push(["", "GESAMTSUMME (Netto)", currentOffer.total.toFixed(2) + " ‚Ç¨"]);
+            body.push(["", "GESAMTSUMME (Netto)", currentOffer.total.toFixed(2) + " Ä"]);
 
             doc.autoTable({
                 startY: 75,
@@ -1498,8 +1539,8 @@
                 tbody.innerHTML += `<tr><td colspan="6" style="background:#f8fafc; font-weight:800; padding-top:20px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; color:#0f172a; text-transform:uppercase; letter-spacing:1px;">${title} (${list.length})</td></tr>`;
                 list.forEach(item => {
                     let capDisplay = "";
-                    if(item.capacityNK > 0) capDisplay += `<div class="temp-badge temp-nk">-10¬∞C</div> ${item.capacityNK} W<br>`;
-                    if(item.capacityTK > 0) capDisplay += `<div class="temp-badge temp-tk">-25¬∞C</div> ${item.capacityTK} W`;
+                    if(item.capacityNK > 0) capDisplay += `<div class="temp-badge temp-nk">-10∞C</div> ${item.capacityNK} W<br>`;
+                    if(item.capacityTK > 0) capDisplay += `<div class="temp-badge temp-tk">-25∞C</div> ${item.capacityTK} W`;
                     if(capDisplay === "") capDisplay = "-";
 
                     const isDeepFreeze = (item.capacityTK > 0 && item.capacityNK === 0);
@@ -1508,12 +1549,12 @@
                     let nameStyle = "";
                     if (isDeepFreeze) {
                         rowStyle = "background-color: #eff6ff; border-left: 4px solid #2563eb;";
-                        namePrefix = "‚ùÑÔ∏è "; 
+                        namePrefix = "?? "; 
                         nameStyle = "color: #1e40af;";
                     }
                     let actionHtml = "";
                     if(item.isCustom) {
-                        actionHtml = `<button class="btn-delete" onclick="deleteCustomProduct('${item.id}')">üóëÔ∏è</button>`;
+                        actionHtml = `<button class="btn-delete" onclick="deleteCustomProduct('${item.id}')">???</button>`;
                     } else {
                         actionHtml = `<span style="color:#cbd5e1; font-size:10px;">Standard</span>`;
                     }
@@ -1522,7 +1563,7 @@
                         <td><span style="font-family:monospace; color:#64748b">${item.id}</span></td>
                         <td><strong style="${nameStyle}">${namePrefix}${item.name}</strong></td>
                         <td>${capDisplay}</td>
-                        <td class="price-col">${item.price.toFixed(2)} ‚Ç¨</td>
+                        <td class="price-col">${item.price.toFixed(2)} Ä</td>
                         <td class="action-col">${actionHtml}</td>
                     </tr>`;
                     tbody.innerHTML += row;
@@ -1534,7 +1575,7 @@
             const condUnits = products.units.filter(u => u.category === 'condensing_unit');
             const cpBoxes = products.units.filter(u => u.category === 'cp_box');
             addSection("Kompressoren", compressors);
-            addSection("Verfl√ºssigungss√§tze", condUnits);
+            addSection("Verfl¸ssigungss‰tze", condUnits);
             addSection("CP-Boxen", cpBoxes);
             addSection("Verdampfer", products.evaporators);
             document.getElementById('dbCount').innerText = `${total} Artikel`;
@@ -1560,7 +1601,7 @@
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Preis (Netto)</span>
-                    <span class="detail-val">${item.price.toFixed(2)} ‚Ç¨</span>
+                    <span class="detail-val">${item.price.toFixed(2)} Ä</span>
                 </div>
                 <div style="margin-top:15px; background:#f8fafc; padding:10px; border-radius:8px;">
                     <div style="font-size:11px; font-weight:bold; color:#64748b; margin-bottom:5px; text-transform:uppercase;">Technische Leistung</div>
@@ -1568,13 +1609,13 @@
 
             if(item.capacityNK > 0) {
                 detailsHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <span>Normalk√ºhlung (-10¬∞C)</span>
+                    <span>Normalk¸hlung (-10∞C)</span>
                     <span style="font-weight:bold; color:#1e40af">${item.capacityNK} Watt</span>
                 </div>`;
             }
             if(item.capacityTK > 0) {
                  detailsHtml += `<div style="display:flex; justify-content:space-between;">
-                    <span>Tiefk√ºhlung (-25¬∞C)</span>
+                    <span>Tiefk¸hlung (-25∞C)</span>
                     <span style="font-weight:bold; color:#3730a3">${item.capacityTK} Watt</span>
                 </div>`;
             }
@@ -1630,12 +1671,12 @@ const CURRENT_NEWS_VERSION = 1;
         const lastSeenVersion = localStorage.getItem('pakora_news_version') || 0;
         const navItems = document.querySelectorAll('.nav-item');
         
-        // Suche den Men√ºpunkt f√ºr News/Kommunikation
+        // Suche den Men¸punkt f¸r News/Kommunikation
         navItems.forEach(item => {
             if(item.innerText.includes("News") || item.innerText.includes("Kommunikation")) {
                 
                 if (CURRENT_NEWS_VERSION > lastSeenVersion) {
-                    // Neuer Inhalt verf√ºgbar -> Roter Punkt hinzuf√ºgen
+                    // Neuer Inhalt verf¸gbar -> Roter Punkt hinzuf¸gen
                     if(!item.querySelector('.news-dot')) {
                         let dot = document.createElement('span');
                         dot.className = 'news-dot';
@@ -1647,7 +1688,7 @@ const CURRENT_NEWS_VERSION = 1;
         });
     }
 
-    // Beim Laden pr√ºfen
+    // Beim Laden pr¸fen
     document.addEventListener("DOMContentLoaded", checkNewsStatus);
     </script>
 
@@ -1915,6 +1956,7 @@ const overlay = document.getElementById("authOverlay");
 </style>
 </body>
 </html>
+
 
 
 
