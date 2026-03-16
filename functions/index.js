@@ -154,7 +154,14 @@ function buildProductId(row, manufacturer, model) {
     const explicitId = String(pickValue(row, ["id", "artnr", "artikelnummer", "artikelnr", "artikelnummerid"])).trim();
     if (explicitId) return explicitId;
 
-    const fallback = [row.__sheet, row.__section, manufacturer, model]
+    const fallback = [
+      row.__sheet,
+      row.__section,
+      manufacturer,
+      model,
+      pickValue(row, ["typ", "kompressor", "modell", "model"]),
+      pickValue(row, ["te10c", "leistung10c", "leistung25c", "leistung"])
+    ]
       .map((part) => String(part || "").trim())
       .filter(Boolean)
       .join(" ");
@@ -187,6 +194,53 @@ function inferCategory(rawCategory, productName) {
     if (haystack.includes("verfl") || haystack.includes("condensing")) return "condensing_unit";
     if (haystack.includes("kompressor") || haystack.includes("compressor")) return "compressor";
     return "accessory";
+}
+
+function inferCategoryFromSheet(sheetName, sectionTitle, rawCategory, productName) {
+    const sheet = String(sheetName || "").toLowerCase();
+    const section = String(sectionTitle || "").toLowerCase();
+    const combined = `${sheet} ${section} ${rawCategory || ""} ${productName || ""}`;
+
+    if (combined.includes("cp-box") || combined.includes("cp box") || combined.includes("frigo")) {
+        return "cp_box";
+    }
+    if (combined.includes("verfl")) {
+        return "condensing_unit";
+    }
+    if (combined.includes("kompressor") || combined.includes("embraco scroll") || combined.includes("tecumseh") || combined.includes("dorin") || combined.includes("danfoss")) {
+        return "compressor";
+    }
+    if (combined.includes("verdampfer") || combined.includes("evacond") || combined.includes("sonkar") || combined.includes("gunay") || combined.includes("günay")) {
+        return "evaporator";
+    }
+
+    return inferCategory(rawCategory, productName);
+}
+
+function buildProductName(row) {
+    const manufacturer = String(pickValue(row, ["hersteller", "manufacturer", "marke"])).trim();
+    const model = String(pickValue(row, ["modell", "model", "kompressor", "typ", "bezeichnung", "produkt", "artikel"])).trim();
+    const explicitName = String(pickValue(row, ["name", "produktname"])).trim();
+    return explicitName || [manufacturer, model].filter(Boolean).join(" ").trim() || model;
+}
+
+function deriveCapacities(row) {
+    const directNK = parseNumber(pickValue(row, ["leistungnk10c", "leistungnk", "leistung10cwatt", "leistung10c", "te10c", "f"]));
+    const directTK = parseNumber(pickValue(row, ["leistungtk25c", "leistungtk", "leistung25cwatt", "leistung25c", "te25c", "g"]));
+    const directZero = parseNumber(pickValue(row, ["te0c", "leistung0c"]));
+    const generic = String(pickValue(row, ["leistung"])).trim();
+
+    let capacityNK = directNK;
+    let capacityTK = directTK;
+
+    if (!capacityNK && generic && generic.includes("-10")) capacityNK = parseNumber(generic);
+    if (!capacityTK && generic && generic.includes("-25")) capacityTK = parseNumber(generic);
+
+    return {
+        capacityNK,
+        capacityTK,
+        capacityZero: directZero
+    };
 }
 
 async function getGraphToken() {
@@ -258,34 +312,30 @@ exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
         let created = 0;
         let updated = 0;
         jsonData.forEach(row => {
-            const manufacturer = String(pickValue(row, ["hersteller", "manufacturer"])).trim();
-            const model = String(pickValue(row, ["modell", "model", "kompressor", "bezeichnung", "produkt", "artikel"])).trim();
+            const manufacturer = String(pickValue(row, ["hersteller", "manufacturer", "marke"])).trim();
+            const model = String(pickValue(row, ["modell", "model", "kompressor", "typ", "bezeichnung", "produkt", "artikel"])).trim();
             const id = buildProductId(row, manufacturer, model);
             if (!id) return;
 
             const safeId = String(id).replace(/[.#$/\[\]]/g, "_");
             const existing = existingProducts[safeId] || {};
-            const explicitName = String(pickValue(row, ["name", "bezeichnung", "produktname"])).trim();
+            const explicitName = buildProductName(row);
             const rawCategory = String(pickValue(row, ["kategorie", "category", "anwendung", "application"])).trim() || `${row.__sheet || ""} ${row.__section || ""}`;
             const qtyRaw = pickValue(row, ["menge", "bestand", "anzahl", "qty", "lagerbestand", "stuck", "stueck"]);
             const hasQty = String(qtyRaw || "").trim() !== "";
             const qty = hasQty ? Math.max(0, Math.round(parseNumber(qtyRaw))) : (existing.qty || 0);
             const price = parseNumber(pickValue(row, ["preis", "price"]));
-            const capacityText = String(pickValue(row, ["leistung", "leistung10cwatt", "leistung10c", "leistung25cwatt", "leistung25c"])).trim();
-            let capacityNK = parseNumber(pickValue(row, ["leistungnk10c", "leistungnk", "leistung10cwatt", "leistung10c", "leistung10", "f"]));
-            let capacityTK = parseNumber(pickValue(row, ["leistungtk25c", "leistungtk", "leistung25cwatt", "leistung25c", "leistung25", "g"]));
-            if (!capacityNK && capacityText && capacityText.includes("-10")) capacityNK = parseNumber(capacityText);
-            if (!capacityTK && capacityText && capacityText.includes("-25")) capacityTK = parseNumber(capacityText);
-
-            const productName = explicitName || [manufacturer, model].filter(Boolean).join(" ").trim() || existing.name || model || id;
+            const capacities = deriveCapacities(row);
+            const productName = explicitName || existing.name || model || id;
+            const category = inferCategoryFromSheet(row.__sheet, row.__section, rawCategory || existing.category, productName);
             const productData = {
                 id,
                 name: productName,
                 qty,
                 price: price || existing.price || 0,
-                category: inferCategory(rawCategory || existing.category, productName),
-                capacityNK: capacityNK || existing.capacityNK || 0,
-                capacityTK: capacityTK || existing.capacityTK || 0
+                category,
+                capacityNK: capacities.capacityNK || existing.capacityNK || 0,
+                capacityTK: capacities.capacityTK || existing.capacityTK || 0
             };
 
             updates[`/products/${safeId}`] = productData;
