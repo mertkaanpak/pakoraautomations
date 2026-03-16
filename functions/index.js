@@ -20,7 +20,8 @@ const MS_GRAPH_CREDS = {
         tenantId: oneDriveConfig.tenant_id || "consumers",
         refreshToken: oneDriveConfig.refresh_token || ""
     },
-    excelFilePath: oneDriveConfig.excel_path || ""
+    excelFilePath: oneDriveConfig.excel_path || "",
+    exportFilePath: oneDriveConfig.export_path || ""
 };
 
 function normalizeHeader(value) {
@@ -363,7 +364,7 @@ async function getGraphToken() {
     }
     body.append("grant_type", "refresh_token");
     body.append("refresh_token", MS_GRAPH_CREDS.auth.refreshToken);
-    body.append("scope", "Files.Read offline_access");
+    body.append("scope", "Files.ReadWrite offline_access");
 
     const response = await fetch(url, { method: "POST", body });
     if (!response.ok) {
@@ -372,6 +373,66 @@ async function getGraphToken() {
     }
     const data = await response.json();
     return data.access_token;
+}
+
+function deriveExportPath(sourcePath) {
+    const normalized = String(sourcePath || "").trim();
+    if (!normalized) return "/Pakora-Lagerbestand-Export.xlsx";
+    if (MS_GRAPH_CREDS.exportFilePath) return MS_GRAPH_CREDS.exportFilePath;
+    if (/\.xlsx$/i.test(normalized)) {
+        return normalized.replace(/\.xlsx$/i, "-pakora-export.xlsx");
+    }
+    return `${normalized}-pakora-export.xlsx`;
+}
+
+function buildExportWorkbook(productsMap) {
+    const workbook = xlsx.utils.book_new();
+    const categorySheets = {
+        condensing_unit: "Verfluessigungssaetze",
+        cp_box: "CP-Box",
+        evaporator: "Verdampfer",
+        compressor: "Kompressoren",
+        accessory: "Zubehoer"
+    };
+
+    const products = Object.values(productsMap || {}).sort((a, b) => {
+        const catA = String(a.category || "");
+        const catB = String(b.category || "");
+        if (catA !== catB) return catA.localeCompare(catB);
+        return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+
+    const allRows = products.map((product) => ({
+        Kategorie: categorySheets[product.category] || product.category || "Sonstiges",
+        ArtNr: product.id || "",
+        Bezeichnung: product.name || "",
+        NK_W: product.capacityNK || 0,
+        TK_W: product.capacityTK || 0,
+        Menge: product.qty || 0,
+        Preis: product.price || 0
+    }));
+
+    const allSheet = xlsx.utils.json_to_sheet(allRows);
+    xlsx.utils.book_append_sheet(workbook, allSheet, "Gesamtbestand");
+
+    Object.entries(categorySheets).forEach(([category, sheetName]) => {
+        const rows = products
+          .filter((product) => (product.category || "accessory") === category)
+          .map((product) => ({
+              ArtNr: product.id || "",
+              Bezeichnung: product.name || "",
+              NK_W: product.capacityNK || 0,
+              TK_W: product.capacityTK || 0,
+              Menge: product.qty || 0,
+              Preis: product.price || 0
+          }));
+
+        if (!rows.length) return;
+        const sheet = xlsx.utils.json_to_sheet(rows);
+        xlsx.utils.book_append_sheet(workbook, sheet, sheetName);
+    });
+
+    return workbook;
 }
 
 exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
@@ -486,6 +547,55 @@ exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
 });
 
 // +++ END: OneDrive Excel Sync Function +++
+
+exports.exportInventoryToOneDrive = functions.https.onRequest(async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+    }
+
+    if (req.method !== "POST") {
+        res.status(405).json({ error: "Use POST or OPTIONS." });
+        return;
+    }
+
+    try {
+        const token = await getGraphToken();
+        const snapshot = await admin.database().ref("/products").get();
+        const products = snapshot.exists() ? snapshot.val() : {};
+        const workbook = buildExportWorkbook(products);
+        const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
+        const exportPath = deriveExportPath(MS_GRAPH_CREDS.excelFilePath);
+        const driveItemUrl = `https://graph.microsoft.com/v1.0/me/drive/root:${exportPath}:/content`;
+
+        const uploadResponse = await fetch(driveItemUrl, {
+            method: "PUT",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            },
+            body: buffer
+        });
+
+        if (!uploadResponse.ok) {
+            const error = await uploadResponse.text();
+            throw new Error(`OneDrive Export Error: ${error}`);
+        }
+
+        res.status(200).json({
+            ok: true,
+            exported: Object.keys(products).length,
+            exportPath
+        });
+    } catch (error) {
+        console.error("Export failed:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 function sanitizeInventoryKey(value) {
     return String(value || "").trim().replace(/[.#$/\[\]]/g, "_");
