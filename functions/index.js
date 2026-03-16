@@ -72,38 +72,72 @@ function extractRowsFromWorksheet(worksheet, sheetName) {
 
       if (headerColumns.length < 3) continue;
 
-      const firstColumn = headerColumns[0].columnIndex;
-      let lastColumn = headerColumns[headerColumns.length - 1].columnIndex;
-      for (let columnIndex = lastColumn + 1; columnIndex < row.length; columnIndex++) {
-        if (!isMeaningfulCell(row[columnIndex])) break;
-        lastColumn = columnIndex;
-      }
-
-      const headers = {};
-      for (let columnIndex = firstColumn; columnIndex <= lastColumn; columnIndex++) {
-        headers[columnIndex] = normalizeHeader(row[columnIndex]) || `col${columnIndex}`;
-      }
-
-      const sectionTitle = rowIndex > 0
-        ? String((matrix[rowIndex - 1] || []).slice(firstColumn, lastColumn + 1).find(isMeaningfulCell) || "")
-        : "";
-
-      for (let dataRowIndex = rowIndex + 1; dataRowIndex < matrix.length; dataRowIndex++) {
-        const dataRow = matrix[dataRowIndex] || [];
-        const values = dataRow.slice(firstColumn, lastColumn + 1);
-        const nonEmptyCount = values.filter(isMeaningfulCell).length;
-        if (!nonEmptyCount) break;
-        if (values.filter(isLikelyHeaderCell).length >= 3) break;
-
-        const entry = { __sheet: sheetName, __section: sectionTitle };
-        Object.entries(headers).forEach(([columnIndex, header]) => {
-          entry[header] = dataRow[Number(columnIndex)];
-        });
-
-        if (Object.values(entry).some(isMeaningfulCell)) {
-          entries.push(entry);
+      const segments = [];
+      let currentSegment = [];
+      headerColumns.forEach((column, index) => {
+        if (!currentSegment.length) {
+          currentSegment.push(column);
+          return;
         }
-      }
+        const previous = headerColumns[index - 1];
+        if (column.columnIndex - previous.columnIndex <= 1) {
+          currentSegment.push(column);
+        } else {
+          segments.push(currentSegment);
+          currentSegment = [column];
+        }
+      });
+      if (currentSegment.length) segments.push(currentSegment);
+
+      segments
+        .filter((segment) => segment.length >= 3)
+        .forEach((segment) => {
+          const firstColumn = segment[0].columnIndex;
+          let lastColumn = segment[segment.length - 1].columnIndex;
+          for (let columnIndex = lastColumn + 1; columnIndex < row.length; columnIndex++) {
+            if (!isMeaningfulCell(row[columnIndex])) break;
+            lastColumn = columnIndex;
+          }
+
+          const headers = {};
+          for (let columnIndex = firstColumn; columnIndex <= lastColumn; columnIndex++) {
+            headers[columnIndex] = normalizeHeader(row[columnIndex]) || `col${columnIndex}`;
+          }
+
+          const sectionTitle = rowIndex > 0
+            ? String((matrix[rowIndex - 1] || []).slice(firstColumn, lastColumn + 1).find(isMeaningfulCell) || "")
+            : "";
+
+          for (let dataRowIndex = rowIndex + 1; dataRowIndex < matrix.length; dataRowIndex++) {
+            const dataRow = matrix[dataRowIndex] || [];
+            const values = dataRow.slice(firstColumn, lastColumn + 1);
+            const nonEmptyCount = values.filter(isMeaningfulCell).length;
+            if (!nonEmptyCount) break;
+            if (values.filter(isLikelyHeaderCell).length >= 3) break;
+
+            const entry = { __sheet: sheetName, __section: sectionTitle };
+            Object.entries(headers).forEach(([columnIndex, header]) => {
+              entry[header] = dataRow[Number(columnIndex)];
+            });
+
+            const hasIdentity = [
+              entry.artikelnummer,
+              entry.artikelnr,
+              entry.artnr,
+              entry.modell,
+              entry.model,
+              entry.kompressor,
+              entry.name,
+              entry.bezeichnung,
+              entry.preis,
+              entry.menge
+            ].some(isMeaningfulCell);
+
+            if (hasIdentity && Object.values(entry).filter(isMeaningfulCell).length >= 2) {
+              entries.push(entry);
+            }
+          }
+        });
     }
 
     return entries;
