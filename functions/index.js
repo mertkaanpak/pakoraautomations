@@ -60,6 +60,38 @@ function isLikelyHeaderCell(value) {
     ].some((token) => normalized.includes(token));
 }
 
+function rowHasTemperatureHeaders(row = []) {
+    return row.some((cell) => {
+      const normalized = normalizeHeader(cell);
+      return ["te0c", "te10c", "te25c"].includes(normalized);
+    });
+}
+
+function buildSegmentHeaders(headerRow, subHeaderRow, firstColumn, lastColumn) {
+    const headers = {};
+    let lastPrimary = "";
+
+    for (let columnIndex = firstColumn; columnIndex <= lastColumn; columnIndex++) {
+      const primary = normalizeHeader(headerRow[columnIndex]);
+      const secondary = normalizeHeader((subHeaderRow || [])[columnIndex]);
+
+      if (primary) {
+        lastPrimary = primary;
+      }
+
+      let header = primary || secondary || `col${columnIndex}`;
+      if (secondary && lastPrimary === "leistung") {
+        header = secondary;
+      } else if (secondary && primary && primary !== secondary) {
+        header = `${primary}${secondary}`;
+      }
+
+      headers[columnIndex] = header;
+    }
+
+    return headers;
+}
+
 function extractRowsFromWorksheet(worksheet, sheetName) {
     const matrix = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
     const entries = [];
@@ -89,6 +121,9 @@ function extractRowsFromWorksheet(worksheet, sheetName) {
       });
       if (currentSegment.length) segments.push(currentSegment);
 
+      const nextRow = matrix[rowIndex + 1] || [];
+      const hasSecondaryHeaders = rowHasTemperatureHeaders(nextRow);
+
       segments
         .filter((segment) => segment.length >= 3)
         .forEach((segment) => {
@@ -99,16 +134,14 @@ function extractRowsFromWorksheet(worksheet, sheetName) {
             lastColumn = columnIndex;
           }
 
-          const headers = {};
-          for (let columnIndex = firstColumn; columnIndex <= lastColumn; columnIndex++) {
-            headers[columnIndex] = normalizeHeader(row[columnIndex]) || `col${columnIndex}`;
-          }
+          const headers = buildSegmentHeaders(row, hasSecondaryHeaders ? nextRow : null, firstColumn, lastColumn);
 
           const sectionTitle = rowIndex > 0
             ? String((matrix[rowIndex - 1] || []).slice(firstColumn, lastColumn + 1).find(isMeaningfulCell) || "")
             : "";
 
-          for (let dataRowIndex = rowIndex + 1; dataRowIndex < matrix.length; dataRowIndex++) {
+          const dataStartIndex = rowIndex + (hasSecondaryHeaders ? 2 : 1);
+          for (let dataRowIndex = dataStartIndex; dataRowIndex < matrix.length; dataRowIndex++) {
             const dataRow = matrix[dataRowIndex] || [];
             const values = dataRow.slice(firstColumn, lastColumn + 1);
             const nonEmptyCount = values.filter(isMeaningfulCell).length;
@@ -224,6 +257,45 @@ function buildProductName(row) {
     return explicitName || [manufacturer, model].filter(Boolean).join(" ").trim() || model;
 }
 
+function inferStructuredCategory(sheetName, sectionTitle, rawCategory, productName, row = {}) {
+    const sheet = String(sheetName || "").toLowerCase();
+    const section = String(sectionTitle || "").toLowerCase();
+    const combined = `${sheet} ${section} ${rawCategory || ""} ${productName || ""}`;
+    const hasEvaporatorTemps = [row.te0c, row.te10c, row.te25c].some(isMeaningfulCell);
+    const hasTypeColumn = [row.typ, row.marke].some(isMeaningfulCell);
+
+    if (combined.includes("cp-box") || combined.includes("cp box") || combined.includes("frigo")) return "cp_box";
+    if (combined.includes("verfl")) return "condensing_unit";
+    if (combined.includes("kompressor") || combined.includes("embraco scroll") || combined.includes("tecumseh") || combined.includes("dorin") || combined.includes("danfoss")) return "compressor";
+    if (combined.includes("verdampfer") || combined.includes("evacond") || combined.includes("sonkar") || combined.includes("gunay") || hasEvaporatorTemps || hasTypeColumn) return "evaporator";
+
+    return inferCategory(rawCategory, productName);
+}
+
+function deriveStructuredCapacities(row) {
+    const directNK = parseNumber(pickValue(row, ["leistungnk10c", "leistungnk", "leistung10cwatt", "leistung10c", "te10c", "f"]));
+    const directTK = parseNumber(pickValue(row, ["leistungtk25c", "leistungtk", "leistung25cwatt", "leistung25c", "te25c", "g"]));
+    const directZero = parseNumber(pickValue(row, ["te0c", "leistung0c"]));
+    const generic = String(pickValue(row, ["leistung"])).trim();
+
+    let capacityNK = directNK;
+    let capacityTK = directTK;
+    const context = `${row.__sheet || ""} ${row.__section || ""}`.toLowerCase();
+
+    if (!capacityNK && generic && generic.includes("-10")) capacityNK = parseNumber(generic);
+    if (!capacityTK && generic && generic.includes("-25")) capacityTK = parseNumber(generic);
+    if (!capacityNK && !capacityTK && generic) {
+        if (context.includes("-10") || context.includes("normalk")) capacityNK = parseNumber(generic);
+        if (context.includes("-25") || context.includes("tiefk")) capacityTK = parseNumber(generic);
+    }
+
+    return {
+        capacityNK,
+        capacityTK,
+        capacityZero: directZero
+    };
+}
+
 function deriveCapacities(row) {
     const directNK = parseNumber(pickValue(row, ["leistungnk10c", "leistungnk", "leistung10cwatt", "leistung10c", "te10c", "f"]));
     const directTK = parseNumber(pickValue(row, ["leistungtk25c", "leistungtk", "leistung25cwatt", "leistung25c", "te25c", "g"]));
@@ -325,9 +397,9 @@ exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
             const hasQty = String(qtyRaw || "").trim() !== "";
             const qty = hasQty ? Math.max(0, Math.round(parseNumber(qtyRaw))) : (existing.qty || 0);
             const price = parseNumber(pickValue(row, ["preis", "price"]));
-            const capacities = deriveCapacities(row);
+            const capacities = deriveStructuredCapacities(row);
             const productName = explicitName || existing.name || model || id;
-            const category = inferCategoryFromSheet(row.__sheet, row.__section, rawCategory || existing.category, productName);
+            const category = inferStructuredCategory(row.__sheet, row.__section, rawCategory || existing.category, productName, row);
             const productData = {
                 id,
                 name: productName,
