@@ -283,6 +283,132 @@ exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
 
 // +++ END: OneDrive Excel Sync Function +++
 
+function sanitizeInventoryKey(value) {
+    return String(value || "").trim().replace(/[.#$/\[\]]/g, "_");
+}
+
+function normalizeInventoryProduct(payload, existing = {}) {
+    const id = String(payload.id || existing.id || "").trim();
+    const name = String(payload.name || existing.name || id).trim();
+    return {
+      id,
+      name,
+      qty: Math.max(0, Math.round(parseNumber(payload.qty !== undefined ? payload.qty : existing.qty || 0))),
+      price: parseNumber(payload.price !== undefined ? payload.price : existing.price || 0),
+      category: String(payload.category || existing.category || "accessory").trim() || "accessory",
+      capacityNK: parseNumber(payload.capacityNK !== undefined ? payload.capacityNK : existing.capacityNK || 0),
+      capacityTK: parseNumber(payload.capacityTK !== undefined ? payload.capacityTK : existing.capacityTK || 0)
+    };
+}
+
+exports.inventoryApi = functions.https.onRequest(async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+    }
+
+    try {
+        const productsRef = admin.database().ref("/products");
+
+        if (req.method === "GET") {
+            const snapshot = await productsRef.get();
+            res.status(200).json({ products: snapshot.exists() ? snapshot.val() : {} });
+            return;
+        }
+
+        if (req.method !== "POST") {
+            res.status(405).json({ error: "Use GET, POST or OPTIONS." });
+            return;
+        }
+
+        const body = req.body || {};
+        const action = String(body.action || "").trim();
+
+        if (action === "update_qty") {
+            const key = sanitizeInventoryKey(body.key);
+            if (!key) {
+                res.status(400).json({ error: "Key fehlt." });
+                return;
+            }
+            const itemRef = productsRef.child(key);
+            const snapshot = await itemRef.get();
+            const existing = snapshot.exists() ? snapshot.val() : null;
+            if (!existing) {
+                res.status(404).json({ error: "Artikel nicht gefunden." });
+                return;
+            }
+            const nextQty = Math.max(0, Math.round(parseNumber(existing.qty || 0) + parseNumber(body.delta || 0)));
+            await itemRef.child("qty").set(nextQty);
+            res.status(200).json({ ok: true, qty: nextQty });
+            return;
+        }
+
+        if (action === "upsert") {
+            const product = body.product || {};
+            const key = sanitizeInventoryKey(body.key || product.id);
+            if (!key) {
+                res.status(400).json({ error: "Artikel-ID fehlt." });
+                return;
+            }
+            const itemRef = productsRef.child(key);
+            const snapshot = await itemRef.get();
+            const existing = snapshot.exists() ? snapshot.val() : {};
+            const normalized = normalizeInventoryProduct(product, existing);
+            if (!normalized.id) normalized.id = key;
+            await itemRef.set(normalized);
+            res.status(200).json({ ok: true, key, product: normalized });
+            return;
+        }
+
+        if (action === "delete") {
+            const key = sanitizeInventoryKey(body.key);
+            if (!key) {
+                res.status(400).json({ error: "Key fehlt." });
+                return;
+            }
+            await productsRef.child(key).remove();
+            res.status(200).json({ ok: true, key });
+            return;
+        }
+
+        if (action === "batch_upsert") {
+            const items = Array.isArray(body.items) ? body.items : [];
+            if (!items.length) {
+                res.status(400).json({ error: "Keine Artikel uebergeben." });
+                return;
+            }
+
+            const snapshot = await productsRef.get();
+            const existingProducts = snapshot.exists() ? snapshot.val() : {};
+            const updates = {};
+            let count = 0;
+
+            items.forEach((item) => {
+                const key = sanitizeInventoryKey(item.key || item.id);
+                if (!key) return;
+                const existing = existingProducts[key] || {};
+                const normalized = normalizeInventoryProduct(item, existing);
+                if (!normalized.id) normalized.id = key;
+                updates[key] = normalized;
+                count++;
+            });
+
+            await productsRef.update(updates);
+            res.status(200).json({ ok: true, count });
+            return;
+        }
+
+        res.status(400).json({ error: "Unbekannte action." });
+    } catch (error) {
+        console.error("inventoryApi failed:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 exports.notifyOnMessage = functions.firestore
   .document("messages/{messageId}")

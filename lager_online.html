@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -124,7 +124,7 @@
             border-radius: var(--radius); 
             border: 1px solid var(--border); 
             box-shadow: var(--shadow); 
-            flex: 1; /* Füllt den Rest */
+            flex: 1; /* FÃ¼llt den Rest */
             display: flex;
             flex-direction: column;
         }
@@ -192,17 +192,17 @@
 <body>
 
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
-    <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Menue oeffnen">☰</button>
+    <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Menue oeffnen">â˜°</button>
 
     <nav class="sidebar">
         <div class="logo">
             <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
             <span style="display:none; font-size: 22px; font-weight:700;">Pakora</span>
         </div>
-        <a href="index.html" class="nav-item">Übersicht</a>
+        <a href="index.html" class="nav-item">Ãœbersicht</a>
         <a href="lager_online.html" class="nav-item active">Lagerbestand</a>
         <a href="index.html#calc" class="nav-item">Smart-Kalkulation</a>
-        <a href="konfigurator.html" class="nav-item">Kühlzellen Kalkulator</a>
+        <a href="konfigurator.html" class="nav-item">KÃ¼hlzellen Kalkulator</a>
     </nav>
 
     <main class="main">
@@ -271,7 +271,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title" id="modalTitle">Neuer Artikel</div>
-                <button class="close-btn" onclick="closeModal()">×</button>
+                <button class="close-btn" onclick="closeModal()">Ã—</button>
             </div>
             
             <input type="hidden" id="modalKey">
@@ -284,7 +284,7 @@
             
             <div class="grid-2">
                 <div>
-                    <label>Preis (€)</label>
+                    <label>Preis (â‚¬)</label>
                     <input type="number" step="0.01" id="modalPrice" placeholder="0.00">
                 </div>
                 <div>
@@ -296,10 +296,10 @@
             <label>Kategorie</label>
             <select id="modalCat">
                 <option value="compressor">Kompressor</option>
-                <option value="condensing_unit">Verflüssigungssatz</option>
-                <option value="cp_box">CP-Box (Gehäuse)</option>
+                <option value="condensing_unit">VerflÃ¼ssigungssatz</option>
+                <option value="cp_box">CP-Box (GehÃ¤use)</option>
                 <option value="evaporator">Verdampfer</option>
-                <option value="accessory">Zubehör</option>
+                <option value="accessory">ZubehÃ¶r</option>
             </select>
 
             <div class="grid-2">
@@ -319,18 +319,10 @@
 
     <script>
         // ==========================================
-        // 1. FIREBASE CONFIGURATION
+        // 1. INVENTORY API CONFIGURATION
         // ==========================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyCjIggzBA4NaMNm1FSfTUzvZLBquvd9P40",
-            authDomain: "pakora-automations-chat.firebaseapp.com",
-            databaseURL: "https://pakora-automations-chat-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "pakora-automations-chat",
-            storageBucket: "pakora-automations-chat.firebasestorage.app",
-            messagingSenderId: "281325034328",
-            appId: "1:281325034328:web:e05c04bac6b8558560632d"
-        };
         const SYNC_FUNCTION_URL = "https://us-central1-pakora-automations-chat.cloudfunctions.net/syncOneDriveExcel";
+        const INVENTORY_API_URL = "https://us-central1-pakora-automations-chat.cloudfunctions.net/inventoryApi";
         // ==========================================
 
         function toggleSidebar() {
@@ -338,108 +330,124 @@
             document.querySelector('.mobile-overlay').classList.toggle('active');
         }
 
-        if (firebase.apps.length === 0) {
-            try {
-                if(firebaseConfig.apiKey === "YOUR_API_KEY") throw "Config missing";
-                firebase.initializeApp(firebaseConfig);
-            } catch(e) {
-                document.getElementById('connectionText').innerText = "Firebase Konfiguration fehlt!";
-                document.getElementById('connectionText').style.color = "#dc2626";
-                console.error("Firebase Config fehlt in lager_online.html!", e);
-            }
-        }
-        
-        let db, stockRef;
         let localData = {};
 
-        function setSyncButtonState(isLoading, label = "OneDrive synchronisieren") {
+        function setConnectionState(text, isOnline) {
+            const dot = document.getElementById('onlineDot');
+            const txt = document.getElementById('connectionText');
+            dot.classList.toggle('active', !!isOnline);
+            txt.innerText = text;
+            txt.style.color = isOnline ? '#166534' : '#dc2626';
+        }
+
+        function setSyncButtonState(isLoading, label = 'OneDrive synchronisieren') {
             const button = document.getElementById('oneDriveSyncBtn');
             if (!button) return;
             button.disabled = !!isLoading;
             button.textContent = label;
         }
 
-        if(firebase.apps.length > 0) {
-            db = firebase.database();
-            stockRef = db.ref('products');
+        function categoryLabel(category) {
+            const labels = {
+                condensing_unit: 'Verfluessigungssaetze',
+                cp_box: 'CP-Box',
+                evaporator: 'Verdampfer',
+                compressor: 'Kompressoren',
+                accessory: 'Zubehoer'
+            };
+            return labels[category] || category || 'Sonstiges';
+        }
 
-            db.ref(".info/connected").on("value", (snap) => {
-                const dot = document.getElementById('onlineDot');
-                const txt = document.getElementById('connectionText');
-                if (snap.val() === true) {
-                    dot.classList.add('active');
-                    txt.innerText = "Online & Synchron";
-                    txt.style.color = "#166534";
-                } else {
-                    dot.classList.remove('active');
-                    txt.innerText = "Offline (Verbindung verloren)";
-                    txt.style.color = "#dc2626";
+        async function loadInventory() {
+            setConnectionState('Lade Lagerdaten...', false);
+            try {
+                const response = await fetch(INVENTORY_API_URL);
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data && data.error ? data.error : 'Lagerdaten konnten nicht geladen werden.');
                 }
-            });
-
-            stockRef.on('value', (snapshot) => {
-                const data = snapshot.val();
-                localData = data || {};
+                localData = data.products || {};
                 renderTable();
                 updateStats();
-                document.getElementById('lastSync').innerText = "Sync: " + new Date().toLocaleTimeString();
-            });
+                document.getElementById('lastSync').innerText = 'Sync: ' + new Date().toLocaleTimeString();
+                setConnectionState('Online & Synchron', true);
+            } catch (error) {
+                localData = {};
+                renderTable();
+                updateStats();
+                setConnectionState(`Fehler beim Laden: ${error.message}`, false);
+            }
         }
 
         function renderTable() {
             const tbody = document.getElementById('tableBody');
             const search = document.getElementById('searchInput').value.toLowerCase();
-            tbody.innerHTML = "";
+            tbody.innerHTML = '';
 
-            const keys = Object.keys(localData).sort((a,b) => localData[a].name.localeCompare(localData[b].name));
+            const keys = Object.keys(localData).sort((a, b) => String(localData[a].name || '').localeCompare(String(localData[b].name || '')));
 
-            if(keys.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:#94a3b8;">Lager ist leer.</td></tr>`;
+            if (!keys.length) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#94a3b8;">Keine Artikel vorhanden.</td></tr>';
                 return;
             }
 
             let visibleCount = 0;
-            keys.forEach(key => {
-                const item = localData[key];
-                if(!item.name) return; // Skip invalid entries
-                
-                if(search && !item.id.toLowerCase().includes(search) && !item.name.toLowerCase().includes(search)) return;
-                visibleCount++;
+            const categories = ['condensing_unit', 'cp_box', 'evaporator', 'compressor', 'accessory'];
 
-                let statusBadge = item.qty > 0 ? `<span class="status-badge st-ok">Lagernd</span>` : `<span class="status-badge st-low">Leer</span>`;
-                if(item.qty > 0 && item.qty <= 2) {
-                    statusBadge = `<span class="status-badge" style="background:#ffedd5; color:#9a3412;">Wenig</span>`;
-                }
+            categories.forEach((category) => {
+                const rows = keys.filter((key) => {
+                    const item = localData[key];
+                    if (!item || !item.name) return false;
+                    if ((item.category || 'accessory') !== category) return false;
+                    const idText = String(item.id || '').toLowerCase();
+                    const nameText = String(item.name || '').toLowerCase();
+                    return !search || idText.includes(search) || nameText.includes(search);
+                });
 
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="font-family:monospace; color:#64748b;">${item.id}</td>
-                    <td style="font-weight:600;">${item.name}</td>
-                    <td>
-                        <div class="stock-ctrl">
-                            <button class="btn-qty" onclick="updateStock('${key}', -1)">-</button>
-                            <div class="val-qty">${item.qty}</div>
-                            <button class="btn-qty" onclick="updateStock('${key}', 1)">+</button>
-                        </div>
-                    </td>
-                    <td>${statusBadge}</td>
-                    <td class="action-col">
-                        <button class="btn" style="background:#64748b; padding: 5px 10px;" onclick="openModal('${key}')">Bearbeiten</button>
-                        <button class="btn" style="background:#dc2626; padding: 5px 10px;" onclick="deleteProduct('${key}')">Loeschen</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
+                if (!rows.length) return;
+                visibleCount += rows.length;
+
+                const sectionRow = document.createElement('tr');
+                sectionRow.innerHTML = `<td colspan="5" style="background:#eef3f9; font-weight:800; color:#142033;">${categoryLabel(category)} (${rows.length})</td>`;
+                tbody.appendChild(sectionRow);
+
+                rows.forEach((key) => {
+                    const item = localData[key];
+                    let statusBadge = item.qty > 0 ? '<span class="status-badge st-ok">Lagernd</span>' : '<span class="status-badge st-low">Leer</span>';
+                    if (item.qty > 0 && item.qty <= 2) {
+                        statusBadge = '<span class="status-badge" style="background:#ffedd5; color:#9a3412;">Wenig</span>';
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-family:monospace; color:#64748b;">${item.id || '-'}</td>
+                        <td style="font-weight:600;">${item.name}</td>
+                        <td>
+                            <div class="stock-ctrl">
+                                <button class="btn-qty" onclick="updateStock('${key}', -1)">-</button>
+                                <div class="val-qty">${item.qty || 0}</div>
+                                <button class="btn-qty" onclick="updateStock('${key}', 1)">+</button>
+                            </div>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td class="action-col">
+                            <button class="btn" style="background:#64748b; padding: 5px 10px;" onclick="openModal('${key}')">Bearbeiten</button>
+                            <button class="btn" style="background:#dc2626; padding: 5px 10px;" onclick="deleteProduct('${key}')">Loeschen</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
             });
 
-            if(visibleCount === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">Keine Treffer für "${search}"</td></tr>`;
+            if (!visibleCount) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">Keine Treffer fuer "${search}"</td></tr>`;
             }
         }
 
         function updateStats() {
             const keys = Object.keys(localData);
             document.getElementById('countTotal').innerText = keys.length;
-            let low = keys.filter(k => (localData[k].qty || 0) <= 0).length;
+            const low = keys.filter((k) => (localData[k].qty || 0) <= 0).length;
             document.getElementById('countLow').innerText = low;
         }
 
@@ -451,9 +459,8 @@
                 if (!response.ok) {
                     throw new Error(data && data.error ? data.error : 'Synchronisierung fehlgeschlagen.');
                 }
-
-                const now = new Date();
-                document.getElementById('lastSync').innerText = `Sync: ${now.toLocaleTimeString()} | ${data.total} Artikel`;
+                document.getElementById('lastSync').innerText = `Sync: ${new Date().toLocaleTimeString()} | ${data.total} Artikel`;
+                await loadInventory();
                 alert(`OneDrive-Sync abgeschlossen.\nGesamt: ${data.total}\nNeu: ${data.created}\nAktualisiert: ${data.updated}`);
             } catch (error) {
                 alert(`OneDrive-Sync fehlgeschlagen: ${error.message}`);
@@ -462,17 +469,35 @@
             }
         }
 
-        function updateStock(key, delta) {
-            let newQty = (localData[key].qty || 0) + delta;
-            if (newQty < 0) newQty = 0;
-            stockRef.child(key).child('qty').set(newQty);
+        async function inventoryPost(payload) {
+            const response = await fetch(INVENTORY_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data && data.error ? data.error : 'Anfrage fehlgeschlagen.');
+            }
+            return data;
+        }
+
+        async function updateStock(key, delta) {
+            try {
+                const data = await inventoryPost({ action: 'update_qty', key, delta });
+                if (localData[key]) localData[key].qty = data.qty;
+                renderTable();
+                updateStats();
+            } catch (error) {
+                alert(`Fehler: ${error.message}`);
+            }
         }
 
         function openModal(key = null) {
             const modal = document.getElementById('productModal');
             document.getElementById('modalTitle').innerText = key ? 'Artikel bearbeiten' : 'Neuer Artikel';
             document.getElementById('modalKey').value = key || '';
-            
+
             const item = key ? localData[key] : {};
             document.getElementById('modalId').value = item.id || '';
             document.getElementById('modalName').value = item.name || '';
@@ -490,32 +515,38 @@
             document.getElementById('productModal').style.display = 'none';
         }
 
-        function saveProduct() {
+        async function saveProduct() {
             const key = document.getElementById('modalKey').value;
             const id = document.getElementById('modalId').value.trim();
-            if (!id) return alert("Art.Nr. ist ein Pflichtfeld!");
+            if (!id) return alert('Art.Nr. ist ein Pflichtfeld!');
 
-            const safeId = id.replace(/[.#$/\[\]]/g, "_");
-
+            const safeId = id.replace(/[.#$/\[\]]/g, '_');
             const productData = {
-                id: id,
+                id,
                 name: document.getElementById('modalName').value.trim(),
                 price: parseFloat(document.getElementById('modalPrice').value) || 0,
                 qty: parseInt(document.getElementById('modalQty').value) || 0,
                 category: document.getElementById('modalCat').value,
                 capacityNK: parseInt(document.getElementById('modalNK').value) || 0,
-                capacityTK: parseInt(document.getElementById('modalTK').value) || 0,
+                capacityTK: parseInt(document.getElementById('modalTK').value) || 0
             };
 
-            const ref = key ? stockRef.child(key) : stockRef.child(safeId);
-            ref.set(productData).then(() => {
+            try {
+                await inventoryPost({ action: 'upsert', key: key || safeId, product: productData });
                 closeModal();
-            }).catch(e => alert("Fehler: " + e.message));
+                await loadInventory();
+            } catch (error) {
+                alert('Fehler: ' + error.message);
+            }
         }
 
-        function deleteProduct(key) {
-            if (confirm(`Soll der Artikel "${localData[key].name}" wirklich gelöscht werden?`)) {
-                stockRef.child(key).remove();
+        async function deleteProduct(key) {
+            if (!confirm(`Soll der Artikel "${localData[key].name}" wirklich geloescht werden?`)) return;
+            try {
+                await inventoryPost({ action: 'delete', key });
+                await loadInventory();
+            } catch (error) {
+                alert('Fehler: ' + error.message);
             }
         }
 
@@ -523,7 +554,7 @@
             const file = input.files[0];
             if (!file) return;
 
-            if (!confirm("CSV-Abgleich:\nBestehende Artikel werden aktualisiert, neue hinzugefügt. Fortfahren?")) {
+            if (!confirm('CSV-Abgleich:\nBestehende Artikel werden aktualisiert, neue hinzugefuegt. Fortfahren?')) {
                 input.value = '';
                 return;
             }
@@ -531,48 +562,54 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const lines = e.target.result.split('\n');
-                let updates = {};
+                const items = [];
                 let count = 0;
 
                 lines.forEach((line, idx) => {
                     if (idx === 0 || !line.trim()) return;
                     const sep = line.includes(';') ? ';' : ',';
                     const cols = line.split(sep).map(c => c.trim());
-                    
                     if (cols.length < 4) return;
+
                     const id = cols[0];
                     if (!id) return;
 
-                    const safeId = id.replace(/[.#$/\[\]]/g, "_");
+                    const safeId = id.replace(/[.#$/\[\]]/g, '_');
                     const existing = localData[safeId] || {};
-
-                    updates[safeId] = {
-                        id: id,
+                    items.push({
+                        key: safeId,
+                        id,
                         name: cols[1] || existing.name || '',
                         price: parseFloat(cols[2]) || existing.price || 0,
                         qty: parseInt(cols[3]) || 0,
                         category: existing.category || 'accessory',
                         capacityNK: existing.capacityNK || 0,
-                        capacityTK: existing.capacityTK || 0,
-                    };
+                        capacityTK: existing.capacityTK || 0
+                    });
                     count++;
                 });
 
-                stockRef.update(updates, (error) => {
-                    if (error) alert("Fehler: " + error);
-                    else alert(`? ${count} Artikel abgeglichen!`);
-                    input.value = '';
-                });
+                inventoryPost({ action: 'batch_upsert', items })
+                    .then(async () => {
+                        await loadInventory();
+                        alert(`${count} Artikel abgeglichen!`);
+                    })
+                    .catch((error) => alert('Fehler: ' + error.message))
+                    .finally(() => {
+                        input.value = '';
+                    });
             };
             reader.readAsText(file, 'ISO-8859-1');
         }
 
-    </script>
-    <script>
+        loadInventory();
+</script>
+<script>
         // AUTH LOGIC (No changes needed)
-    </script>
+</script>
 </body>
 </html>
+
 
 
 
