@@ -42,6 +42,10 @@ function isLikelyHeaderCell(value) {
       "artikelnummer",
       "artikelnr",
       "artnr",
+      "typ",
+      "marke",
+      "farbe",
+      "km",
       "hersteller",
       "modell",
       "model",
@@ -112,7 +116,7 @@ function extractRowsFromWorksheet(worksheet, sheetName) {
           return;
         }
         const previous = headerColumns[index - 1];
-        if (column.columnIndex - previous.columnIndex <= 1) {
+        if (column.columnIndex - previous.columnIndex <= 3) {
           currentSegment.push(column);
         } else {
           segments.push(currentSegment);
