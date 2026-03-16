@@ -116,7 +116,7 @@ function extractRowsFromWorksheet(worksheet, sheetName) {
           return;
         }
         const previous = headerColumns[index - 1];
-        if (column.columnIndex - previous.columnIndex <= 3) {
+        if (column.columnIndex - previous.columnIndex <= 1) {
           currentSegment.push(column);
         } else {
           segments.push(currentSegment);
@@ -300,6 +300,31 @@ function deriveStructuredCapacities(row) {
     };
 }
 
+function normalizeNameKey(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim();
+}
+
+function shouldSkipProduct(product) {
+    const name = normalizeNameKey(product.name);
+    if (!name) return true;
+    const blocked = [
+      "tk gesamt",
+      "nk gesamt",
+      "gesamt",
+      "weiss",
+      "weiß",
+      "anthrazith",
+      "grau beige"
+    ];
+    if (blocked.includes(name)) return true;
+    if (!product.price && !product.qty && !product.capacityNK && !product.capacityTK) return true;
+    return false;
+}
+
 function deriveCapacities(row) {
     const directNK = parseNumber(pickValue(row, ["leistungnk10c", "leistungnk", "leistung10cwatt", "leistung10c", "te10c", "f"]));
     const directTK = parseNumber(pickValue(row, ["leistungtk25c", "leistungtk", "leistung25cwatt", "leistung25c", "te25c", "g"]));
@@ -383,7 +408,7 @@ exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
         const existingSnapshot = await admin.database().ref("/products").get();
         const existingProducts = existingSnapshot.exists() ? existingSnapshot.val() : {};
 
-        const updates = {};
+        const importedProducts = new Map();
         let count = 0;
         let created = 0;
         let updated = 0;
@@ -414,22 +439,41 @@ exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
                 capacityTK: capacities.capacityTK || existing.capacityTK || 0
             };
 
-            updates[`/products/${safeId}`] = productData;
+            if (shouldSkipProduct(productData)) return;
+
+            const mergeKey = `${category}:${normalizeNameKey(productData.name)}`;
+            const merged = importedProducts.get(mergeKey);
+            if (merged) {
+                merged.id = merged.id || productData.id;
+                merged.qty = Math.max(merged.qty || 0, productData.qty || 0);
+                merged.price = merged.price || productData.price || 0;
+                merged.capacityNK = merged.capacityNK || productData.capacityNK || 0;
+                merged.capacityTK = merged.capacityTK || productData.capacityTK || 0;
+            } else {
+                importedProducts.set(mergeKey, { ...productData });
+            }
             count++;
+        });
+
+        const updates = {};
+        importedProducts.forEach((productData) => {
+            const safeId = String(productData.id || productData.name).replace(/[.#$/\[\]]/g, "_");
+            const existing = existingProducts[safeId] || {};
+            updates[`/products/${safeId}`] = productData;
             if (existing && Object.keys(existing).length) updated++;
             else created++;
         });
 
-        if (!count) {
+        if (!importedProducts.size) {
             res.status(400).json({ error: "Keine gueltigen Artikelzeilen in der OneDrive-Datei gefunden." });
             return;
         }
 
         await admin.database().ref().update(updates);
-        console.log(`OK: ${count} products synced.`);
+        console.log(`OK: ${importedProducts.size} products synced.`);
         res.status(200).json({
             ok: true,
-            total: count,
+            total: importedProducts.size,
             created,
             updated,
             sheets: workbook.SheetNames
