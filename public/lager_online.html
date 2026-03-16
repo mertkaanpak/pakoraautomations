@@ -172,16 +172,9 @@
             font-weight: 800;
             color: #142033;
         }
-        .performance-badges {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 8px;
-        }
         .performance-badge {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
             padding: 4px 9px;
             border-radius: 999px;
             font-size: 11px;
@@ -310,13 +303,15 @@
                         <tr>
                             <th>Art.Nr</th>
                             <th>Bezeichnung</th>
+                            <th>NK</th>
+                            <th>TK</th>
                             <th>Bestand</th>
                             <th>Status</th>
                             <th class="action-col">Aktion</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr><td colspan="5" style="text-align:center; padding:30px; color:#94a3b8;">Lade Daten...</td></tr>
+                        <tr><td colspan="7" style="text-align:center; padding:30px; color:#94a3b8;">Lade Daten...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -420,16 +415,11 @@
             return `${num.toLocaleString('de-DE')} W`;
         }
 
-        function renderPerformanceBadges(item, category) {
-            if (category !== 'condensing_unit') return '';
-            const badges = [];
-            if (Number(item.capacityNK || 0) > 0) {
-                badges.push(`<span class="performance-badge nk">Normalkuehlung -10: ${formatCapacity(item.capacityNK)}</span>`);
-            }
-            if (Number(item.capacityTK || 0) > 0) {
-                badges.push(`<span class="performance-badge tk">Tiefkuehlung -25: ${formatCapacity(item.capacityTK)}</span>`);
-            }
-            return badges.length ? `<div class="performance-badges">${badges.join('')}</div>` : '';
+        function renderCapacityCell(value, type) {
+            const formatted = formatCapacity(value);
+            if (!formatted) return '<span style="color:#94a3b8;">-</span>';
+            const cls = type === 'NK' ? 'nk' : 'tk';
+            return `<span class="performance-badge ${cls}">${formatted}</span>`;
         }
 
         function jumpToCategory(category) {
@@ -467,7 +457,7 @@
             const keys = Object.keys(localData).sort((a, b) => String(localData[a].name || '').localeCompare(String(localData[b].name || '')));
 
             if (!keys.length) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#94a3b8;">Keine Artikel vorhanden.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px; color:#94a3b8;">Keine Artikel vorhanden.</td></tr>';
                 return;
             }
 
@@ -490,7 +480,7 @@
                 const sectionRow = document.createElement('tr');
                 sectionRow.className = 'category-row';
                 sectionRow.id = `category-${category}`;
-                sectionRow.innerHTML = `<td colspan="5">${categoryLabel(category)} (${rows.length})</td>`;
+                sectionRow.innerHTML = `<td colspan="7">${categoryLabel(category)} (${rows.length})</td>`;
                 tbody.appendChild(sectionRow);
 
                 rows.forEach((key) => {
@@ -503,7 +493,9 @@
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td style="font-family:monospace; color:#64748b;">${item.id || '-'}</td>
-                        <td style="font-weight:600;">${item.name}${renderPerformanceBadges(item, category)}</td>
+                        <td style="font-weight:600;">${item.name}</td>
+                        <td>${renderCapacityCell(item.capacityNK, 'NK')}</td>
+                        <td>${renderCapacityCell(item.capacityTK, 'TK')}</td>
                         <td>
                             <div class="stock-ctrl">
                                 <button class="btn-qty" onclick="updateStock('${key}', -1)">-</button>
@@ -522,7 +514,7 @@
             });
 
             if (!visibleCount) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">Keine Treffer fuer "${search}"</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#94a3b8;">Keine Treffer fuer "${search}"</td></tr>`;
             }
         }
 
