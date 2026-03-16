@@ -1,0 +1,467 @@
+:root {
+    --app-bg: #f3f6fb;
+    --app-bg-accent: rgba(31, 111, 235, 0.10);
+    --app-surface: rgba(255, 255, 255, 0.9);
+    --app-surface-strong: #ffffff;
+    --app-surface-soft: #eef3f9;
+    --app-text: #142033;
+    --app-text-muted: #607086;
+    --app-border: rgba(20, 32, 51, 0.10);
+    --app-border-strong: rgba(20, 32, 51, 0.16);
+    --app-primary: #1f6feb;
+    --app-primary-strong: #1859bc;
+    --app-success: #159f6b;
+    --app-warning: #d99017;
+    --app-danger: #d44d5c;
+    --app-shadow: 0 18px 50px rgba(17, 31, 53, 0.10);
+    --app-shadow-soft: 0 10px 30px rgba(17, 31, 53, 0.08);
+    --app-radius-xl: 28px;
+    --app-radius-lg: 22px;
+    --app-radius-md: 16px;
+    --app-radius-sm: 12px;
+    --app-sidebar-width: 288px;
+}
+
+html {
+    color-scheme: light;
+}
+
+body {
+    font-family: "Sora", "Segoe UI", sans-serif !important;
+    color: var(--app-text) !important;
+    background:
+        radial-gradient(1200px 500px at 0% 0%, var(--app-bg-accent), transparent 52%),
+        radial-gradient(900px 420px at 100% 0%, rgba(21, 159, 107, 0.08), transparent 46%),
+        linear-gradient(180deg, #f9fbfe 0%, var(--app-bg) 54%, #eef3f9 100%) !important;
+}
+
+.sidebar {
+    width: var(--app-sidebar-width) !important;
+    padding: 28px 18px 22px !important;
+    background:
+        linear-gradient(180deg, rgba(10, 18, 32, 0.98), rgba(16, 28, 46, 0.96)) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 16px 0 40px rgba(7, 12, 22, 0.24) !important;
+    backdrop-filter: blur(14px);
+}
+
+.logo {
+    margin-bottom: 34px !important;
+    padding: 6px 10px 18px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logo img {
+    max-height: 96px !important;
+}
+
+.nav-item {
+    min-height: 48px;
+    padding: 12px 14px !important;
+    border-radius: 14px !important;
+    color: rgba(226, 232, 240, 0.80) !important;
+    border: 1px solid transparent;
+    transition: background-color 140ms ease, transform 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.nav-item:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #ffffff !important;
+}
+
+.nav-item.active {
+    background: linear-gradient(135deg, rgba(31, 111, 235, 0.34), rgba(24, 89, 188, 0.26)) !important;
+    color: #ffffff !important;
+    border-color: rgba(118, 170, 255, 0.32) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 12px 24px rgba(12, 26, 48, 0.24) !important;
+}
+
+.main {
+    padding: 28px !important;
+    gap: 18px;
+}
+
+.dashboard-header,
+.header-card,
+.header-section,
+.card,
+.config-card,
+.selection-card,
+.chat-list,
+.chat-panel,
+.notes-panel,
+.request-card,
+.stat-card,
+.modal-content,
+.current-user,
+.summary-box,
+.calendar-shell > *,
+.request-list .request-card,
+.push-status,
+.status,
+.status-badge,
+.res-card,
+.dash-card {
+    border-radius: var(--app-radius-lg) !important;
+}
+
+.dashboard-header,
+.header-card,
+.card,
+.config-card,
+.selection-card,
+.chat-list,
+.chat-panel,
+.notes-panel,
+.request-card,
+.stat-card,
+.modal-content,
+.summary-box,
+.current-user,
+.res-card,
+.dash-card {
+    background: var(--app-surface) !important;
+    border: 1px solid var(--app-border) !important;
+    box-shadow: var(--app-shadow-soft) !important;
+    backdrop-filter: blur(12px);
+}
+
+.header-section {
+    background: transparent !important;
+    padding: 0 !important;
+    margin-bottom: 4px !important;
+}
+
+.header-title h1,
+.dashboard-welcome,
+h1,
+h2,
+.dash-title,
+.modal-title {
+    color: var(--app-text) !important;
+    letter-spacing: -0.03em;
+}
+
+.subtitle,
+.header-title p,
+.dashboard-date,
+.stat-label,
+label,
+.meta,
+.request-card span,
+.dash-desc,
+.notes-header p,
+.card-header,
+.back-link,
+.presence,
+.push-status,
+.status {
+    color: var(--app-text-muted) !important;
+}
+
+.dashboard-date,
+.presence,
+.push-status,
+.status,
+.back-link {
+    background: rgba(255, 255, 255, 0.82) !important;
+    border: 1px solid var(--app-border) !important;
+    box-shadow: none !important;
+}
+
+.stat-card {
+    border-left: 0 !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
+    background: linear-gradient(180deg, var(--app-primary), var(--app-success));
+}
+
+.dash-card,
+.selection-card,
+.res-card,
+.chat-item,
+.request-card,
+.notes-list > *,
+.calendar-cell,
+.stock-table tr,
+.offer-table tr {
+    transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.dash-card:hover,
+.selection-card:hover,
+.res-card:hover,
+.chat-item:hover,
+.request-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--app-shadow) !important;
+}
+
+.chat-item,
+.calendar-cell,
+.request-card,
+.notes-list > *,
+.current-user {
+    border: 1px solid var(--app-border) !important;
+    background: var(--app-surface-strong) !important;
+}
+
+.chat-item.active,
+.calendar-cell.selected,
+.res-card.selected {
+    border-color: rgba(31, 111, 235, 0.34) !important;
+    background: rgba(31, 111, 235, 0.08) !important;
+    box-shadow: 0 14px 32px rgba(31, 111, 235, 0.12) !important;
+}
+
+input,
+select,
+textarea,
+#authCard input,
+#pushPromptCard,
+.notes-form textarea {
+    border-radius: 14px !important;
+    border: 1px solid var(--app-border) !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    color: var(--app-text) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+#authCard input:focus {
+    border-color: rgba(31, 111, 235, 0.42) !important;
+    box-shadow: 0 0 0 4px rgba(31, 111, 235, 0.12) !important;
+    outline: none !important;
+}
+
+.btn,
+button:not(.mobile-toggle):not(.btn-qty),
+#authCard button,
+#pushPromptEnable,
+#pushPromptLater,
+.notes-form button,
+.chat-input button,
+.event-form button {
+    border-radius: 14px !important;
+}
+
+.btn,
+.btn-primary,
+.btn-offer,
+.btn-calc,
+.btn-new,
+.btn-upload,
+.notes-form button,
+.chat-input button[type="submit"],
+.event-form button,
+#saveBot,
+#pushPromptEnable,
+#authCard button {
+    background: linear-gradient(135deg, var(--app-primary), var(--app-primary-strong)) !important;
+    color: #ffffff !important;
+    border: 0 !important;
+    box-shadow: 0 12px 24px rgba(31, 111, 235, 0.24) !important;
+}
+
+.btn:hover,
+.btn-primary:hover,
+.btn-offer:hover,
+.btn-calc:hover,
+.btn-new:hover,
+.btn-upload:hover,
+.notes-form button:hover,
+.chat-input button[type="submit"]:hover,
+.event-form button:hover,
+#saveBot:hover,
+#pushPromptEnable:hover,
+#authCard button:hover {
+    filter: brightness(1.03);
+    transform: translateY(-1px);
+}
+
+.btn-secondary,
+#pushPromptLater,
+.attach-btn,
+.admin-btn,
+.back-link {
+    background: rgba(255, 255, 255, 0.88) !important;
+    color: var(--app-text) !important;
+    border: 1px solid var(--app-border) !important;
+    box-shadow: none !important;
+}
+
+.btn-qty {
+    border-radius: 12px !important;
+    border: 1px solid var(--app-border) !important;
+    background: #ffffff !important;
+    color: var(--app-primary) !important;
+}
+
+.offer-table,
+.stock-table,
+table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.offer-table th,
+.stock-table th,
+table th {
+    background: rgba(231, 238, 247, 0.96) !important;
+    color: var(--app-text-muted) !important;
+}
+
+.offer-table td,
+.stock-table td,
+table td {
+    background: rgba(255, 255, 255, 0.62);
+}
+
+.offer-table tr:last-child td,
+.stock-table tr:last-child td,
+table tr:last-child td {
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.mobile-toggle {
+    width: 52px;
+    height: 52px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50% !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: linear-gradient(135deg, var(--app-primary), var(--app-primary-strong)) !important;
+    color: #ffffff !important;
+    box-shadow: 0 14px 30px rgba(31, 111, 235, 0.28) !important;
+}
+
+.mobile-overlay.active {
+    backdrop-filter: blur(3px);
+}
+
+#authOverlay,
+#pushPrompt,
+.modal-overlay {
+    background: rgba(9, 16, 28, 0.56) !important;
+    backdrop-filter: blur(8px);
+}
+
+#authCard,
+#pushPromptCard,
+.modal-content {
+    background: rgba(255, 255, 255, 0.96) !important;
+    border: 1px solid rgba(255, 255, 255, 0.7) !important;
+    box-shadow: 0 26px 60px rgba(14, 25, 44, 0.18) !important;
+}
+
+.chat-shell {
+    gap: 16px !important;
+}
+
+.controls {
+    align-items: stretch;
+}
+
+.controls > * {
+    min-height: 50px;
+}
+
+.request-list,
+.dash-grid,
+.selection-grid,
+.stats-grid {
+    gap: 18px !important;
+}
+
+@media (max-width: 1100px) {
+    .main {
+        padding: 22px !important;
+    }
+
+    .chat-shell {
+        grid-template-columns: 1fr !important;
+    }
+
+    .notes-panel,
+    .chat-list {
+        min-height: auto;
+    }
+}
+
+@media (max-width: 900px) {
+    .mobile-toggle {
+        display: flex !important;
+        top: 16px !important;
+        right: 16px !important;
+    }
+
+    .sidebar {
+        width: min(86vw, 320px) !important;
+        padding-top: 72px !important;
+    }
+
+    .main {
+        padding: 84px 14px 22px !important;
+    }
+
+    .dashboard-header,
+    .header-card,
+    .card,
+    .config-card,
+    .chat-list,
+    .chat-panel,
+    .notes-panel,
+    .request-card,
+    .stat-card,
+    .modal-content {
+        border-radius: 18px !important;
+    }
+
+    .header-section,
+    .dashboard-header,
+    .header-card {
+        gap: 12px !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .grid-2,
+    .grid-offer,
+    .stats-grid,
+    .selection-grid,
+    .controls {
+        grid-template-columns: 1fr !important;
+    }
+
+    .request-list,
+    .dash-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .calendar-shell {
+        grid-template-columns: 1fr !important;
+    }
+
+    .chat-input {
+        grid-template-columns: 1fr !important;
+    }
+
+    .chat-input button,
+    .controls .btn,
+    .btn,
+    button[type="submit"] {
+        width: 100%;
+    }
+}

@@ -10,19 +10,28 @@ admin.initializeApp({
 
 // +++ START: OneDrive Excel Sync Function +++
 
+const runtimeConfig = functions.config();
+const oneDriveConfig = runtimeConfig.onedrive || {};
+
 const MS_GRAPH_CREDS = {
     auth: {
-        clientId: functions.config().onedrive.client_id,
-        clientSecret: functions.config().onedrive.client_secret,
-        tenantId: functions.config().onedrive.tenant_id || "consumers",
-        refreshToken: functions.config().onedrive.refresh_token
+        clientId: oneDriveConfig.client_id || "",
+        clientSecret: oneDriveConfig.client_secret || "",
+        tenantId: oneDriveConfig.tenant_id || "consumers",
+        refreshToken: oneDriveConfig.refresh_token || ""
     },
-    excelFilePath: functions.config().onedrive.excel_path
+    excelFilePath: oneDriveConfig.excel_path || ""
 };
 
 async function getGraphToken() {
+    if (!MS_GRAPH_CREDS.auth.clientId) {
+        throw new Error("Missing OneDrive client ID. Set functions config onedrive.client_id.");
+    }
     if (!MS_GRAPH_CREDS.auth.refreshToken) {
         throw new Error("Missing OneDrive refresh token. Set functions config onedrive.refresh_token.");
+    }
+    if (!MS_GRAPH_CREDS.excelFilePath) {
+        throw new Error("Missing OneDrive Excel path. Set functions config onedrive.excel_path.");
     }
 
     const url = `https://login.microsoftonline.com/${MS_GRAPH_CREDS.auth.tenantId}/oauth2/v2.0/token`;

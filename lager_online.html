@@ -124,7 +124,7 @@
             border-radius: var(--radius); 
             border: 1px solid var(--border); 
             box-shadow: var(--shadow); 
-            flex: 1; /* Füllt den Rest */
+            flex: 1; /* FÃ¼llt den Rest */
             display: flex;
             flex-direction: column;
         }
@@ -187,21 +187,22 @@
             .grid-2 { grid-template-columns: 1fr; }
         }
     </style>
+    <link rel="stylesheet" href="app-theme.css">
 </head>
 <body>
 
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
-    <button class="mobile-toggle" onclick="toggleSidebar()">?</button>
+    <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Menue oeffnen">â˜°</button>
 
     <nav class="sidebar">
         <div class="logo">
             <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
             <span style="display:none; font-size: 22px; font-weight:700;">Pakora</span>
         </div>
-        <a href="index.html" class="nav-item">Übersicht</a>
+        <a href="index.html" class="nav-item">Ãœbersicht</a>
         <a href="lager_online.html" class="nav-item active">Lagerbestand</a>
         <a href="index.html#calc" class="nav-item">Smart-Kalkulation</a>
-        <a href="konfigurator.html" class="nav-item">Kühlzellen Kalkulator</a>
+        <a href="konfigurator.html" class="nav-item">KÃ¼hlzellen Kalkulator</a>
     </nav>
 
     <main class="main">
@@ -232,9 +233,9 @@
 
         <div class="card">
             <div class="controls">
-                <input type="text" id="searchInput" placeholder="?? Artikel, EAN oder Nummer suchen..." onkeyup="renderTable()">
+                <input type="text" id="searchInput" placeholder="Artikel, EAN oder Nummer suchen..." onkeyup="renderTable()">
                 <button class="btn btn-upload" onclick="document.getElementById('csvInput').click()">
-                    ?? Liste Abgleichen
+                    Liste abgleichen
                 </button>
                 <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="handleCSV(this)">
                 <button class="btn btn-new" onclick="openModal()">
@@ -265,7 +266,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title" id="modalTitle">Neuer Artikel</div>
-                <button class="close-btn" onclick="closeModal()">×</button>
+                <button class="close-btn" onclick="closeModal()">Ã—</button>
             </div>
             
             <input type="hidden" id="modalKey">
@@ -278,7 +279,7 @@
             
             <div class="grid-2">
                 <div>
-                    <label>Preis (€)</label>
+                    <label>Preis (â‚¬)</label>
                     <input type="number" step="0.01" id="modalPrice" placeholder="0.00">
                 </div>
                 <div>
@@ -290,10 +291,10 @@
             <label>Kategorie</label>
             <select id="modalCat">
                 <option value="compressor">Kompressor</option>
-                <option value="condensing_unit">Verflüssigungssatz</option>
-                <option value="cp_box">CP-Box (Gehäuse)</option>
+                <option value="condensing_unit">VerflÃ¼ssigungssatz</option>
+                <option value="cp_box">CP-Box (GehÃ¤use)</option>
                 <option value="evaporator">Verdampfer</option>
-                <option value="accessory">Zubehör</option>
+                <option value="accessory">ZubehÃ¶r</option>
             </select>
 
             <div class="grid-2">
@@ -410,15 +411,15 @@
                     </td>
                     <td>${statusBadge}</td>
                     <td class="action-col">
-                        <button class="btn" style="background:#64748b; padding: 5px 10px;" onclick="openModal('${key}')">??</button>
-                        <button class="btn" style="background:#dc2626; padding: 5px 10px;" onclick="deleteProduct('${key}')">???</button>
+                        <button class="btn" style="background:#64748b; padding: 5px 10px;" onclick="openModal('${key}')">Bearbeiten</button>
+                        <button class="btn" style="background:#dc2626; padding: 5px 10px;" onclick="deleteProduct('${key}')">Loeschen</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
 
             if(visibleCount === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">Keine Treffer für "${search}"</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">Keine Treffer fÃ¼r "${search}"</td></tr>`;
             }
         }
 
@@ -481,7 +482,7 @@
         }
 
         function deleteProduct(key) {
-            if (confirm(`Soll der Artikel "${localData[key].name}" wirklich gelöscht werden?`)) {
+            if (confirm(`Soll der Artikel "${localData[key].name}" wirklich gelÃ¶scht werden?`)) {
                 stockRef.child(key).remove();
             }
         }
@@ -490,7 +491,7 @@
             const file = input.files[0];
             if (!file) return;
 
-            if (!confirm("CSV-Abgleich:\nBestehende Artikel werden aktualisiert, neue hinzugefügt. Fortfahren?")) {
+            if (!confirm("CSV-Abgleich:\nBestehende Artikel werden aktualisiert, neue hinzugefÃ¼gt. Fortfahren?")) {
                 input.value = '';
                 return;
             }

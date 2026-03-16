@@ -72,6 +72,7 @@
         .admin-btn.done { background: #d1f4cc; border-color: rgba(0,128,105,.35); color:#0b3220; }
         .empty-state { text-align: center; color: var(--muted); font-size: 14px; margin-top: 40px; }
     </style>
+    <link rel="stylesheet" href="app-theme.css">
 </head>
 <body>
     <nav class="sidebar">
@@ -134,9 +135,14 @@
             'm.pak': { label: 'Mert Kaan' },
             'k.guemuesok': { label: 'Kaan' },
             'l.wenzel': { label: 'Leon' },
-            'oe.pak': { label: 'Oemer' }
+            'ö.pak': { label: 'Ömer' },
+            'oe.pak': { label: 'Ömer' }
         };
-        const accountLabel = (id) => (ACCOUNTS[id] && ACCOUNTS[id].label) ? ACCOUNTS[id].label : (id || '-');
+        const normalizeUserId = (id) => String(id || '').trim().toLowerCase();
+        const accountLabel = (id) => {
+            const normalized = normalizeUserId(id);
+            return (ACCOUNTS[normalized] && ACCOUNTS[normalized].label) ? ACCOUNTS[normalized].label : (id || '-');
+        };
 
         function formatTime(ts) {
             if (!ts) return '--:--';
