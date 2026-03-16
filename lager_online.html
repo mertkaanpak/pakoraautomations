@@ -130,6 +130,23 @@
         }
 
         .controls { display: grid; grid-template-columns: 1fr auto auto auto; gap: 15px; margin-bottom: 20px; }
+        .category-jump {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .jump-chip {
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #334155;
+            padding: 10px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .jump-chip:hover { border-color: #2563eb; color: #2563eb; }
         
         input, select { 
             width: 100%; padding: 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; outline: none;
@@ -147,6 +164,37 @@
         .stock-table th { text-align: left; padding: 12px; background: #f1f5f9; color: #475569; font-size: 12px; text-transform: uppercase; }
         .stock-table td { padding: 15px 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
         .stock-table tr:last-child td { border-bottom: none; }
+        .category-row td {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: #eef3f9;
+            font-weight: 800;
+            color: #142033;
+        }
+        .performance-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .performance-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .performance-badge.nk {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .performance-badge.tk {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
         .action-col { text-align: right; }
 
         /* STOCK CONTROLLER */
@@ -246,6 +294,14 @@
                 <button class="btn btn-new" onclick="openModal()">
                     + Neuer Artikel
                 </button>
+            </div>
+
+            <div class="category-jump" id="categoryJump">
+                <button class="jump-chip" type="button" onclick="jumpToCategory('condensing_unit')">Verfluessigungssaetze</button>
+                <button class="jump-chip" type="button" onclick="jumpToCategory('cp_box')">CP-Box</button>
+                <button class="jump-chip" type="button" onclick="jumpToCategory('evaporator')">Verdampfer</button>
+                <button class="jump-chip" type="button" onclick="jumpToCategory('compressor')">Kompressoren</button>
+                <button class="jump-chip" type="button" onclick="jumpToCategory('accessory')">Zubehoer</button>
             </div>
 
             <div style="overflow-x:auto; flex:1;">
@@ -358,6 +414,30 @@
             return labels[category] || category || 'Sonstiges';
         }
 
+        function formatCapacity(value) {
+            const num = Number(value || 0);
+            if (!num) return '';
+            return `${num.toLocaleString('de-DE')} W`;
+        }
+
+        function renderPerformanceBadges(item, category) {
+            if (category !== 'condensing_unit') return '';
+            const badges = [];
+            if (Number(item.capacityNK || 0) > 0) {
+                badges.push(`<span class="performance-badge nk">Normalkuehlung -10: ${formatCapacity(item.capacityNK)}</span>`);
+            }
+            if (Number(item.capacityTK || 0) > 0) {
+                badges.push(`<span class="performance-badge tk">Tiefkuehlung -25: ${formatCapacity(item.capacityTK)}</span>`);
+            }
+            return badges.length ? `<div class="performance-badges">${badges.join('')}</div>` : '';
+        }
+
+        function jumpToCategory(category) {
+            const row = document.getElementById(`category-${category}`);
+            if (!row) return;
+            row.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         async function loadInventory() {
             setConnectionState('Lade Lagerdaten...', false);
             try {
@@ -408,7 +488,9 @@
                 visibleCount += rows.length;
 
                 const sectionRow = document.createElement('tr');
-                sectionRow.innerHTML = `<td colspan="5" style="background:#eef3f9; font-weight:800; color:#142033;">${categoryLabel(category)} (${rows.length})</td>`;
+                sectionRow.className = 'category-row';
+                sectionRow.id = `category-${category}`;
+                sectionRow.innerHTML = `<td colspan="5">${categoryLabel(category)} (${rows.length})</td>`;
                 tbody.appendChild(sectionRow);
 
                 rows.forEach((key) => {
@@ -421,7 +503,7 @@
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td style="font-family:monospace; color:#64748b;">${item.id || '-'}</td>
-                        <td style="font-weight:600;">${item.name}</td>
+                        <td style="font-weight:600;">${item.name}${renderPerformanceBadges(item, category)}</td>
                         <td>
                             <div class="stock-ctrl">
                                 <button class="btn-qty" onclick="updateStock('${key}', -1)">-</button>
