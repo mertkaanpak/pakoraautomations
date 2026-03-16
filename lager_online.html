@@ -215,8 +215,13 @@
                     <span id="connectionText">Verbinde mit Cloud...</span>
                 </div>
             </div>
-            <div id="lastSync" style="font-size:12px; color:#94a3b8; font-family:monospace;">
-                Sync: --:--:--
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <button class="btn btn-primary" id="oneDriveSyncBtn" type="button" onclick="syncFromOneDrive()">
+                    OneDrive synchronisieren
+                </button>
+                <div id="lastSync" style="font-size:12px; color:#94a3b8; font-family:monospace;">
+                    Sync: --:--:--
+                </div>
             </div>
         </div>
 
@@ -308,7 +313,7 @@
                 </div>
             </div>
 
-            <button class="btn btn-primary" onclick="saveProduct()" style="width:100%; margin-top:20px;">?? Speichern</button>
+            <button class="btn btn-primary" onclick="saveProduct()" style="width:100%; margin-top:20px;">Speichern</button>
         </div>
     </div>
 
@@ -325,6 +330,7 @@
             messagingSenderId: "281325034328",
             appId: "1:281325034328:web:e05c04bac6b8558560632d"
         };
+        const SYNC_FUNCTION_URL = "https://us-central1-pakora-automations-chat.cloudfunctions.net/syncOneDriveExcel";
         // ==========================================
 
         function toggleSidebar() {
@@ -345,6 +351,13 @@
         
         let db, stockRef;
         let localData = {};
+
+        function setSyncButtonState(isLoading, label = "OneDrive synchronisieren") {
+            const button = document.getElementById('oneDriveSyncBtn');
+            if (!button) return;
+            button.disabled = !!isLoading;
+            button.textContent = label;
+        }
 
         if(firebase.apps.length > 0) {
             db = firebase.database();
@@ -428,6 +441,25 @@
             document.getElementById('countTotal').innerText = keys.length;
             let low = keys.filter(k => (localData[k].qty || 0) <= 0).length;
             document.getElementById('countLow').innerText = low;
+        }
+
+        async function syncFromOneDrive() {
+            setSyncButtonState(true, 'Synchronisiert...');
+            try {
+                const response = await fetch(SYNC_FUNCTION_URL, { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data && data.error ? data.error : 'Synchronisierung fehlgeschlagen.');
+                }
+
+                const now = new Date();
+                document.getElementById('lastSync').innerText = `Sync: ${now.toLocaleTimeString()} | ${data.total} Artikel`;
+                alert(`OneDrive-Sync abgeschlossen.\nGesamt: ${data.total}\nNeu: ${data.created}\nAktualisiert: ${data.updated}`);
+            } catch (error) {
+                alert(`OneDrive-Sync fehlgeschlagen: ${error.message}`);
+            } finally {
+                setSyncButtonState(false);
+            }
         }
 
         function updateStock(key, delta) {

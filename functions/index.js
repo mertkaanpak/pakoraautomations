@@ -23,6 +23,138 @@ const MS_GRAPH_CREDS = {
     excelFilePath: oneDriveConfig.excel_path || ""
 };
 
+function normalizeHeader(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "");
+}
+
+function isMeaningfulCell(value) {
+    return String(value || "").trim() !== "";
+}
+
+function isLikelyHeaderCell(value) {
+    const normalized = normalizeHeader(value);
+    return [
+      "artikelnummer",
+      "artikelnr",
+      "artnr",
+      "hersteller",
+      "modell",
+      "model",
+      "kompressor",
+      "kategorie",
+      "khltemittel",
+      "anwendung",
+      "leistung10cwatt",
+      "leistung25cwatt",
+      "leistung10c",
+      "leistung25c",
+      "leistung",
+      "menge",
+      "preis",
+      "spannungsversorgung"
+    ].some((token) => normalized.includes(token));
+}
+
+function extractRowsFromWorksheet(worksheet, sheetName) {
+    const matrix = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+    const entries = [];
+
+    for (let rowIndex = 0; rowIndex < matrix.length; rowIndex++) {
+      const row = matrix[rowIndex] || [];
+      const headerColumns = row
+        .map((cell, columnIndex) => ({ columnIndex, cell }))
+        .filter(({ cell }) => isLikelyHeaderCell(cell));
+
+      if (headerColumns.length < 3) continue;
+
+      const firstColumn = headerColumns[0].columnIndex;
+      let lastColumn = headerColumns[headerColumns.length - 1].columnIndex;
+      for (let columnIndex = lastColumn + 1; columnIndex < row.length; columnIndex++) {
+        if (!isMeaningfulCell(row[columnIndex])) break;
+        lastColumn = columnIndex;
+      }
+
+      const headers = {};
+      for (let columnIndex = firstColumn; columnIndex <= lastColumn; columnIndex++) {
+        headers[columnIndex] = normalizeHeader(row[columnIndex]) || `col${columnIndex}`;
+      }
+
+      const sectionTitle = rowIndex > 0
+        ? String((matrix[rowIndex - 1] || []).slice(firstColumn, lastColumn + 1).find(isMeaningfulCell) || "")
+        : "";
+
+      for (let dataRowIndex = rowIndex + 1; dataRowIndex < matrix.length; dataRowIndex++) {
+        const dataRow = matrix[dataRowIndex] || [];
+        const values = dataRow.slice(firstColumn, lastColumn + 1);
+        const nonEmptyCount = values.filter(isMeaningfulCell).length;
+        if (!nonEmptyCount) break;
+        if (values.filter(isLikelyHeaderCell).length >= 3) break;
+
+        const entry = { __sheet: sheetName, __section: sectionTitle };
+        Object.entries(headers).forEach(([columnIndex, header]) => {
+          entry[header] = dataRow[Number(columnIndex)];
+        });
+
+        if (Object.values(entry).some(isMeaningfulCell)) {
+          entries.push(entry);
+        }
+      }
+    }
+
+    return entries;
+}
+
+function workbookToObjects(workbook) {
+    return workbook.SheetNames.flatMap((sheetName) => {
+      const worksheet = workbook.Sheets[sheetName];
+      return extractRowsFromWorksheet(worksheet, sheetName);
+    });
+}
+
+function buildProductId(row, manufacturer, model) {
+    const explicitId = String(pickValue(row, ["id", "artnr", "artikelnummer", "artikelnr", "artikelnummerid"])).trim();
+    if (explicitId) return explicitId;
+
+    const fallback = [row.__sheet, row.__section, manufacturer, model]
+      .map((part) => String(part || "").trim())
+      .filter(Boolean)
+      .join(" ");
+
+    return fallback || "";
+}
+
+function pickValue(row, candidates) {
+    for (const key of candidates) {
+      const value = row[key];
+      if (value !== undefined && value !== null && String(value).trim() !== "") {
+        return value;
+      }
+    }
+    return "";
+}
+
+function parseNumber(value) {
+    if (typeof value === "number" && !Number.isNaN(value)) return value;
+    const normalized = String(value || "")
+      .replace(",", ".")
+      .match(/-?\d+(?:\.\d+)?/);
+    return normalized ? Number(normalized[0]) : 0;
+}
+
+function inferCategory(rawCategory, productName) {
+    const haystack = `${rawCategory || ""} ${productName || ""}`.toLowerCase();
+    if (haystack.includes("verdampfer")) return "evaporator";
+    if (haystack.includes("cp-box") || haystack.includes("cp box")) return "cp_box";
+    if (haystack.includes("verfl") || haystack.includes("condensing")) return "condensing_unit";
+    if (haystack.includes("kompressor") || haystack.includes("compressor")) return "compressor";
+    return "accessory";
+}
+
 async function getGraphToken() {
     if (!MS_GRAPH_CREDS.auth.clientId) {
         throw new Error("Missing OneDrive client ID. Set functions config onedrive.client_id.");
@@ -54,6 +186,20 @@ async function getGraphToken() {
 }
 
 exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+    }
+
+    if (!["GET", "POST"].includes(req.method)) {
+        res.status(405).json({ error: "Use GET, POST or OPTIONS." });
+        return;
+    }
+
     try {
         const token = await getGraphToken();
         const driveItemUrl = `https://graph.microsoft.com/v1.0/me/drive/root:${MS_GRAPH_CREDS.excelFilePath}:/content`;
@@ -69,30 +215,69 @@ exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
 
         const arrayBuffer = await fileResponse.arrayBuffer();
         const workbook = xlsx.read(Buffer.from(arrayBuffer), { type: "buffer" });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = xlsx.utils.sheet_to_json(worksheet);
+        const jsonData = workbookToObjects(workbook);
+        const existingSnapshot = await admin.database().ref("/products").get();
+        const existingProducts = existingSnapshot.exists() ? existingSnapshot.val() : {};
 
         const updates = {};
         let count = 0;
+        let created = 0;
+        let updated = 0;
         jsonData.forEach(row => {
-            const id = row.ID || row.ArtNr;
-            const qty = parseInt(row.Menge, 10);
+            const manufacturer = String(pickValue(row, ["hersteller", "manufacturer"])).trim();
+            const model = String(pickValue(row, ["modell", "model", "kompressor", "bezeichnung", "produkt", "artikel"])).trim();
+            const id = buildProductId(row, manufacturer, model);
+            if (!id) return;
 
-            if (id && !isNaN(qty)) {
-                const safeId = String(id).replace(/[.#$/\[\]]/g, "_");
-                updates[`/products/${safeId}/qty`] = qty;
-                count++;
-            }
+            const safeId = String(id).replace(/[.#$/\[\]]/g, "_");
+            const existing = existingProducts[safeId] || {};
+            const explicitName = String(pickValue(row, ["name", "bezeichnung", "produktname"])).trim();
+            const rawCategory = String(pickValue(row, ["kategorie", "category", "anwendung", "application"])).trim() || `${row.__sheet || ""} ${row.__section || ""}`;
+            const qtyRaw = pickValue(row, ["menge", "bestand", "anzahl", "qty", "lagerbestand", "stuck", "stueck"]);
+            const hasQty = String(qtyRaw || "").trim() !== "";
+            const qty = hasQty ? Math.max(0, Math.round(parseNumber(qtyRaw))) : (existing.qty || 0);
+            const price = parseNumber(pickValue(row, ["preis", "price"]));
+            const capacityText = String(pickValue(row, ["leistung", "leistung10cwatt", "leistung10c", "leistung25cwatt", "leistung25c"])).trim();
+            let capacityNK = parseNumber(pickValue(row, ["leistungnk10c", "leistungnk", "leistung10cwatt", "leistung10c", "leistung10", "f"]));
+            let capacityTK = parseNumber(pickValue(row, ["leistungtk25c", "leistungtk", "leistung25cwatt", "leistung25c", "leistung25", "g"]));
+            if (!capacityNK && capacityText && capacityText.includes("-10")) capacityNK = parseNumber(capacityText);
+            if (!capacityTK && capacityText && capacityText.includes("-25")) capacityTK = parseNumber(capacityText);
+
+            const productName = explicitName || [manufacturer, model].filter(Boolean).join(" ").trim() || existing.name || model || id;
+            const productData = {
+                id,
+                name: productName,
+                qty,
+                price: price || existing.price || 0,
+                category: inferCategory(rawCategory || existing.category, productName),
+                capacityNK: capacityNK || existing.capacityNK || 0,
+                capacityTK: capacityTK || existing.capacityTK || 0
+            };
+
+            updates[`/products/${safeId}`] = productData;
+            count++;
+            if (existing && Object.keys(existing).length) updated++;
+            else created++;
         });
 
+        if (!count) {
+            res.status(400).json({ error: "Keine gueltigen Artikelzeilen in der OneDrive-Datei gefunden." });
+            return;
+        }
+
         await admin.database().ref().update(updates);
-        console.log(`OK: ${count} products updated.`);
-        res.status(200).send(`OK: ${count} products updated.`);
+        console.log(`OK: ${count} products synced.`);
+        res.status(200).json({
+            ok: true,
+            total: count,
+            created,
+            updated,
+            sheets: workbook.SheetNames
+        });
 
     } catch (error) {
         console.error("Sync failed:", error);
-        res.status(500).send(`Error: ${error.message}`);
+        res.status(500).json({ error: error.message });
     }
 });
 
