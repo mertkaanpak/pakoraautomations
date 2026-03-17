@@ -699,7 +699,8 @@
 
         window.onload = function() {
             updateDashboardStats();
-            nav('dashboard');
+            const initialSection = (window.location.hash || '').replace('#', '') || 'dashboard';
+            nav(initialSection);
         };
 const CURRENT_NEWS_VERSION = 1; 
 
@@ -805,15 +806,44 @@ const CURRENT_NEWS_VERSION = 1;
         "\u00f6.pak": { pass: "pakora", label: "\u00d6mer" }
     };
     const AUTH_KEY = "pakora_auth_user";
-
-    
-    const APP_VERSION = "20.0.0";
+    const APP_VERSION = "20.0.1";
     const VERSION_KEY = "pakora_app_version";
-    const storedVersion = localStorage.getItem(VERSION_KEY);
+    const storage = (() => {
+        try {
+            const probeKey = "__pakora_probe__";
+            localStorage.setItem(probeKey, "1");
+            localStorage.removeItem(probeKey);
+            return localStorage;
+        } catch (error) {
+            return sessionStorage;
+        }
+    })();
+    const readStored = (key) => {
+        try {
+            return storage.getItem(key);
+        } catch (error) {
+            return null;
+        }
+    };
+    const writeStored = (key, value) => {
+        try {
+            storage.setItem(key, value);
+        } catch (error) {
+            console.warn("Storage write failed:", error);
+        }
+    };
+    const removeStored = (key) => {
+        try {
+            storage.removeItem(key);
+        } catch (error) {
+            console.warn("Storage remove failed:", error);
+        }
+    };
+
+    const storedVersion = readStored(VERSION_KEY);
     if (storedVersion !== APP_VERSION) {
-        localStorage.setItem(VERSION_KEY, APP_VERSION);
-        localStorage.removeItem(AUTH_KEY);
-        window.location.reload(true);
+        writeStored(VERSION_KEY, APP_VERSION);
+        removeStored(AUTH_KEY);
     }
 const overlay = document.getElementById("authOverlay");
     const form = document.getElementById("authForm");
@@ -823,7 +853,7 @@ const overlay = document.getElementById("authOverlay");
     const logoutBtn = document.getElementById("logoutBtn");
     const welcomeName = document.getElementById("welcomeName");
 
-    const getStoredUser = () => (localStorage.getItem(AUTH_KEY) || "").toLowerCase();
+    const getStoredUser = () => (readStored(AUTH_KEY) || "").toLowerCase();
     const isAuthed = () => !!ACCOUNTS[getStoredUser()];
     const setWelcome = (userId) => {
         const label = ACCOUNTS[userId]?.label || "Chef";
@@ -854,7 +884,7 @@ const overlay = document.getElementById("authOverlay");
         error.textContent = "";
         const userId = user.value.trim().toLowerCase();
         if (ACCOUNTS[userId] && pass.value === ACCOUNTS[userId].pass) {
-            localStorage.setItem(AUTH_KEY, userId);
+            writeStored(AUTH_KEY, userId);
             setWelcome(userId);
             hideAuth();
             return;
@@ -866,7 +896,7 @@ const overlay = document.getElementById("authOverlay");
 
     if (logoutBtn) {
         logoutBtn.addEventListener("click", () => {
-            localStorage.removeItem(AUTH_KEY);
+            removeStored(AUTH_KEY);
             showAuth();
         });
     }
