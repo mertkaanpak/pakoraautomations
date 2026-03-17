@@ -225,6 +225,12 @@ function parseNumber(value) {
     return normalized ? Number(normalized[0]) : 0;
 }
 
+function normalizeCapacityValue(value) {
+    const numeric = parseNumber(value);
+    if (!numeric) return 0;
+    return numeric > 0 && numeric < 100 ? Math.round(numeric * 1000) : Math.round(numeric);
+}
+
 function inferCategory(rawCategory, productName) {
     const haystack = `${rawCategory || ""} ${productName || ""}`.toLowerCase();
     if (haystack.includes("verdampfer")) return "evaporator";
@@ -278,20 +284,20 @@ function inferStructuredCategory(sheetName, sectionTitle, rawCategory, productNa
 }
 
 function deriveStructuredCapacities(row) {
-    const directNK = parseNumber(pickValue(row, ["leistungnk10c", "leistungnk", "leistung10cwatt", "leistung10c", "te10c", "f"]));
-    const directTK = parseNumber(pickValue(row, ["leistungtk25c", "leistungtk", "leistung25cwatt", "leistung25c", "te25c", "g"]));
-    const directZero = parseNumber(pickValue(row, ["te0c", "leistung0c"]));
+    const directNK = normalizeCapacityValue(pickValue(row, ["leistungnk10c", "leistungnk", "leistung10cwatt", "leistung10c", "te10c", "f"]));
+    const directTK = normalizeCapacityValue(pickValue(row, ["leistungtk25c", "leistungtk", "leistung25cwatt", "leistung25c", "te25c", "g"]));
+    const directZero = normalizeCapacityValue(pickValue(row, ["te0c", "leistung0c"]));
     const generic = String(pickValue(row, ["leistung"])).trim();
 
     let capacityNK = directNK;
     let capacityTK = directTK;
     const context = `${row.__sheet || ""} ${row.__section || ""}`.toLowerCase();
 
-    if (!capacityNK && generic && generic.includes("-10")) capacityNK = parseNumber(generic);
-    if (!capacityTK && generic && generic.includes("-25")) capacityTK = parseNumber(generic);
+    if (!capacityNK && generic && generic.includes("-10")) capacityNK = normalizeCapacityValue(generic);
+    if (!capacityTK && generic && generic.includes("-25")) capacityTK = normalizeCapacityValue(generic);
     if (!capacityNK && !capacityTK && generic) {
-        if (context.includes("-10") || context.includes("normalk")) capacityNK = parseNumber(generic);
-        if (context.includes("-25") || context.includes("tiefk")) capacityTK = parseNumber(generic);
+        if (context.includes("-10") || context.includes("normalk")) capacityNK = normalizeCapacityValue(generic);
+        if (context.includes("-25") || context.includes("tiefk")) capacityTK = normalizeCapacityValue(generic);
     }
 
     return {
@@ -327,16 +333,16 @@ function shouldSkipProduct(product) {
 }
 
 function deriveCapacities(row) {
-    const directNK = parseNumber(pickValue(row, ["leistungnk10c", "leistungnk", "leistung10cwatt", "leistung10c", "te10c", "f"]));
-    const directTK = parseNumber(pickValue(row, ["leistungtk25c", "leistungtk", "leistung25cwatt", "leistung25c", "te25c", "g"]));
-    const directZero = parseNumber(pickValue(row, ["te0c", "leistung0c"]));
+    const directNK = normalizeCapacityValue(pickValue(row, ["leistungnk10c", "leistungnk", "leistung10cwatt", "leistung10c", "te10c", "f"]));
+    const directTK = normalizeCapacityValue(pickValue(row, ["leistungtk25c", "leistungtk", "leistung25cwatt", "leistung25c", "te25c", "g"]));
+    const directZero = normalizeCapacityValue(pickValue(row, ["te0c", "leistung0c"]));
     const generic = String(pickValue(row, ["leistung"])).trim();
 
     let capacityNK = directNK;
     let capacityTK = directTK;
 
-    if (!capacityNK && generic && generic.includes("-10")) capacityNK = parseNumber(generic);
-    if (!capacityTK && generic && generic.includes("-25")) capacityTK = parseNumber(generic);
+    if (!capacityNK && generic && generic.includes("-10")) capacityNK = normalizeCapacityValue(generic);
+    if (!capacityTK && generic && generic.includes("-25")) capacityTK = normalizeCapacityValue(generic);
 
     return {
         capacityNK,
@@ -468,6 +474,12 @@ exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
         const jsonData = workbookToObjects(workbook);
         const existingSnapshot = await admin.database().ref("/products").get();
         const existingProducts = existingSnapshot.exists() ? existingSnapshot.val() : {};
+        const existingKeysByMergeKey = new Map();
+        Object.entries(existingProducts).forEach(([key, product]) => {
+            const mergeKey = `${product.category || "accessory"}:${normalizeNameKey(product.name)}`;
+            if (!normalizeNameKey(product.name)) return;
+            if (!existingKeysByMergeKey.has(mergeKey)) existingKeysByMergeKey.set(mergeKey, key);
+        });
 
         const importedProducts = new Map();
         let count = 0;
@@ -518,9 +530,11 @@ exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
 
         const updates = {};
         importedProducts.forEach((productData) => {
-            const safeId = String(productData.id || productData.name).replace(/[.#$/\[\]]/g, "_");
+            const mergeKey = `${productData.category || "accessory"}:${normalizeNameKey(productData.name)}`;
+            const matchedKey = existingKeysByMergeKey.get(mergeKey);
+            const safeId = matchedKey || String(productData.id || productData.name).replace(/[.#$/\[\]]/g, "_");
             const existing = existingProducts[safeId] || {};
-            updates[`/products/${safeId}`] = productData;
+            updates[`/products/${safeId}`] = { ...existing, ...productData };
             if (existing && Object.keys(existing).length) updated++;
             else created++;
         });

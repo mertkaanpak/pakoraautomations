@@ -421,7 +421,8 @@
         }
 
         function formatCapacity(value) {
-            const num = Number(value || 0);
+            const raw = Number(value || 0);
+            const num = raw > 0 && raw < 100 ? Math.round(raw * 1000) : Math.round(raw);
             if (!num) return '';
             return `${num.toLocaleString('de-DE')} W`;
         }

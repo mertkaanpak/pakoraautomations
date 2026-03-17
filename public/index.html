@@ -457,6 +457,11 @@
         let calculatedValues = { normal: 0, heavy: 0, baseNormal: 0, baseHeavy: 0 };
         let currentMode = 'normal';
         let currentOffer = { items: [], subTotal: 0, discount: 0, total: 0, watts: 0 };
+        function normalizeCapacityWatts(value) {
+            const numeric = Number(value || 0);
+            if (!numeric) return 0;
+            return numeric > 0 && numeric < 100 ? Math.round(numeric * 1000) : Math.round(numeric);
+        }
 
         function calculateWatts() {
             const vol = parseFloat(document.getElementById('calcVol').value);
@@ -540,11 +545,11 @@
 
             let units = onStockProducts.filter(u => {
                 if (!['condensing_unit', 'cp_box'].includes(u.category)) return false;
-                let cap = (type === 'NK' ? u.capacityNK : u.capacityTK) || 0;
+                let cap = normalizeCapacityWatts(type === 'NK' ? u.capacityNK : u.capacityTK);
                 return cap > watts;
             }).sort((a,b) => {
-                let capA = type === 'NK' ? a.capacityNK : a.capacityTK;
-                let capB = type === 'NK' ? b.capacityNK : b.capacityTK;
+                let capA = normalizeCapacityWatts(type === 'NK' ? a.capacityNK : a.capacityTK);
+                let capB = normalizeCapacityWatts(type === 'NK' ? b.capacityNK : b.capacityTK);
                 return capA - capB;
             });
             
@@ -554,18 +559,18 @@
             if(!unit) {
                 items.push({ type: "Warnung", name: `⚠️ Keine passende Außeneinheit (${type}) auf Lager`, price: 0 });
             } else {
-                usedCap = type === 'NK' ? unit.capacityNK : unit.capacityTK;
+                usedCap = normalizeCapacityWatts(type === 'NK' ? unit.capacityNK : unit.capacityTK);
                 let catLabel = unit.category === 'cp_box' ? 'CP-Box' : 'Verflüssigungssatz';
                 items.push({ type: catLabel, name: `${unit.name} (${usedCap}W)`, price: unit.price });
                 subTotal += unit.price;
 
                 const evaps = onStockProducts.filter(e => {
                     if (e.category !== 'evaporator') return false;
-                    let cap = type === 'NK' ? e.capacityNK : e.capacityTK;
+                    let cap = normalizeCapacityWatts(type === 'NK' ? e.capacityNK : e.capacityTK);
                     return cap >= (usedCap * 1.10); 
                 }).sort((a,b) => {
-                    let capA = type === 'NK' ? a.capacityNK : a.capacityTK;
-                    let capB = type === 'NK' ? b.capacityNK : b.capacityTK;
+                    let capA = normalizeCapacityWatts(type === 'NK' ? a.capacityNK : a.capacityTK);
+                    let capB = normalizeCapacityWatts(type === 'NK' ? b.capacityNK : b.capacityTK);
                     return capA - capB;
                 });
 
