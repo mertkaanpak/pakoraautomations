@@ -363,30 +363,30 @@
         };
 
         let allProducts = [];
-        const INVENTORY_API_URL = "https://us-central1-pakora-automations-chat.cloudfunctions.net/inventoryApi";
 
-        async function loadProducts() {
+        if (firebase.apps.length === 0) {
             try {
-                const response = await fetch(INVENTORY_API_URL);
-                const payload = await response.json();
-                if (!response.ok) {
-                    throw new Error(payload && payload.error ? payload.error : 'Produktdaten konnten nicht geladen werden.');
-                }
-                allProducts = Object.values(payload.products || {});
-                console.log(`Inventory API: ${allProducts.length} products loaded.`);
-                if (document.getElementById('db').classList.contains('active')) {
-                    renderDatabase();
-                }
-                updateDashboardStats();
-            } catch (error) {
-                console.error("Produktdatenbank konnte nicht geladen werden.", error);
-                if (document.getElementById('db').classList.contains('active')) {
-                    renderDatabase();
-                }
+                if(firebaseConfig.apiKey === "YOUR_API_KEY") throw "Config missing";
+                firebase.initializeApp(firebaseConfig);
+                const db = firebase.database();
+                const productsRef = db.ref('products');
+
+                productsRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        allProducts = Object.values(data);
+                        console.log(`Firebase: ${allProducts.length} products loaded.`);
+                        if(document.getElementById('db').classList.contains('active')) {
+                            renderDatabase();
+                        }
+                        updateDashboardStats();
+                    }
+                });
+            } catch(e) {
+                console.error("Firebase Config fehlt in index.html!", e);
+                alert("Firebase ist nicht konfiguriert. Die Produktdatenbank funktioniert nicht.");
             }
         }
-
-        loadProducts();
        
         function toggleSidebar(forceOpen) {
             const sidebar = document.querySelector('.sidebar');
