@@ -1,5 +1,6 @@
 ﻿    <title>Pakora WhatsApp Anfragen</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
@@ -131,13 +132,7 @@
         const getStoredUser = () =>
             (localStorage.getItem(AUTH_KEY) || localStorage.getItem(LEGACY_AUTH_KEY) || '').toLowerCase();
         const isAdmin = () => getStoredUser() === ADMIN_USER;
-        const ACCOUNTS = {
-            'm.pak': { label: 'Mert Kaan' },
-            'k.guemuesok': { label: 'Kaan' },
-            'l.wenzel': { label: 'Leon' },
-            'ö.pak': { label: 'Ömer' },
-            'oe.pak': { label: 'Ömer' }
-        };
+        const ACCOUNTS = window.PAKORA_ACCOUNTS;
         const normalizeUserId = (id) => String(id || '').trim().toLowerCase();
         const accountLabel = (id) => {
             const normalized = normalizeUserId(id);

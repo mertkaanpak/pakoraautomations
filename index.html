@@ -18,6 +18,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#22c55e">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="auth.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -800,12 +801,7 @@ const CURRENT_NEWS_VERSION = 1;
     </div>
     <script>
         (function () {
-    const ACCOUNTS = {
-        "m.pak": { pass: "admin", label: "Mert Kaan" },
-        "k.guemuesok": { pass: "pakora", label: "Kaan" },
-        "l.wenzel": { pass: "pakora", label: "Leon" },
-        "\u00f6.pak": { pass: "pakora", label: "\u00d6mer" }
-    };
+    const ACCOUNTS = window.PAKORA_ACCOUNTS;
     const AUTH_KEY = "pakora_auth_user";
     const APP_VERSION = "20.0.1";
     const VERSION_KEY = "pakora_app_version";

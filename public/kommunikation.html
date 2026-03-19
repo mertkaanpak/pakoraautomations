@@ -18,6 +18,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#008069">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
@@ -858,12 +859,7 @@
         const isPwa = isStandalone || isIosStandalone;
         const messaging = messagingSupported ? firebase.messaging() : null;
 
-        const ACCOUNTS = {
-            'm.pak': { pass: 'admin', label: 'Mert Kaan' },
-            'k.guemuesok': { pass: 'pakora', label: 'Kaan' },
-            'l.wenzel': { pass: 'pakora', label: 'Leon' },
-            '\u00f6.pak': { pass: 'pakora', label: '\u00d6mer' }
-        };
+        const ACCOUNTS = window.PAKORA_ACCOUNTS;
 
         const AUTH_KEY = 'pakora_auth_user';
         const LEGACY_AUTH_KEY = 'pakora_chat_user';

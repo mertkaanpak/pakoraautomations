@@ -6,6 +6,7 @@
     <title>Pakora | Zellen-Konfigurator</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="auth.js"></script>
 
     <style>
         /* --- DESIGN SYSTEM (Exakt wie Index & Kommunikation) --- */
@@ -678,12 +679,7 @@
     <script>
         (function () {
             const AUTH_KEY = "pakora_auth_user";
-            const ACCOUNTS = {
-                "m.pak": { pass: "admin", label: "Mert Kaan" },
-                "k.guemuesok": { pass: "pakora", label: "Kaan" },
-                "l.wenzel": { pass: "pakora", label: "Leon" },
-                "\u00f6.pak": { pass: "pakora", label: "\u00d6mer" }
-            };
+            const ACCOUNTS = window.PAKORA_ACCOUNTS;
 
             const overlay = document.getElementById("authOverlay");
             const form = document.getElementById("authForm");
