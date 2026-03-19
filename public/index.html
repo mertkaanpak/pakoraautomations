@@ -175,9 +175,12 @@
         
         .info-bar { background: #eff6ff; color: #1e40af; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px; border: 1px solid #bfdbfe; }
         
-        .temp-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-right: 5px; }
-        .temp-nk { background: #dbeafe; color: #1e40af; }
-        .temp-tk { background: #e0e7ff; color: #3730a3; }
+        .temp-badge { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+        .temp-nk { background: #dbeafe; color: #1d4ed8; }
+        .temp-tk { background: #fee2e2; color: #b91c1c; }
+        .db-chip { border: 1.5px solid #e2e8f0; background: #fff; color: #475569; padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; transition: .15s; }
+        .db-chip:hover { border-color: #2563eb; color: #2563eb; }
+        .db-chip.active { background: #2563eb; border-color: #2563eb; color: #fff; }
 
         .mobile-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 2000; background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 50%; box-shadow: 0 4px 12px rgba(37,99,235,0.4); font-size: 20px; cursor: pointer; }
         .mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 900; }
@@ -217,7 +220,7 @@
         .offer-table th { background: #334155; color: #e2e8f0; }
         .info-bar { background: #1e40af; color: #dbeafe; border-color: #2563eb; }
     </style>
-    <link rel="stylesheet" href="app-theme.css">
+    <link rel="stylesheet" href="app-theme.css?v=5">
 </head>
 <body> 
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
@@ -346,11 +349,28 @@
 
         <div id="db" class="section">
             <h2>Produkt-Datenbank</h2>
+            <p class="subtitle">Alle Artikel mit Preisen und Lagerbestand.</p>
             <div class="card">
-                <div class="card-header">
-                    <div id="dbCount">Lade Artikel...</div>
-                     <a href="lager_online.html" class="btn btn-primary" style="width:auto; text-decoration: none;">Zur Lagerverwaltung</a>
+                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:16px;">
+                    <input type="text" id="dbSearch" placeholder="Artikel oder Art.Nr. suchen..."
+                        style="flex:1; min-width:200px; padding:12px 16px; font-size:14px;"
+                        oninput="renderDatabase()">
+                    <a href="lager_online.html" class="btn btn-primary" style="text-decoration:none; white-space:nowrap;">Zur Lagerverwaltung</a>
                 </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
+                    <span style="font-size:12px; font-weight:700; color:var(--secondary); text-transform:uppercase; letter-spacing:.06em; margin-right:4px;">Kategorie:</span>
+                    <button class="db-chip active" onclick="setDbCat('')">Alle</button>
+                    <button class="db-chip" onclick="setDbCat('condensing_unit')">Verflüssigungssätze</button>
+                    <button class="db-chip" onclick="setDbCat('cp_box')">CP-Box</button>
+                    <button class="db-chip" onclick="setDbCat('evaporator')">Verdampfer</button>
+                    <button class="db-chip" onclick="setDbCat('compressor')">Kompressoren</button>
+                    <button class="db-chip" onclick="setDbCat('accessory')">Zubehör</button>
+                    <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:var(--secondary);">
+                        <input type="checkbox" id="dbOnlyStock" onchange="renderDatabase()" style="width:16px; height:16px; accent-color:var(--primary); border-radius:4px; margin:0;">
+                        Nur auf Lager
+                    </label>
+                </div>
+                <div id="dbCount" style="font-size:13px; color:var(--secondary); margin-bottom:12px;">Lade Artikel...</div>
                 <div style="overflow-x:auto;">
                     <table class="offer-table">
                         <thead><tr><th>Art.Nr.</th><th>Bezeichnung</th><th>Leistung</th><th class="price-col">Preis</th><th>Bestand</th></tr></thead>
@@ -661,36 +681,65 @@
             doc.save(`Angebot_${client}.pdf`);
         }
 
+        const DB_CAT_LABELS = {
+            condensing_unit: 'Verflüssigungssätze',
+            cp_box: 'CP-Box',
+            evaporator: 'Verdampfer',
+            compressor: 'Kompressoren',
+            accessory: 'Zubehör'
+        };
+        let dbActiveCat = '';
+
+        function setDbCat(cat) {
+            dbActiveCat = cat;
+            document.querySelectorAll('.db-chip').forEach(c => c.classList.remove('active'));
+            const idx = ['', 'condensing_unit', 'cp_box', 'evaporator', 'compressor', 'accessory'].indexOf(cat);
+            document.querySelectorAll('.db-chip')[idx]?.classList.add('active');
+            renderDatabase();
+        }
+
         function renderDatabase() {
             const tbody = document.getElementById('dbTableBody');
             tbody.innerHTML = "";
 
+            const search = (document.getElementById('dbSearch')?.value || '').toLowerCase().trim();
+            const onlyStock = document.getElementById('dbOnlyStock')?.checked;
             const categories = ['condensing_unit', 'cp_box', 'evaporator', 'compressor', 'accessory'];
             let total = 0;
 
             categories.forEach(cat => {
-                const list = allProducts.filter(p => p.category === cat);
+                if (dbActiveCat && cat !== dbActiveCat) return;
+
+                let list = allProducts.filter(p => p.category === cat);
+                if (search) {
+                    list = list.filter(p =>
+                        String(p.name || '').toLowerCase().includes(search) ||
+                        String(p.id || '').toLowerCase().includes(search)
+                    );
+                }
+                if (onlyStock) list = list.filter(p => (p.qty || 0) > 0);
                 if (list.length === 0) return;
 
-                tbody.innerHTML += `<tr><td colspan="5" style="background:#334155; font-weight:700; padding: 10px;">${cat.replace('_', ' ')} (${list.length})</td></tr>`;
-                list.sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
+                tbody.innerHTML += `<tr><td colspan="5" style="background:#1e293b; color:#94a3b8; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; padding:10px 14px;">${DB_CAT_LABELS[cat] || cat} (${list.length})</td></tr>`;
+                list.sort((a,b) => (a.name||'').localeCompare(b.name||'')).forEach(item => {
                     let capDisplay = "";
-                    if(item.capacityNK > 0) capDisplay += `<div class="temp-badge temp-nk">-10°C</div> ${item.capacityNK} W<br>`;
-                    if(item.capacityTK > 0) capDisplay += `<div class="temp-badge temp-tk">-25°C</div> ${item.capacityTK} W`;
-                    
+                    if(item.capacityNK > 0) capDisplay += `<span class="temp-badge temp-nk">NK ${item.capacityNK} W</span> `;
+                    if(item.capacityTK > 0) capDisplay += `<span class="temp-badge temp-tk">TK ${item.capacityTK} W</span>`;
+
                     tbody.innerHTML += `<tr>
-                        <td><span style="font-family:monospace;">${item.id}</span></td>
+                        <td><span style="font-family:monospace; font-size:12px; color:#64748b;">${item.id || '-'}</span></td>
                         <td><strong>${item.name}</strong></td>
-                        <td>${capDisplay || '-'}</td>
+                        <td>${capDisplay || '<span style="color:#94a3b8;">–</span>'}</td>
                         <td class="price-col">${(item.price || 0).toFixed(2)} €</td>
-                         <td><span class="status-badge ${item.qty > 0 ? 'st-ok' : 'st-low'}">${item.qty || 0} Stk.</span></td>
+                        <td><span class="status-badge ${(item.qty||0) > 0 ? 'st-ok' : 'st-low'}">${item.qty || 0} Stk.</span></td>
                     </tr>`;
                 });
                 total += list.length;
             });
 
-            document.getElementById('dbCount').innerText = `${total} Artikel geladen`;
-            if(total === 0) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px;">Keine Produkte in der Datenbank.</td></tr>`;
+            const countEl = document.getElementById('dbCount');
+            if (countEl) countEl.innerText = total ? `${total} Artikel` : '';
+            if (total === 0) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:#94a3b8;">${search ? `Kein Treffer für „${search}"` : 'Keine Produkte vorhanden.'}</td></tr>`;
         }
 
         function updateDashboardStats() {
