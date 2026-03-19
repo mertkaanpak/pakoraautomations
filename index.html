@@ -333,7 +333,13 @@
 
                         <!-- Schritt A: Gerätetyp wählen -->
                         <div id="unitTypeSelector" style="margin-bottom:20px;">
-                            <label style="font-size:12px; font-weight:700; color:var(--secondary); text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px; display:block;">Gerätetyp wählen</label>
+                            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                                <label style="font-size:12px; font-weight:700; color:var(--secondary); text-transform:uppercase; letter-spacing:.07em; margin:0;">Gerätetyp wählen</label>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--secondary); cursor:pointer; margin:0;">
+                                    <input type="checkbox" id="offerOnlyStock" checked onchange="rerunMatch()" style="width:16px; height:16px; accent-color:var(--primary); margin:0;">
+                                    Nur auf Lager
+                                </label>
+                            </div>
                             <div style="display:flex; gap:12px;">
                                 <button class="unit-type-btn" onclick="selectUnitType('cp_box', this)">
                                     <span class="btn-icon">📦</span>
@@ -600,13 +606,21 @@
             document.getElementById('offerDetails').style.display = 'block';
         }
 
+        function rerunMatch() {
+            if (!currentUnitType) return;
+            const watts = currentMode === 'normal' ? calculatedValues.normal : calculatedValues.heavy;
+            const tempVal = parseFloat(document.getElementById('calcTemp').value);
+            matchProducts(watts, tempVal, currentUnitType);
+        }
+
         function matchProducts(watts, temp, unitType) {
             const items = [];
             let subTotal = 0;
             const type = temp >= 0 ? 'NK' : 'TK';
             const catLabel = unitType === 'cp_box' ? 'CP-Box' : 'Verflüssigungssatz';
 
-            const onStockProducts = allProducts.filter(p => (p.qty || 0) > 0);
+            const onlyStock = document.getElementById('offerOnlyStock')?.checked !== false;
+            const onStockProducts = onlyStock ? allProducts.filter(p => (p.qty || 0) > 0) : allProducts;
 
             // 1. Außeneinheit (nur die gewählte Kategorie)
             let units = onStockProducts.filter(u => {
