@@ -1,8 +1,39 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
+
+    // --- Geschrieben nur von Cloud Functions (Admin SDK) ---
+    // Frontend hat KEINEN Schreibzugriff auf diese Collections
+    match /pushLogs/{doc} {
+      allow read, write: if false;
+    }
+
+    // WhatsApp-Anfragen: nur lesbar vom Frontend (geschrieben via Webhook)
+    match /whatsappRequests/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // --- Frontend-zugängliche Collections ---
+    match /messages/{doc} {
       allow read, write: if true;
+    }
+
+    match /importantNotes/{doc} {
+      allow read, write: if true;
+    }
+
+    match /pushTokens/{doc} {
+      allow read, write: if true;
+    }
+
+    match /whatsappBotSettings/{doc} {
+      allow read, write: if true;
+    }
+
+    // --- Alles andere sperren ---
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

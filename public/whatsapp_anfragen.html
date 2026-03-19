@@ -88,7 +88,19 @@
         <a href="index.html#db" class="nav-item" data-section="db"><span class="nav-icon">🗃</span><span class="nav-text">Produkt-Datenbank</span></a>
         <a href="lager_online.html" class="nav-item"><span class="nav-icon">📦</span><span class="nav-text">Lagerbestand</span></a>
         <a href="kalender.html?v=2" class="nav-item"><span class="nav-icon">📅</span><span class="nav-text">Kalender</span></a>
-        <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar" id="userAvatar">?</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="welcomeName">–</div>
+                    <div class="sidebar-user-role">Pakora Team</div>
+                </div>
+            </div>
+            <button id="logoutBtn" class="nav-item logout-btn" hidden>
+                <span class="nav-icon">&#x1F6AA;</span>
+                <span class="nav-text">Abmelden</span>
+            </button>
+        </div>
     </nav>
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
     <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
@@ -328,6 +340,84 @@
     .request-card .actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
 }
 </style>
+
+<div id="authOverlay" hidden>
+    <div id="authCard">
+        <h2>Zugriff gesperrt</h2>
+        <p>Bitte anmelden, um fortzufahren.</p>
+        <form id="authForm">
+            <label for="authUser">Benutzername</label>
+            <input id="authUser" type="text" autocomplete="username" required />
+            <label for="authPass">Passwort</label>
+            <input id="authPass" type="password" autocomplete="current-password" required />
+            <div id="authError"></div>
+            <button type="submit">Anmelden</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const ACCOUNTS = window.PAKORA_ACCOUNTS;
+        const AUTH_KEY = window.PAKORA_AUTH_KEY;
+        const storage = (() => { try { localStorage.setItem('__p__','1'); localStorage.removeItem('__p__'); return localStorage; } catch(e) { return sessionStorage; } })();
+        const readStored  = (k) => { try { return storage.getItem(k); } catch(e) { return null; } };
+        const writeStored = (k, v) => { try { storage.setItem(k, v); } catch(e) {} };
+        const removeStored = (k) => { try { storage.removeItem(k); } catch(e) {} };
+        const getStoredUser = () => (readStored(AUTH_KEY) || readStored('pakora_chat_user') || '').toLowerCase();
+        const isAuthed = () => !!ACCOUNTS[getStoredUser()];
+
+        const overlay   = document.getElementById('authOverlay');
+        const form      = document.getElementById('authForm');
+        const userInput = document.getElementById('authUser');
+        const passInput = document.getElementById('authPass');
+        const errorDiv  = document.getElementById('authError');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        function updateUserDisplay() {
+            const userId = getStoredUser();
+            const label = ACCOUNTS[userId]?.label || 'Mitarbeiter';
+            const wn = document.getElementById('welcomeName');
+            if (wn) wn.textContent = label;
+            const av = document.getElementById('userAvatar');
+            if (av) av.textContent = label.charAt(0).toUpperCase();
+        }
+
+        function showAuth() {
+            overlay.hidden = false;
+            if (logoutBtn) logoutBtn.hidden = true;
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => userInput.focus(), 50);
+        }
+
+        function hideAuth() {
+            overlay.hidden = true;
+            if (logoutBtn) logoutBtn.hidden = false;
+            document.body.style.overflow = '';
+            updateUserDisplay();
+        }
+
+        if (!isAuthed()) { showAuth(); } else { hideAuth(); }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            errorDiv.textContent = '';
+            const userId = userInput.value.trim().toLowerCase();
+            if (ACCOUNTS[userId] && passInput.value === ACCOUNTS[userId].pass) {
+                writeStored(AUTH_KEY, userId);
+                hideAuth();
+                return;
+            }
+            errorDiv.textContent = 'Falsche Zugangsdaten.';
+            passInput.value = '';
+            passInput.focus();
+        });
+
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => { removeStored(AUTH_KEY); showAuth(); });
+        }
+    })();
+</script>
 </body>
 </html>
 

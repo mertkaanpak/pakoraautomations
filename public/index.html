@@ -237,7 +237,19 @@
         <a href="#db" class="nav-item" onclick="nav('db')"><span class="nav-icon">&#x1F5C3;</span><span class="nav-text">Produkt-Datenbank</span></a>
         <a href="lager_online.html" class="nav-item"><span class="nav-icon">&#x1F4E6;</span><span class="nav-text">Lagerbestand</span></a>
         <a href="kalender.html?v=2" class="nav-item"><span class="nav-icon">&#x1F4C5;</span><span class="nav-text">Kalender</span></a>
-        <button id="logoutBtn" class="nav-item" style="margin-top:auto; background: #334155;" hidden>Logout</button>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar" id="userAvatar">?</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="welcomeName">–</div>
+                    <div class="sidebar-user-role">Pakora Team</div>
+                </div>
+            </div>
+            <button id="logoutBtn" class="nav-item logout-btn" hidden>
+                <span class="nav-icon">&#x1F6AA;</span>
+                <span class="nav-text">Abmelden</span>
+            </button>
+        </div>
     </nav>
 
     <main class="main">
@@ -853,10 +865,13 @@ const overlay = document.getElementById("authOverlay");
     const getStoredUser = () => (readStored(AUTH_KEY) || "").toLowerCase();
     const isAuthed = () => !!ACCOUNTS[getStoredUser()];
     const setWelcome = (userId) => {
-        const label = ACCOUNTS[userId]?.label || "Chef";
-        if (welcomeName) welcomeName.textContent = label;
+        const label = ACCOUNTS[userId]?.label || "Mitarbeiter";
+        const wn = document.getElementById("welcomeName");
+        if (wn) wn.textContent = label;
+        const av = document.getElementById("userAvatar");
+        if (av) av.textContent = label.charAt(0).toUpperCase();
     };
-    
+
     const showAuth = () => {
         overlay.hidden = false;
         if (logoutBtn) logoutBtn.hidden = true;

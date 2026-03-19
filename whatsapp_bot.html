@@ -62,7 +62,19 @@
         <a href="index.html#db" class="nav-item" data-section="db"><span class="nav-icon">🗃</span><span class="nav-text">Produkt-Datenbank</span></a>
         <a href="lager_online.html" class="nav-item"><span class="nav-icon">📦</span><span class="nav-text">Lagerbestand</span></a>
         <a href="kalender.html?v=2" class="nav-item"><span class="nav-icon">📅</span><span class="nav-text">Kalender</span></a>
-        <button id="logoutBtn" class="nav-item logout-btn" hidden>Logout</button>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar" id="userAvatar">?</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="welcomeName">–</div>
+                    <div class="sidebar-user-role">Pakora Team</div>
+                </div>
+            </div>
+            <button id="logoutBtn" class="nav-item logout-btn" hidden>
+                <span class="nav-icon">&#x1F6AA;</span>
+                <span class="nav-text">Abmelden</span>
+            </button>
+        </div>
     </nav>
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
     <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
@@ -167,8 +179,18 @@
     const saveBot = document.getElementById('saveBot');
     const botStatus = document.getElementById('botStatus');
 
-    function showAuth() { overlay.hidden = false; document.body.style.overflow = 'hidden'; }
-    function hideAuth() { overlay.hidden = true; document.body.style.overflow = ''; }
+    function showAuth() { overlay.hidden = false; if (logoutBtn) logoutBtn.hidden = true; document.body.style.overflow = 'hidden'; }
+    function hideAuth() {
+        overlay.hidden = true;
+        if (logoutBtn) logoutBtn.hidden = false;
+        document.body.style.overflow = '';
+        const userId = (localStorage.getItem('pakora_auth_user') || '').toLowerCase();
+        const label = ACCOUNTS[userId]?.label || 'Mitarbeiter';
+        const wn = document.getElementById('welcomeName');
+        if (wn) wn.textContent = label;
+        const av = document.getElementById('userAvatar');
+        if (av) av.textContent = label.charAt(0).toUpperCase();
+    }
     function isAdmin(user) { return user === ADMIN_USER; }
     function normalizePhone(value) { return String(value || '').replace(/\D/g, ''); }
     function updateStatus(enabled) {

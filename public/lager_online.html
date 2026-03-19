@@ -298,15 +298,28 @@
             <img src="logo.png" alt="Pakora" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
             <span style="display:none; font-size: 22px; font-weight:700;">Pakora</span>
         </div>
-        <a href="index.html" class="nav-item">Übersicht</a>
-        <a href="lager_online.html" class="nav-item active">Lagerbestand</a>
-        <a href="index.html#calc" class="nav-item">Smart-Kalkulation</a>
-        <a href="konfigurator.html" class="nav-item">Kühlzellen Kalkulator</a>
-        <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08);">
-            <div style="font-size: 13px; color: #64748b; margin-bottom: 8px; padding: 0 4px;">
-                Angemeldet als <strong id="welcomeName" style="color:#94a3b8;">–</strong>
+        <a href="index.html" class="nav-item" data-section="dashboard"><span class="nav-icon">&#x1F3E0;</span><span class="nav-text">Übersicht</span></a>
+        <a href="index.html#calc" class="nav-item" data-section="calc"><span class="nav-icon">&#x1F4D0;</span><span class="nav-text">Smart-Kalkulation</span></a>
+        <a href="konfigurator.html" class="nav-item"><span class="nav-icon">&#x1F9CA;</span><span class="nav-text">Kühlzellen Kalkulator</span></a>
+        <a href="whatsapp_bot.html" class="nav-item only-mpak"><span class="nav-icon">&#x1F916;</span><span class="nav-text">WhatsApp Bot</span></a>
+        <a href="whatsapp_anfragen.html" class="nav-item"><span class="nav-icon">&#x1F4AC;</span><span class="nav-text">WhatsApp Anfragen</span></a>
+        <a href="kommunikation.html" class="nav-item"><span class="nav-icon">&#x1F4E8;</span><span class="nav-text">Kommunikation</span></a>
+        <a href="verdichterrechereche.html" class="nav-item"><span class="nav-icon">&#x1F50D;</span><span class="nav-text">Verdichter Recherche</span></a>
+        <a href="index.html#db" class="nav-item" data-section="db"><span class="nav-icon">&#x1F5C3;</span><span class="nav-text">Produkt-Datenbank</span></a>
+        <a href="lager_online.html" class="nav-item active"><span class="nav-icon">&#x1F4E6;</span><span class="nav-text">Lagerbestand</span></a>
+        <a href="kalender.html?v=2" class="nav-item"><span class="nav-icon">&#x1F4C5;</span><span class="nav-text">Kalender</span></a>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar" id="userAvatar">?</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="welcomeName">–</div>
+                    <div class="sidebar-user-role">Pakora Team</div>
+                </div>
             </div>
-            <button id="logoutBtn" class="nav-item logout-btn" hidden>Abmelden</button>
+            <button id="logoutBtn" class="nav-item logout-btn" hidden>
+                <span class="nav-icon">&#x1F6AA;</span>
+                <span class="nav-text">Abmelden</span>
+            </button>
         </div>
     </nav>
 
@@ -827,6 +840,12 @@
                 document.body.style.overflow = "";
                 const userId = getStoredUser();
                 if (welcomeName) welcomeName.textContent = ACCOUNTS[userId]?.label || "Mitarbeiter";
+                // Avatar initialen setzen
+                const avatar = document.getElementById('userAvatar');
+                if (avatar) {
+                    const label = ACCOUNTS[userId]?.label || 'M';
+                    avatar.textContent = label.charAt(0).toUpperCase();
+                }
             }
 
             if (!isAuthed()) {
