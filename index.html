@@ -170,6 +170,10 @@
         .result-box { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         .res-card { background: #f8fafc; padding: 20px 15px; border-radius: var(--radius); text-align: center; border: 2px solid transparent; cursor: pointer; transition: 0.2s; }
         .res-card.selected { border-color: var(--primary); background: #eff6ff; }
+        .unit-type-btn { flex:1; background: white; border: 2px solid var(--border); color: var(--text); font-size: 15px; font-weight: 600; border-radius: 12px; padding: 18px 12px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .unit-type-btn:hover { border-color: var(--primary); color: var(--primary); background: #eff6ff; }
+        .unit-type-btn.selected { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
+        .unit-type-btn .btn-icon { font-size: 24px; }
         .res-val { font-size: 24px; font-weight: 800; display: block; margin-top: 5px; }
         .res-sub { font-size: 12px; color: #64748b; margin-top: 5px; display: block; }
         
@@ -326,22 +330,41 @@
                     </div>
                     <div id="offerCard" class="card" style="display:none;">
                         <div class="card-header">2. Angebot erstellen</div>
-                        <div class="grid-2">
-                            <div><label>Kunde / Firma</label><input type="text" id="clientName" placeholder="Kundenname"></div>
-                            <div><label>Rabatt (%)</label><input type="number" id="discountPercent" value="0" oninput="updateTotals()"></div>
+
+                        <!-- Schritt A: Gerätetyp wählen -->
+                        <div id="unitTypeSelector" style="margin-bottom:20px;">
+                            <label style="font-size:12px; font-weight:700; color:var(--secondary); text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px; display:block;">Gerätetyp wählen</label>
+                            <div style="display:flex; gap:12px;">
+                                <button class="unit-type-btn" onclick="selectUnitType('cp_box', this)">
+                                    <span class="btn-icon">📦</span>
+                                    <span>CP-Box</span>
+                                </button>
+                                <button class="unit-type-btn" onclick="selectUnitType('condensing_unit', this)">
+                                    <span class="btn-icon">🔧</span>
+                                    <span>Verflüssigungssatz</span>
+                                </button>
+                            </div>
                         </div>
-                        <div style="overflow-x:auto;">
-                            <table class="offer-table">
-                                <thead><tr><th>Komponente</th><th>Artikel</th><th class="price-col">Preis</th></tr></thead>
-                                <tbody id="offerTableBody"></tbody>
-                            </table>
+
+                        <!-- Schritt B: Angebot (wird nach Auswahl eingeblendet) -->
+                        <div id="offerDetails" style="display:none;">
+                            <div class="grid-2">
+                                <div><label>Kunde / Firma</label><input type="text" id="clientName" placeholder="Kundenname"></div>
+                                <div><label>Rabatt (%)</label><input type="number" id="discountPercent" value="0" oninput="updateTotals()"></div>
+                            </div>
+                            <div style="overflow-x:auto;">
+                                <table class="offer-table">
+                                    <thead><tr><th>Komponente</th><th>Artikel</th><th class="price-col">Preis</th></tr></thead>
+                                    <tbody id="offerTableBody"></tbody>
+                                </table>
+                            </div>
+                            <div class="totals-area">
+                                <div class="total-row"><span>Zwischensumme (Netto)</span><span id="subTotal">0,00 €</span></div>
+                                <div class="total-row" style="color:#f87171"><span>Rabatt (<span id="dispDisc">0</span>%)</span><span id="discAmount">-0,00 €</span></div>
+                                <div class="total-row total-final"><span>GESAMTBETRAG</span><span id="finalTotal">0,00 €</span></div>
+                            </div>
+                            <button class="btn btn-offer" onclick="generatePDF()" style="margin-top:20px;">📄 PDF Erstellen</button>
                         </div>
-                        <div class="totals-area">
-                            <div class="total-row"><span>Zwischensumme (Netto)</span><span id="subTotal">0,00 €</span></div>
-                            <div class="total-row" style="color:#f87171"><span>Rabatt (<span id="dispDisc">0</span>%)</span><span id="discAmount">-0,00 €</span></div>
-                            <div class="total-row total-final"><span>GESAMTBETRAG</span><span id="finalTotal">0,00 €</span></div>
-                        </div>
-                        <button class="btn btn-offer" onclick="generatePDF()" style="margin-top:20px;">📄 PDF Erstellen</button>
                     </div>
                 </div>
             </div>
@@ -485,6 +508,7 @@
         
         let calculatedValues = { normal: 0, heavy: 0, baseNormal: 0, baseHeavy: 0 };
         let currentMode = 'normal';
+        let currentUnitType = null;
         let currentOffer = { items: [], subTotal: 0, discount: 0, total: 0, watts: 0 };
         function normalizeCapacityWatts(value) {
             const numeric = Number(value || 0);
@@ -559,21 +583,34 @@
             if(mode === 'normal') document.getElementById('resNormal').classList.add('selected');
             else document.getElementById('resHeavy').classList.add('selected');
 
-            const watts = mode === 'normal' ? calculatedValues.normal : calculatedValues.heavy;
-            const tempVal = parseFloat(document.getElementById('calcTemp').value);
-            matchProducts(watts, tempVal);
+            // Reset unit type selection
+            currentUnitType = null;
+            document.querySelectorAll('.unit-type-btn').forEach(b => b.classList.remove('selected'));
+            document.getElementById('offerDetails').style.display = 'none';
             document.getElementById('offerCard').style.display = 'block';
         }
 
-        function matchProducts(watts, temp) {
+        function selectUnitType(type, btn) {
+            currentUnitType = type;
+            document.querySelectorAll('.unit-type-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            const watts = currentMode === 'normal' ? calculatedValues.normal : calculatedValues.heavy;
+            const tempVal = parseFloat(document.getElementById('calcTemp').value);
+            matchProducts(watts, tempVal, type);
+            document.getElementById('offerDetails').style.display = 'block';
+        }
+
+        function matchProducts(watts, temp, unitType) {
             const items = [];
             let subTotal = 0;
             const type = temp >= 0 ? 'NK' : 'TK';
+            const catLabel = unitType === 'cp_box' ? 'CP-Box' : 'Verflüssigungssatz';
 
             const onStockProducts = allProducts.filter(p => (p.qty || 0) > 0);
 
+            // 1. Außeneinheit (nur die gewählte Kategorie)
             let units = onStockProducts.filter(u => {
-                if (!['condensing_unit', 'cp_box'].includes(u.category)) return false;
+                if (u.category !== unitType) return false;
                 let cap = normalizeCapacityWatts(type === 'NK' ? u.capacityNK : u.capacityTK);
                 return cap > watts;
             }).sort((a,b) => {
@@ -581,45 +618,43 @@
                 let capB = normalizeCapacityWatts(type === 'NK' ? b.capacityNK : b.capacityTK);
                 return capA - capB;
             });
-            
+
             let unit = units[0];
             let usedCap = 0;
-            
-            if(!unit) {
-                items.push({ type: "Warnung", name: `⚠️ Keine passende Außeneinheit (${type}) auf Lager`, price: 0 });
+
+            if (!unit) {
+                items.push({ type: catLabel, name: `⚠️ Kein passender ${catLabel} (${type}) auf Lager`, price: 0 });
             } else {
                 usedCap = normalizeCapacityWatts(type === 'NK' ? unit.capacityNK : unit.capacityTK);
-                let catLabel = unit.category === 'cp_box' ? 'CP-Box' : 'Verflüssigungssatz';
-                items.push({ type: catLabel, name: `${unit.name} (${usedCap}W)`, price: unit.price });
+                items.push({ type: catLabel, name: `${unit.name} (${usedCap.toLocaleString('de-DE')} W)`, price: unit.price });
                 subTotal += unit.price;
-
-                const evaps = onStockProducts.filter(e => {
-                    if (e.category !== 'evaporator') return false;
-                    let cap = normalizeCapacityWatts(type === 'NK' ? e.capacityNK : e.capacityTK);
-                    return cap >= (usedCap * 1.10); 
-                }).sort((a,b) => {
-                    let capA = normalizeCapacityWatts(type === 'NK' ? a.capacityNK : a.capacityTK);
-                    let capB = normalizeCapacityWatts(type === 'NK' ? b.capacityNK : b.capacityTK);
-                    return capA - capB;
-                });
-
-                let evap = evaps[0];
-                if(evap) {
-                    items.push({ type: "Verdampfer", name: evap.name, price: evap.price });
-                    subTotal += evap.price;
-                } else {
-                    items.push({ type: "Warnung", name: "⚠️ Kein passender Verdampfer auf Lager", price: 0 });
-                }
             }
 
-            const accessory = allProducts.find(p => p.category === 'accessory' && p.qty > 0);
-            if(accessory) {
-                items.push({ type: "Zubehör", name: accessory.name, price: accessory.price });
-                subTotal += accessory.price;
+            // 2. Verdampfer (mind. 110% der Außeneinheitsleistung)
+            const evapMinCap = usedCap > 0 ? usedCap * 1.10 : watts;
+            const evaps = onStockProducts.filter(e => {
+                if (e.category !== 'evaporator') return false;
+                let cap = normalizeCapacityWatts(type === 'NK' ? e.capacityNK : e.capacityTK);
+                return cap >= evapMinCap;
+            }).sort((a,b) => {
+                let capA = normalizeCapacityWatts(type === 'NK' ? a.capacityNK : a.capacityTK);
+                let capB = normalizeCapacityWatts(type === 'NK' ? b.capacityNK : b.capacityTK);
+                return capA - capB;
+            });
+
+            let evap = evaps[0];
+            if (evap) {
+                items.push({ type: "Verdampfer", name: evap.name, price: evap.price });
+                subTotal += evap.price;
             } else {
-                items.push({ type: "Zubehör", name: "Standard Zubehör-Kit", price: 320.00 });
-                subTotal += 320.00;
+                items.push({ type: "Verdampfer", name: "⚠️ Kein passender Verdampfer auf Lager", price: 0 });
             }
+
+            // 3. Feste Positionen
+            items.push({ type: "Expansionsventil", name: "Expansionsventil", price: 85.00 });
+            subTotal += 85.00;
+            items.push({ type: "Kühlstellenregler", name: "Kühlstellenregler", price: 170.00 });
+            subTotal += 170.00;
 
             currentOffer.items = items;
             currentOffer.subTotal = subTotal;
