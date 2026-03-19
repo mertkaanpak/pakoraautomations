@@ -627,7 +627,6 @@
                 id,
                 name: document.getElementById('modalName').value.trim(),
                 price: parseFloat(document.getElementById('modalPrice').value) || 0,
-                qty: parseInt(document.getElementById('modalQty').value) || 0,
                 category: document.getElementById('modalCat').value,
                 capacityNK: parseInt(document.getElementById('modalNK').value) || 0,
                 capacityTK: parseInt(document.getElementById('modalTK').value) || 0
@@ -683,7 +682,6 @@
                         id,
                         name: cols[1] || existing.name || '',
                         price: parseFloat(cols[2]) || existing.price || 0,
-                        qty: parseInt(cols[3]) || 0,
                         category: existing.category || 'accessory',
                         capacityNK: existing.capacityNK || 0,
                         capacityTK: existing.capacityTK || 0

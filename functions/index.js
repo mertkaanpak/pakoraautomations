@@ -472,85 +472,35 @@ exports.syncOneDriveExcel = functions.https.onRequest(async (req, res) => {
         const arrayBuffer = await fileResponse.arrayBuffer();
         const workbook = xlsx.read(Buffer.from(arrayBuffer), { type: "buffer" });
         const jsonData = workbookToObjects(workbook);
-        const existingSnapshot = await admin.database().ref("/products").get();
-        const existingProducts = existingSnapshot.exists() ? existingSnapshot.val() : {};
-        const existingKeysByMergeKey = new Map();
-        Object.entries(existingProducts).forEach(([key, product]) => {
-            const mergeKey = `${product.category || "accessory"}:${normalizeNameKey(product.name)}`;
-            if (!normalizeNameKey(product.name)) return;
-            if (!existingKeysByMergeKey.has(mergeKey)) existingKeysByMergeKey.set(mergeKey, key);
-        });
-
-        const importedProducts = new Map();
+        const importedStock = {};
         let count = 0;
-        let created = 0;
-        let updated = 0;
-        jsonData.forEach(row => {
+
+        jsonData.forEach((row) => {
             const manufacturer = String(pickValue(row, ["hersteller", "manufacturer", "marke"])).trim();
             const model = String(pickValue(row, ["modell", "model", "kompressor", "typ", "bezeichnung", "produkt", "artikel"])).trim();
             const id = buildProductId(row, manufacturer, model);
             if (!id) return;
 
-            const safeId = String(id).replace(/[.#$/\[\]]/g, "_");
-            const existing = existingProducts[safeId] || {};
-            const explicitName = buildProductName(row);
-            const rawCategory = String(pickValue(row, ["kategorie", "category", "anwendung", "application"])).trim() || `${row.__sheet || ""} ${row.__section || ""}`;
             const qtyRaw = pickValue(row, ["menge", "bestand", "anzahl", "qty", "lagerbestand", "stuck", "stueck"]);
-            const hasQty = String(qtyRaw || "").trim() !== "";
-            const qty = hasQty ? Math.max(0, Math.round(parseNumber(qtyRaw))) : (existing.qty || 0);
-            const price = parseNumber(pickValue(row, ["preis", "price"]));
-            const capacities = deriveStructuredCapacities(row);
-            const productName = explicitName || existing.name || model || id;
-            const category = inferStructuredCategory(row.__sheet, row.__section, rawCategory || existing.category, productName, row);
-            const productData = {
-                id,
-                name: productName,
-                qty,
-                price: price || existing.price || 0,
-                category,
-                capacityNK: capacities.capacityNK || existing.capacityNK || 0,
-                capacityTK: capacities.capacityTK || existing.capacityTK || 0
-            };
+            if (String(qtyRaw || "").trim() === "") return;
 
-            if (shouldSkipProduct(productData)) return;
-
-            const mergeKey = `${category}:${normalizeNameKey(productData.name)}`;
-            const merged = importedProducts.get(mergeKey);
-            if (merged) {
-                merged.id = merged.id || productData.id;
-                merged.qty = Math.max(merged.qty || 0, productData.qty || 0);
-                merged.price = merged.price || productData.price || 0;
-                merged.capacityNK = merged.capacityNK || productData.capacityNK || 0;
-                merged.capacityTK = merged.capacityTK || productData.capacityTK || 0;
-            } else {
-                importedProducts.set(mergeKey, { ...productData });
-            }
+            const safeId = String(id).replace(/[.#$/\[\]]/g, "_");
+            importedStock[safeId] = normalizeStockQuantity(qtyRaw);
             count++;
         });
 
-        const updates = {};
-        importedProducts.forEach((productData) => {
-            const mergeKey = `${productData.category || "accessory"}:${normalizeNameKey(productData.name)}`;
-            const matchedKey = existingKeysByMergeKey.get(mergeKey);
-            const safeId = matchedKey || String(productData.id || productData.name).replace(/[.#$/\[\]]/g, "_");
-            const existing = existingProducts[safeId] || {};
-            updates[`/products/${safeId}`] = { ...existing, ...productData };
-            if (existing && Object.keys(existing).length) updated++;
-            else created++;
-        });
-
-        if (!importedProducts.size) {
+        if (!Object.keys(importedStock).length) {
             res.status(400).json({ error: "Keine gueltigen Artikelzeilen in der OneDrive-Datei gefunden." });
             return;
         }
 
-        await admin.database().ref().update(updates);
-        console.log(`OK: ${importedProducts.size} products synced.`);
+        await admin.database().ref("/stock").update(importedStock);
+        console.log(`OK: ${Object.keys(importedStock).length} stock entries synced.`);
         res.status(200).json({
             ok: true,
-            total: importedProducts.size,
-            created,
-            updated,
+            total: Object.keys(importedStock).length,
+            created: 0,
+            updated: Object.keys(importedStock).length,
             sheets: workbook.SheetNames
         });
 
@@ -579,9 +529,13 @@ exports.exportInventoryToOneDrive = functions.https.onRequest(async (req, res) =
 
     try {
         const token = await getGraphToken();
-        const snapshot = await admin.database().ref("/products").get();
-        const products = snapshot.exists() ? snapshot.val() : {};
-        const workbook = buildExportWorkbook(products);
+        const [catalogSnapshot, stockSnapshot] = await Promise.all([
+            admin.database().ref("/catalog").get(),
+            admin.database().ref("/stock").get()
+        ]);
+        const catalog = catalogSnapshot.exists() ? catalogSnapshot.val() : {};
+        const stock = stockSnapshot.exists() ? stockSnapshot.val() : {};
+        const workbook = buildExportWorkbook(mergeCatalogWithStock(catalog, stock));
         const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
         const exportPath = deriveExportPath(MS_GRAPH_CREDS.excelFilePath);
         const driveItemUrl = `https://graph.microsoft.com/v1.0/me/drive/root:${exportPath}:/content`;
@@ -602,7 +556,7 @@ exports.exportInventoryToOneDrive = functions.https.onRequest(async (req, res) =
 
         res.status(200).json({
             ok: true,
-            exported: Object.keys(products).length,
+            exported: Object.keys(catalog).length,
             exportPath
         });
     } catch (error) {
@@ -621,12 +575,30 @@ function normalizeInventoryProduct(payload, existing = {}) {
     return {
       id,
       name,
-      qty: Math.max(0, Math.round(parseNumber(payload.qty !== undefined ? payload.qty : existing.qty || 0))),
+      manufacturer: String(payload.manufacturer || existing.manufacturer || "").trim(),
+      refrigerant: String(payload.refrigerant || existing.refrigerant || "").trim(),
+      color: String(payload.color || existing.color || "").trim(),
       price: parseNumber(payload.price !== undefined ? payload.price : existing.price || 0),
       category: String(payload.category || existing.category || "accessory").trim() || "accessory",
+      capacityZero: parseNumber(payload.capacityZero !== undefined ? payload.capacityZero : existing.capacityZero || 0),
       capacityNK: parseNumber(payload.capacityNK !== undefined ? payload.capacityNK : existing.capacityNK || 0),
       capacityTK: parseNumber(payload.capacityTK !== undefined ? payload.capacityTK : existing.capacityTK || 0)
     };
+}
+
+function normalizeStockQuantity(value) {
+    return Math.max(0, Math.round(parseNumber(value || 0)));
+}
+
+function mergeCatalogWithStock(catalog = {}, stock = {}) {
+    const merged = {};
+    Object.entries(catalog || {}).forEach(([key, product]) => {
+        merged[key] = {
+            ...product,
+            qty: normalizeStockQuantity((stock || {})[key])
+        };
+    });
+    return merged;
 }
 
 exports.inventoryApi = functions.https.onRequest(async (req, res) => {
@@ -640,11 +612,14 @@ exports.inventoryApi = functions.https.onRequest(async (req, res) => {
     }
 
     try {
-        const productsRef = admin.database().ref("/products");
+        const catalogRef = admin.database().ref("/catalog");
+        const stockRef = admin.database().ref("/stock");
 
         if (req.method === "GET") {
-            const snapshot = await productsRef.get();
-            res.status(200).json({ products: snapshot.exists() ? snapshot.val() : {} });
+            const [catalogSnapshot, stockSnapshot] = await Promise.all([catalogRef.get(), stockRef.get()]);
+            const catalog = catalogSnapshot.exists() ? catalogSnapshot.val() : {};
+            const stock = stockSnapshot.exists() ? stockSnapshot.val() : {};
+            res.status(200).json({ products: mergeCatalogWithStock(catalog, stock) });
             return;
         }
 
@@ -662,15 +637,14 @@ exports.inventoryApi = functions.https.onRequest(async (req, res) => {
                 res.status(400).json({ error: "Key fehlt." });
                 return;
             }
-            const itemRef = productsRef.child(key);
-            const snapshot = await itemRef.get();
-            const existing = snapshot.exists() ? snapshot.val() : null;
-            if (!existing) {
+            const catalogSnapshot = await catalogRef.child(key).get();
+            if (!catalogSnapshot.exists()) {
                 res.status(404).json({ error: "Artikel nicht gefunden." });
                 return;
             }
-            const nextQty = Math.max(0, Math.round(parseNumber(existing.qty || 0) + parseNumber(body.delta || 0)));
-            await itemRef.child("qty").set(nextQty);
+            const stockSnapshot = await stockRef.child(key).get();
+            const nextQty = normalizeStockQuantity((stockSnapshot.exists() ? stockSnapshot.val() : 0) + parseNumber(body.delta || 0));
+            await stockRef.child(key).set(nextQty);
             res.status(200).json({ ok: true, qty: nextQty });
             return;
         }
@@ -682,12 +656,11 @@ exports.inventoryApi = functions.https.onRequest(async (req, res) => {
                 res.status(400).json({ error: "Artikel-ID fehlt." });
                 return;
             }
-            const itemRef = productsRef.child(key);
-            const snapshot = await itemRef.get();
+            const snapshot = await catalogRef.child(key).get();
             const existing = snapshot.exists() ? snapshot.val() : {};
             const normalized = normalizeInventoryProduct(product, existing);
             if (!normalized.id) normalized.id = key;
-            await itemRef.set(normalized);
+            await catalogRef.child(key).set(normalized);
             res.status(200).json({ ok: true, key, product: normalized });
             return;
         }
@@ -698,7 +671,10 @@ exports.inventoryApi = functions.https.onRequest(async (req, res) => {
                 res.status(400).json({ error: "Key fehlt." });
                 return;
             }
-            await productsRef.child(key).remove();
+            await Promise.all([
+                catalogRef.child(key).remove(),
+                stockRef.child(key).remove()
+            ]);
             res.status(200).json({ ok: true, key });
             return;
         }
@@ -710,7 +686,7 @@ exports.inventoryApi = functions.https.onRequest(async (req, res) => {
                 return;
             }
 
-            const snapshot = await productsRef.get();
+            const snapshot = await catalogRef.get();
             const existingProducts = snapshot.exists() ? snapshot.val() : {};
             const updates = {};
             let count = 0;
@@ -725,7 +701,7 @@ exports.inventoryApi = functions.https.onRequest(async (req, res) => {
                 count++;
             });
 
-            await productsRef.update(updates);
+            await catalogRef.update(updates);
             res.status(200).json({ ok: true, count });
             return;
         }
