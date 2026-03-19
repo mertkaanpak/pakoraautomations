@@ -622,46 +622,47 @@
             const onlyStock = document.getElementById('offerOnlyStock')?.checked !== false;
             const onStockProducts = onlyStock ? allProducts.filter(p => (p.qty || 0) > 0) : allProducts;
 
-            // 1. Außeneinheit (nur die gewählte Kategorie)
-            let units = onStockProducts.filter(u => {
-                if (u.category !== unitType) return false;
-                let cap = normalizeCapacityWatts(type === 'NK' ? u.capacityNK : u.capacityTK);
-                return cap > watts;
-            }).sort((a,b) => {
-                let capA = normalizeCapacityWatts(type === 'NK' ? a.capacityNK : a.capacityTK);
-                let capB = normalizeCapacityWatts(type === 'NK' ? b.capacityNK : b.capacityTK);
-                return capA - capB;
-            });
+            // Hilfsfunktion: Kapazität eines Produkts für den aktuellen Typ
+            const getCap = p => normalizeCapacityWatts(type === 'NK' ? p.capacityNK : p.capacityTK);
 
-            let unit = units[0];
-            let usedCap = 0;
+            // 1. Außeneinheit — nächste Größe über dem Bedarf, sonst größte verfügbare
+            const allUnitsOfType = onStockProducts.filter(u => u.category === unitType);
+            let unit = allUnitsOfType
+                .filter(u => getCap(u) > watts)
+                .sort((a,b) => getCap(a) - getCap(b))[0];
 
+            // Fallback: größte Einheit wenn keine über Bedarf gefunden
             if (!unit) {
-                items.push({ type: catLabel, name: `⚠️ Kein passender ${catLabel} (${type}) auf Lager`, price: 0 });
+                unit = allUnitsOfType.sort((a,b) => getCap(b) - getCap(a))[0];
+            }
+
+            let usedCap = 0;
+            if (!unit) {
+                items.push({ type: catLabel, name: `⚠️ Kein ${catLabel} auf Lager`, price: 0 });
             } else {
-                usedCap = normalizeCapacityWatts(type === 'NK' ? unit.capacityNK : unit.capacityTK);
-                items.push({ type: catLabel, name: `${unit.name} (${usedCap.toLocaleString('de-DE')} W)`, price: unit.price });
+                usedCap = getCap(unit);
+                const capNote = usedCap > 0 ? ` (${usedCap.toLocaleString('de-DE')} W)` : '';
+                items.push({ type: catLabel, name: `${unit.name}${capNote}`, price: unit.price });
                 subTotal += unit.price;
             }
 
-            // 2. Verdampfer (mind. 110% der Außeneinheitsleistung)
+            // 2. Verdampfer — mind. 110% der Außeneinheitsleistung, sonst größter verfügbarer
             const evapMinCap = usedCap > 0 ? usedCap * 1.10 : watts;
-            const evaps = onStockProducts.filter(e => {
-                if (e.category !== 'evaporator') return false;
-                let cap = normalizeCapacityWatts(type === 'NK' ? e.capacityNK : e.capacityTK);
-                return cap >= evapMinCap;
-            }).sort((a,b) => {
-                let capA = normalizeCapacityWatts(type === 'NK' ? a.capacityNK : a.capacityTK);
-                let capB = normalizeCapacityWatts(type === 'NK' ? b.capacityNK : b.capacityTK);
-                return capA - capB;
-            });
+            const allEvaps = onStockProducts.filter(e => e.category === 'evaporator');
+            let evap = allEvaps
+                .filter(e => getCap(e) >= evapMinCap)
+                .sort((a,b) => getCap(a) - getCap(b))[0];
 
-            let evap = evaps[0];
+            // Fallback: größter Verdampfer
+            if (!evap) {
+                evap = allEvaps.sort((a,b) => getCap(b) - getCap(a))[0];
+            }
+
             if (evap) {
                 items.push({ type: "Verdampfer", name: evap.name, price: evap.price });
                 subTotal += evap.price;
             } else {
-                items.push({ type: "Verdampfer", name: "⚠️ Kein passender Verdampfer auf Lager", price: 0 });
+                items.push({ type: "Verdampfer", name: "⚠️ Kein Verdampfer auf Lager", price: 0 });
             }
 
             // 3. Feste Positionen
