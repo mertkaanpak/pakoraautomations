@@ -147,6 +147,7 @@
             cursor: pointer;
         }
         .jump-chip:hover { border-color: #2563eb; color: #2563eb; }
+        .jump-chip.active { background: #2563eb; color: #fff; border-color: #2563eb; }
         
         input, select { 
             width: 100%; padding: 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; outline: none;
@@ -359,7 +360,7 @@
 
         <div class="card">
             <div class="controls">
-                <input type="text" id="searchInput" placeholder="Artikel, EAN oder Nummer suchen..." onkeyup="renderTable()">
+                <input type="text" id="searchInput" placeholder="Artikel oder Art.Nr. suchen..." oninput="renderTable()">
                 <button class="btn btn-upload" onclick="document.getElementById('csvInput').click()">
                     Liste abgleichen
                 </button>
@@ -369,12 +370,21 @@
                 </button>
             </div>
 
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
+                <span style="font-size:12px; font-weight:700; color:var(--secondary,#64748b); text-transform:uppercase; letter-spacing:.06em; margin-right:2px;">Status:</span>
+                <button class="jump-chip status-filter active" data-filter="all" onclick="setStockFilter('all', this)">Alle</button>
+                <button class="jump-chip status-filter" data-filter="ok" onclick="setStockFilter('ok', this)">Lagernd</button>
+                <button class="jump-chip status-filter" data-filter="low" onclick="setStockFilter('low', this)">Wenig (≤2)</button>
+                <button class="jump-chip status-filter" data-filter="empty" onclick="setStockFilter('empty', this)">Leer</button>
+                <span id="resultCount" style="margin-left:auto; font-size:13px; font-weight:600; color:var(--secondary,#64748b);"></span>
+            </div>
+
             <div class="category-jump" id="categoryJump">
-                <button class="jump-chip" type="button" onclick="jumpToCategory('condensing_unit')">Verfluessigungssaetze</button>
+                <button class="jump-chip" type="button" onclick="jumpToCategory('condensing_unit')">Verflüssigungssätze</button>
                 <button class="jump-chip" type="button" onclick="jumpToCategory('cp_box')">CP-Box</button>
                 <button class="jump-chip" type="button" onclick="jumpToCategory('evaporator')">Verdampfer</button>
                 <button class="jump-chip" type="button" onclick="jumpToCategory('compressor')">Kompressoren</button>
-                <button class="jump-chip" type="button" onclick="jumpToCategory('accessory')">Zubehoer</button>
+                <button class="jump-chip" type="button" onclick="jumpToCategory('accessory')">Zubehör</button>
             </div>
 
             <div style="overflow-x:auto; flex:1;">
@@ -463,6 +473,14 @@
         }
 
         let localData = {};
+        let activeStockFilter = 'all';
+
+        function setStockFilter(filter, btn) {
+            activeStockFilter = filter;
+            document.querySelectorAll('.status-filter').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            renderTable();
+        }
 
         function setConnectionState(text, isOnline) {
             const dot = document.getElementById('onlineDot');
@@ -547,6 +565,7 @@
 
             if (!keys.length) {
                 tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px; color:#94a3b8;">Keine Artikel vorhanden.</td></tr>';
+                document.getElementById('resultCount').textContent = '';
                 return;
             }
 
@@ -560,7 +579,12 @@
                     if ((item.category || 'accessory') !== category) return false;
                     const idText = String(item.id || '').toLowerCase();
                     const nameText = String(item.name || '').toLowerCase();
-                    return !search || idText.includes(search) || nameText.includes(search);
+                    if (search && !idText.includes(search) && !nameText.includes(search)) return false;
+                    const qty = item.qty || 0;
+                    if (activeStockFilter === 'ok'    && !(qty > 2))  return false;
+                    if (activeStockFilter === 'low'   && !(qty > 0 && qty <= 2)) return false;
+                    if (activeStockFilter === 'empty' && qty !== 0)   return false;
+                    return true;
                 });
 
                 if (!rows.length) return;
@@ -603,8 +627,12 @@
             });
 
             if (!visibleCount) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#94a3b8;">Keine Treffer fuer "${search}"</td></tr>`;
+                const msg = search ? `Keine Treffer für "${search}"` : 'Keine Artikel in dieser Kategorie.';
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#94a3b8;">${msg}</td></tr>`;
             }
+
+            const countEl = document.getElementById('resultCount');
+            if (countEl) countEl.textContent = visibleCount ? `${visibleCount} Artikel` : '';
         }
 
         function updateStats() {
