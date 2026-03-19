@@ -17,3 +17,34 @@ window.PAKORA_ACCOUNTS = {
 
 window.PAKORA_AUTH_KEY   = "pakora_auth_user";
 window.PAKORA_ADMIN_USER = "m.pak";
+
+// ============================================================
+// Rollen-Hilfsfunktionen — von allen Seiten nutzbar
+// ============================================================
+
+window.pakoraGetCurrentUser = function () {
+    try {
+        return (localStorage.getItem(window.PAKORA_AUTH_KEY) || "").toLowerCase();
+    } catch (e) { return ""; }
+};
+
+window.pakoraIsAdmin = function () {
+    const user = window.pakoraGetCurrentUser();
+    return (window.PAKORA_ACCOUNTS[user] || {}).role === "admin";
+};
+
+// Blendet/zeigt .only-mpak Elemente je nach Rolle
+window.pakoraApplyRoles = function () {
+    const isAdmin = window.pakoraIsAdmin();
+    document.querySelectorAll(".only-mpak").forEach(function (el) {
+        el.style.display = isAdmin ? "" : "none";
+    });
+};
+
+// Automatisch nach dem DOM-Laden anwenden (für Seiten-Neuladen)
+document.addEventListener("DOMContentLoaded", function () {
+    const user = window.pakoraGetCurrentUser();
+    if (window.PAKORA_ACCOUNTS[user]) {
+        window.pakoraApplyRoles();
+    }
+});

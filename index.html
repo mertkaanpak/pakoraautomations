@@ -882,6 +882,7 @@ const overlay = document.getElementById("authOverlay");
         overlay.hidden = true;
         if (logoutBtn) logoutBtn.hidden = false;
         document.body.style.overflow = "";
+        if (window.pakoraApplyRoles) window.pakoraApplyRoles();
     };
 
     if (!isAuthed()) {

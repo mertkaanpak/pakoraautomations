@@ -229,7 +229,12 @@
       const user = userInput.value.trim().toLowerCase();
       const pass = passInput.value;
       if (ACCOUNTS[user] && ACCOUNTS[user].pass === pass) {
-        if (!isAdmin(user)) { error.textContent = 'Nur m.pak hat Zugriff.'; passInput.value = ''; return; }
+        if (!isAdmin(user)) {
+            error.textContent = 'Diese Seite ist nur für Administratoren.';
+            passInput.value = '';
+            setTimeout(() => window.location.replace('index.html'), 1500);
+            return;
+        }
         localStorage.setItem(AUTH_KEY, user);
         localStorage.removeItem(LEGACY_AUTH_KEY);
         hideAuth();
@@ -255,7 +260,11 @@
         if (storedUser) { localStorage.setItem(AUTH_KEY, storedUser); localStorage.removeItem(LEGACY_AUTH_KEY); }
       }
       if (storedUser && ACCOUNTS[storedUser]) {
-        if (!isAdmin(storedUser)) { showAuth(); error.textContent = 'Nur m.pak hat Zugriff.'; return; }
+        if (!isAdmin(storedUser)) {
+            // Kein Admin → zurück zur Startseite
+            window.location.replace('index.html');
+            return;
+        }
         hideAuth();
         loadSettings();
       } else {

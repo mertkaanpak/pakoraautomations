@@ -395,6 +395,7 @@
             if (logoutBtn) logoutBtn.hidden = false;
             document.body.style.overflow = '';
             updateUserDisplay();
+            if (window.pakoraApplyRoles) window.pakoraApplyRoles();
         }
 
         if (!isAuthed()) { showAuth(); } else { hideAuth(); }

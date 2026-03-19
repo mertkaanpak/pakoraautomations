@@ -838,6 +838,7 @@
                 overlay.hidden = true;
                 if (logoutBtn) logoutBtn.hidden = false;
                 document.body.style.overflow = "";
+                if (window.pakoraApplyRoles) window.pakoraApplyRoles();
                 const userId = getStoredUser();
                 if (welcomeName) welcomeName.textContent = ACCOUNTS[userId]?.label || "Mitarbeiter";
                 // Avatar initialen setzen
