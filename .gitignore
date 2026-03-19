@@ -9,17 +9,30 @@ firebase-debug.log
 node_modules/
 functions/node_modules/
 
-# --- GEHEIMNISSE (WICHTIG!) ---
-# Das hier darf auf keinen Fall auf GitHub landen:
+# --- GEHEIMNISSE (DARF NIE AUF GITHUB LANDEN) ---
 serviceAccountKey.json
+*ServiceAccount*.json
+*service_account*.json
 config.json
 .env
+.env.local
+.env.production
+login-daten.txt
+*passwort*.txt
+*password*.txt
+*credentials*.json
+*.pem
+*.key
+firebase-adminsdk-*.json
 
 # --- WHATSAPP SITZUNG ---
 # Das hier speichert deinen Login. Nicht hochladen, 
 # sonst loggt sich der Server ständig aus/ein.
 .wwebjs_auth/
 .wwebjs_cache/
+
+# --- LOKALE ENTWICKLUNGSKONFIGURATION ---
+functions/.runtimeconfig.json
 
 # --- ABHÄNGIGKEITEN (Konfliktvermeidung) ---
 package-lock.json
