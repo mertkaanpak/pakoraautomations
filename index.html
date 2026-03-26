@@ -200,6 +200,15 @@
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+        /* Kalkulation Mode Tabs */
+        .calc-mode-tabs { display: flex; gap: 5px; background: #f1f5f9; padding: 4px; border-radius: 12px; }
+        .calc-tab { padding: 10px 20px; border: none; border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.18s; background: transparent; color: #64748b; white-space: nowrap; }
+        .calc-tab.active { background: white; color: #0f172a; box-shadow: 0 2px 8px rgba(0,0,0,0.09); }
+        .calc-tab:hover:not(.active) { color: #0f172a; background: rgba(255,255,255,0.55); }
+        /* Manual select styling */
+        .manual-select { width: 100%; padding: 13px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; background: white; color: #0f172a; margin-bottom: 20px; appearance: none; font-family: inherit; transition: border-color 0.2s; cursor: pointer; }
+        .manual-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,0.1); }
+
         .offer-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 15px; font-size: 14px; }
         .offer-table th { text-align: left; padding: 12px 15px; background: #f1f5f9; color: #475569; font-weight: 600; text-transform: uppercase; font-size: 12px; }
         .offer-table td { padding: 12px 15px; border-bottom: 1px solid #e2e8f0; }
@@ -301,10 +310,20 @@
         </div>
 
         <div id="calc" class="section">
-            <h2>Präzisions-Kalkulation</h2>
-            <p class="subtitle">Automatische Wahl: Normal (≥ 0°C) oder Tief (< 0°C).</p>
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-bottom:22px;">
+                <div>
+                    <h2 style="margin:0 0 4px;">Kalkulation</h2>
+                    <p class="subtitle" style="margin:0;">Smart-Berechnung oder manuelle Produktauswahl.</p>
+                </div>
+                <div class="calc-mode-tabs">
+                    <button class="calc-tab active" id="tabSmart" onclick="switchCalcMode('smart')">⚡ Smart</button>
+                    <button class="calc-tab" id="tabManual" onclick="switchCalcMode('manual')">🔧 Manuell</button>
+                </div>
+            </div>
             <div class="grid-offer">
-                <div class="card">
+
+                <!-- ===== SMART PANEL ===== -->
+                <div id="smartPanel" class="card">
                     <div class="card-header">1. Technische Daten</div>
                     <label>Raumvolumen (m³)</label>
                     <input type="number" inputmode="decimal" id="calcVol" placeholder="z.B. 150" onchange="resetOffer()">
@@ -316,8 +335,46 @@
                         <option value="-18" selected>-18°C</option> <option value="-25">-25°C</option>
                     </select>
                     <button class="btn btn-primary" onclick="calculateWatts()">⚡ Exakt Berechnen</button>
-                </div>
+                </div><!-- /smartPanel -->
+
+                <!-- ===== MANUAL PANEL ===== -->
+                <div id="manualPanel" class="card" style="display:none;">
+                    <div class="card-header">1. Manuelle Auswahl</div>
+
+                    <label>Gerätetyp</label>
+                    <div style="display:flex; gap:12px; margin-bottom:20px;">
+                        <button class="unit-type-btn" id="manTypeCpBox" onclick="selectManualType('cp_box', this)">
+                            <span class="btn-icon">📦</span><span>CP-Box</span>
+                        </button>
+                        <button class="unit-type-btn" id="manTypeVfl" onclick="selectManualType('condensing_unit', this)">
+                            <span class="btn-icon">🔧</span><span>Verflüssigungssatz</span>
+                        </button>
+                    </div>
+
+                    <div id="manUnitRow" style="display:none;">
+                        <label id="manUnitLabel">Gerät wählen</label>
+                        <select id="manUnitSelect" class="manual-select">
+                            <option value="">-- Bitte wählen --</option>
+                        </select>
+                    </div>
+
+                    <div id="manEvapRow" style="display:none;">
+                        <label>Verdampfer wählen <span style="font-weight:400; color:#94a3b8;">(optional)</span></label>
+                        <select id="manEvapSelect" class="manual-select">
+                            <option value="">-- Kein Verdampfer --</option>
+                        </select>
+                    </div>
+
+                    <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--secondary); cursor:pointer; text-transform:none; letter-spacing:0; margin-bottom:20px;">
+                        <input type="checkbox" id="manOnlyStock" checked onchange="populateManualDropdowns()" style="width:16px; height:16px; accent-color:var(--primary); margin:0;">
+                        Nur auf Lager
+                    </label>
+
+                    <button class="btn btn-primary" onclick="buildManualOffer()">📋 Angebot erstellen</button>
+                </div><!-- /manualPanel -->
+
                 <div id="resultSection" style="display:none;">
+                    <div id="calcResultCards">
                     <div class="info-bar" id="calcInfo"></div>
                     <div class="result-box">
                         <div class="res-card" id="resNormal" onclick="selectMode('normal')">
@@ -329,6 +386,7 @@
                             <span class="res-sub" id="baseHeavy">Basis 35°C: 0 W</span>
                         </div>
                     </div>
+                    </div><!-- /calcResultCards -->
                     <div id="offerCard" class="card" style="display:none;">
                         <div class="card-header">2. Angebot erstellen</div>
 
@@ -438,6 +496,9 @@
                 allProducts = Object.values(payload.products || {});
                 if(document.getElementById('db').classList.contains('active')) {
                     renderDatabase();
+                }
+                if (document.getElementById('manualPanel')?.style.display !== 'none') {
+                    populateManualDropdowns();
                 }
                 updateDashboardStats();
             } catch (error) {
@@ -590,16 +651,20 @@
             if(mode === 'normal') document.getElementById('resNormal').classList.add('selected');
             else document.getElementById('resHeavy').classList.add('selected');
 
+            // Restore smart mode elements
+            document.getElementById('calcResultCards').style.display = 'block';
+            document.getElementById('unitTypeSelector').style.display = 'block';
+
             // Reset unit type selection
             currentUnitType = null;
-            document.querySelectorAll('.unit-type-btn').forEach(b => b.classList.remove('selected'));
+            document.querySelectorAll('#unitTypeSelector .unit-type-btn').forEach(b => b.classList.remove('selected'));
             document.getElementById('offerDetails').style.display = 'none';
             document.getElementById('offerCard').style.display = 'block';
         }
 
         function selectUnitType(type, btn) {
             currentUnitType = type;
-            document.querySelectorAll('.unit-type-btn').forEach(b => b.classList.remove('selected'));
+            document.querySelectorAll('#unitTypeSelector .unit-type-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
             const watts = currentMode === 'normal' ? calculatedValues.normal : calculatedValues.heavy;
             const tempVal = parseFloat(document.getElementById('calcTemp').value);
@@ -707,6 +772,119 @@
 
         function resetOffer() {
             document.getElementById('resultSection').style.display = 'none';
+        }
+
+        // =========================================================================
+        // --- MANUELLE KALKULATION ---
+        // =========================================================================
+        let manualUnitType = null;
+
+        function switchCalcMode(mode) {
+            document.getElementById('smartPanel').style.display  = mode === 'smart'  ? 'block' : 'none';
+            document.getElementById('manualPanel').style.display = mode === 'manual' ? 'block' : 'none';
+            document.getElementById('tabSmart').classList.toggle('active',  mode === 'smart');
+            document.getElementById('tabManual').classList.toggle('active', mode === 'manual');
+            document.getElementById('resultSection').style.display = 'none';
+            if (mode === 'manual') populateManualDropdowns();
+        }
+
+        function selectManualType(type, btn) {
+            manualUnitType = type;
+            document.querySelectorAll('#manualPanel .unit-type-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('manUnitLabel').textContent = type === 'cp_box' ? 'CP-Box wählen' : 'Verflüssigungssatz wählen';
+            populateManualDropdowns();
+            document.getElementById('manUnitRow').style.display = 'block';
+            document.getElementById('manEvapRow').style.display = 'block';
+        }
+
+        function getManualCapText(p) {
+            const nk = normalizeCapacityWatts(p.capacityNK);
+            const tk = normalizeCapacityWatts(p.capacityTK);
+            if (nk && tk) return `NK ${nk.toLocaleString('de-DE')} / TK ${tk.toLocaleString('de-DE')} W`;
+            if (nk) return `${nk.toLocaleString('de-DE')} W`;
+            if (tk) return `${tk.toLocaleString('de-DE')} W`;
+            return '';
+        }
+
+        function populateManualDropdowns() {
+            const onlyStock = document.getElementById('manOnlyStock')?.checked;
+            const products  = onlyStock ? allProducts.filter(p => (p.qty || 0) > 0) : allProducts;
+
+            // Unit dropdown
+            const unitSel  = document.getElementById('manUnitSelect');
+            const prevUnit = unitSel.value;
+            unitSel.innerHTML = '<option value="">-- Bitte wählen --</option>';
+
+            if (manualUnitType) {
+                products
+                    .filter(p => p.category === manualUnitType)
+                    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'))
+                    .forEach(p => {
+                        const cap   = getManualCapText(p);
+                        const price = p.price > 0 ? ` — ${p.price.toFixed(2)} €` : '';
+                        const opt   = document.createElement('option');
+                        opt.value   = p.id || p.name;
+                        opt.textContent = `${p.name}${cap ? ' [' + cap + ']' : ''}${price}`;
+                        unitSel.appendChild(opt);
+                    });
+                if (prevUnit) unitSel.value = prevUnit;
+            }
+
+            // Evaporator dropdown
+            const evapSel  = document.getElementById('manEvapSelect');
+            const prevEvap = evapSel.value;
+            evapSel.innerHTML = '<option value="">-- Kein Verdampfer --</option>';
+
+            products
+                .filter(p => p.category === 'evaporator')
+                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'))
+                .forEach(p => {
+                    const cap   = getManualCapText(p);
+                    const price = p.price > 0 ? ` — ${p.price.toFixed(2)} €` : '';
+                    const opt   = document.createElement('option');
+                    opt.value   = p.id || p.name;
+                    opt.textContent = `${p.name}${cap ? ' [' + cap + ']' : ''}${price}`;
+                    evapSel.appendChild(opt);
+                });
+            if (prevEvap) evapSel.value = prevEvap;
+        }
+
+        function buildManualOffer() {
+            if (!manualUnitType) return alert('Bitte zuerst einen Gerätetyp (CP-Box oder Verflüssigungssatz) auswählen.');
+            const unitVal = document.getElementById('manUnitSelect').value;
+            if (!unitVal) return alert('Bitte ein Gerät aus der Liste auswählen.');
+
+            const unitProduct = allProducts.find(p => (p.id || p.name) === unitVal);
+            const evapVal     = document.getElementById('manEvapSelect').value;
+            const evapProduct = evapVal ? allProducts.find(p => (p.id || p.name) === evapVal) : null;
+
+            const items = [];
+            let subTotal = 0;
+            const catLabel = manualUnitType === 'cp_box' ? 'CP-Box' : 'Verflüssigungssatz';
+
+            if (unitProduct) {
+                items.push({ type: catLabel, name: unitProduct.name, price: unitProduct.price || 0 });
+                subTotal += unitProduct.price || 0;
+            }
+            if (evapProduct) {
+                items.push({ type: 'Verdampfer', name: evapProduct.name, price: evapProduct.price || 0 });
+                subTotal += evapProduct.price || 0;
+            }
+            items.push({ type: 'Expansionsventil',  name: 'Expansionsventil',  price: 85.00 });  subTotal += 85.00;
+            items.push({ type: 'Kühlstellenregler', name: 'Kühlstellenregler', price: 170.00 }); subTotal += 170.00;
+
+            currentOffer.items    = items;
+            currentOffer.subTotal = subTotal;
+            currentOffer.watts    = 0;
+
+            // Show result section — skip calc cards, go straight to offer
+            document.getElementById('resultSection').style.display    = 'block';
+            document.getElementById('calcResultCards').style.display  = 'none';
+            document.getElementById('offerCard').style.display        = 'block';
+            document.getElementById('unitTypeSelector').style.display = 'none';
+            document.getElementById('offerDetails').style.display     = 'block';
+            renderOfferTable();
         }
 
        function generatePDF() {
