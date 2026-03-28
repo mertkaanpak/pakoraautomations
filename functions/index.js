@@ -451,6 +451,10 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
     "Wenn gar nichts passt, fuelle alle Felder mit \"unbekannt\" und setze summary entsprechend.",
     "Wenn eine EN12900 Tabelle vorhanden ist, gib nur Zeilen fuer -10/45 und -25/45 zurueck.",
     "Wenn keine EN12900 Tabelle vorhanden ist, setze en12900 auf [].",
+    "PFLICHT: Trage in specs immer capacity_nk_w (Kaelteleistung in Watt bei -10C/45C) und capacity_tk_w (bei -25C/45C) ein.",
+    "Wenn EN12900 Daten vorhanden: entnehme die Werte direkt daraus.",
+    "Wenn keine EN12900 Tabelle: schaetze aus Nennleistung, Modellnummer oder Herstellerangaben.",
+    "Wenn gar nicht bestimmbar: setze 0.",
     "",
     `Anfrage: ${query}`,
     brand ? `Hersteller: ${brand}` : "",
@@ -496,7 +500,9 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
                     "type",
                     "suction_connection",
                     "discharge_connection",
-                    "notes"
+                    "notes",
+                    "capacity_nk_w",
+                    "capacity_tk_w"
                   ],
                   properties: {
                     manufacturer: { type: "string" },
@@ -507,7 +513,9 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
                     type: { type: "string" },
                     suction_connection: { type: "string" },
                     discharge_connection: { type: "string" },
-                    notes: { type: "string" }
+                    notes: { type: "string" },
+                    capacity_nk_w: { type: "number" },
+                    capacity_tk_w: { type: "number" }
                   }
                 },
                 en12900: {
@@ -730,8 +738,8 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
 
     const nkRow = finalEnRows.find((r) => Number(r.te_c) === -10);
     const tkRow = finalEnRows.find((r) => Number(r.te_c) === -25);
-    const targetNK = nkRow ? parseNumber(nkRow.capacity_w) : 0;
-    const targetTK = tkRow ? parseNumber(tkRow.capacity_w) : 0;
+    const targetNK = nkRow ? parseNumber(nkRow.capacity_w) : parseNumber(specs.capacity_nk_w || 0);
+    const targetTK = tkRow ? parseNumber(tkRow.capacity_w) : parseNumber(specs.capacity_tk_w || 0);
     const refrigerantForMatch = (specs.refrigerant || "").trim();
 
     const embracoMatches = await findEmbracoReplacements(refrigerantForMatch, targetNK, targetTK);
