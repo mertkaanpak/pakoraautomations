@@ -307,6 +307,65 @@ exports.notifyOnMessage = functions.firestore
     return Promise.all(deletes);
   });
 
+async function findEmbracoReplacements(refrigerant, targetNK, targetTK) {
+  if (!refrigerant || refrigerant === "unbekannt") return {};
+  try {
+    const catalogSnap = await admin.database().ref("/catalog").get();
+    if (!catalogSnap.exists()) return {};
+    const catalog = catalogSnap.val();
+
+    const embraco = Object.values(catalog).filter((p) =>
+      p &&
+      p.manufacturer &&
+      p.manufacturer.toLowerCase().includes("embraco") &&
+      (p.refrigerant || "").trim().toLowerCase() === refrigerant.trim().toLowerCase()
+    );
+
+    const result = {};
+
+    if (targetNK > 0) {
+      const sorted = embraco.filter((p) => p.capacityNK > 0).sort((a, b) => a.capacityNK - b.capacityNK);
+      const lo = targetNK * 0.90;
+      const hi = targetNK * 1.10;
+
+      const weaker = sorted
+        .filter((p) => p.capacityNK <= targetNK && p.capacityNK >= lo)
+        .sort((a, b) => b.capacityNK - a.capacityNK)[0] || null;
+
+      const stronger = sorted
+        .filter((p) => p.capacityNK > targetNK && p.capacityNK <= hi)
+        .sort((a, b) => a.capacityNK - b.capacityNK)[0] || null;
+
+      if (weaker || stronger) {
+        result.nk = { target_w: targetNK, weaker: weaker || null, stronger: stronger || null };
+      }
+    }
+
+    if (targetTK > 0) {
+      const sorted = embraco.filter((p) => p.capacityTK > 0).sort((a, b) => a.capacityTK - b.capacityTK);
+      const lo = targetTK * 0.90;
+      const hi = targetTK * 1.10;
+
+      const weaker = sorted
+        .filter((p) => p.capacityTK <= targetTK && p.capacityTK >= lo)
+        .sort((a, b) => b.capacityTK - a.capacityTK)[0] || null;
+
+      const stronger = sorted
+        .filter((p) => p.capacityTK > targetTK && p.capacityTK <= hi)
+        .sort((a, b) => a.capacityTK - b.capacityTK)[0] || null;
+
+      if (weaker || stronger) {
+        result.tk = { target_w: targetTK, weaker: weaker || null, stronger: stronger || null };
+      }
+    }
+
+    return result;
+  } catch (err) {
+    console.error("findEmbracoReplacements failed:", err);
+    return {};
+  }
+}
+
 exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -669,11 +728,20 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
 
     const finalEnRows = parsedEnRows.length ? parsedEnRows : filteredEnRows;
 
+    const nkRow = finalEnRows.find((r) => Number(r.te_c) === -10);
+    const tkRow = finalEnRows.find((r) => Number(r.te_c) === -25);
+    const targetNK = nkRow ? parseNumber(nkRow.capacity_w) : 0;
+    const targetTK = tkRow ? parseNumber(tkRow.capacity_w) : 0;
+    const refrigerantForMatch = (specs.refrigerant || "").trim();
+
+    const embracoMatches = await findEmbracoReplacements(refrigerantForMatch, targetNK, targetTK);
+
     res.status(200).json({
       summary: payload.summary || "KI Recherche abgeschlossen.",
       specs,
       en12900: finalEnRows,
-      sources: hasInlineDatasheet ? (Array.isArray(payload.sources) ? payload.sources : []) : (officialSources.length ? officialSources : pdfSources)
+      sources: hasInlineDatasheet ? (Array.isArray(payload.sources) ? payload.sources : []) : (officialSources.length ? officialSources : pdfSources),
+      embraco_matches: embracoMatches
     });
   } catch (error) {
     res.status(500).json({ error: error && error.message ? error.message : String(error) });

@@ -307,6 +307,130 @@
         .card.hidden {
             display: none;
         }
+
+        .embraco-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-top: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .embraco-grid { grid-template-columns: 1fr; }
+        }
+
+        .embraco-comp-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(148,163,184,0.18);
+            border-radius: 14px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .embraco-comp-card:hover {
+            border-color: rgba(34,197,94,0.4);
+            box-shadow: 0 6px 24px rgba(34,197,94,0.12);
+        }
+
+        .embraco-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            width: fit-content;
+        }
+        .embraco-badge-weaker {
+            background: rgba(251,146,60,0.15);
+            color: #fb923c;
+            border: 1px solid rgba(251,146,60,0.3);
+        }
+        .embraco-badge-stronger {
+            background: rgba(34,197,94,0.13);
+            color: #22c55e;
+            border: 1px solid rgba(34,197,94,0.28);
+        }
+        .embraco-badge-none {
+            background: rgba(148,163,184,0.1);
+            color: #64748b;
+            border: 1px solid rgba(148,163,184,0.2);
+        }
+
+        .embraco-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: #e2e8f0;
+            line-height: 1.2;
+        }
+
+        .embraco-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .embraco-pill {
+            background: rgba(148,163,184,0.1);
+            border: 1px solid rgba(148,163,184,0.18);
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 12px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .embraco-capacity {
+            font-size: 22px;
+            font-weight: 800;
+            color: #e2e8f0;
+        }
+        .embraco-capacity span {
+            font-size: 13px;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .embraco-deviation {
+            font-size: 13px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+        .embraco-deviation-pos { color: #22c55e; background: rgba(34,197,94,0.1); }
+        .embraco-deviation-neg { color: #fb923c; background: rgba(251,146,60,0.1); }
+
+        .embraco-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: #22c55e;
+        }
+
+        .embraco-section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #475569;
+            margin-bottom: 4px;
+            margin-top: 14px;
+        }
+        .embraco-section-label:first-child { margin-top: 0; }
+
+        .embraco-empty {
+            text-align: center;
+            padding: 28px;
+            color: #475569;
+            font-size: 14px;
+        }
     </style>
     <link rel="stylesheet" href="app-theme.css?v=5">
 </head>
@@ -445,6 +569,17 @@
                 </table>
             </div>
         </div>
+
+        <div id="embracoCard" class="card hidden">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+                <span style="font-size:22px;">🔄</span>
+                <div>
+                    <h2 style="margin:0; font-size:18px; font-weight:700;">Embraco Ersatzkompressoren</h2>
+                    <div id="embracoSubtitle" style="font-size:13px; color:var(--secondary); margin-top:3px;"></div>
+                </div>
+            </div>
+            <div id="embracoContent"></div>
+        </div>
     </main>
 
     <script>
@@ -464,6 +599,9 @@
         const aiPdfBtn = document.getElementById('aiPdfBtn');
         const aiStatus = document.getElementById('aiStatus');
         const aiResultsCard = document.getElementById('aiResultsCard');
+        const embracoCard = document.getElementById('embracoCard');
+        const embracoContent = document.getElementById('embracoContent');
+        const embracoSubtitle = document.getElementById('embracoSubtitle');
 
         const AI_FUNCTION_URL = "https://us-central1-pakora-automations-chat.cloudfunctions.net/aiCompressorLookup";
         let lastAiResult = null;
@@ -479,6 +617,98 @@
             if (value && typeof value === 'object') return JSON.stringify(value);
             if (value === null || value === undefined || value === '') return '-';
             return String(value);
+        }
+
+        function renderEmbracoMatches(matches, refrigerant) {
+            if (!embracoCard || !embracoContent) return;
+
+            const hasNK = matches && matches.nk && (matches.nk.weaker || matches.nk.stronger);
+            const hasTK = matches && matches.tk && (matches.tk.weaker || matches.tk.stronger);
+
+            if (!hasNK && !hasTK) {
+                embracoCard.classList.add('hidden');
+                return;
+            }
+
+            embracoCard.classList.remove('hidden');
+            if (embracoSubtitle) {
+                const parts = [];
+                if (refrigerant && refrigerant !== 'unbekannt') parts.push(`Kältemittel: ${escapeHtml(refrigerant)}`);
+                if (hasNK) parts.push(`NK-Ziel: ${matches.nk.target_w} W`);
+                if (hasTK) parts.push(`TK-Ziel: ${matches.tk.target_w} W`);
+                embracoSubtitle.textContent = parts.join(' · ');
+            }
+
+            function compCard(comp, role, targetW, capacityField) {
+                if (!comp) {
+                    return `
+                        <div class="embraco-comp-card" style="opacity:0.45;">
+                            <div class="embraco-badge embraco-badge-none">${role === 'weaker' ? '▼ Kein schwächerer' : '▲ Kein stärkerer'} gefunden</div>
+                            <div style="font-size:13px; color:#475569; padding:8px 0;">
+                                Kein Embraco Kompressor im ±10% Bereich verfügbar.
+                            </div>
+                        </div>`;
+                }
+                const cap = comp[capacityField] || 0;
+                const diffPct = targetW > 0 ? ((cap - targetW) / targetW * 100).toFixed(1) : null;
+                const devClass = diffPct >= 0 ? 'embraco-deviation-pos' : 'embraco-deviation-neg';
+                const devText = diffPct !== null ? `${diffPct > 0 ? '+' : ''}${diffPct}%` : '';
+                const badgeClass = role === 'weaker' ? 'embraco-badge-weaker' : 'embraco-badge-stronger';
+                const badgeLabel = role === 'weaker' ? '▼ Schwächer' : '▲ Stärker';
+                const typeLabel = capacityField === 'capacityNK' ? 'NK' : 'TK';
+
+                return `
+                    <div class="embraco-comp-card">
+                        <div class="embraco-badge ${badgeClass}">${badgeLabel}</div>
+                        <div class="embraco-name">${escapeHtml(comp.name || comp.id || '-')}</div>
+                        <div class="embraco-meta">
+                            <div class="embraco-pill">❄️ ${escapeHtml(comp.refrigerant || '-')}</div>
+                            <div class="embraco-pill">🏭 ${escapeHtml(comp.manufacturer || 'Embraco')}</div>
+                        </div>
+                        <div style="display:flex; align-items:baseline; gap:10px;">
+                            <div class="embraco-capacity">${cap.toLocaleString('de-DE')} <span>W ${typeLabel}</span></div>
+                            ${devText ? `<div class="embraco-deviation ${devClass}">${devText}</div>` : ''}
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                            <div class="embraco-price">${comp.price ? comp.price.toLocaleString('de-DE') + ' €' : '-'}</div>
+                            <button onclick="copyCompressorName('${escapeHtml(comp.name || '')}', this)"
+                                style="background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); color:#22c55e; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s;"
+                                onmouseover="this.style.background='rgba(34,197,94,0.25)'"
+                                onmouseout="this.style.background='rgba(34,197,94,0.15)'">
+                                📋 Kopieren
+                            </button>
+                        </div>
+                    </div>`;
+            }
+
+            let html = '';
+
+            if (hasNK) {
+                html += `<div class="embraco-section-label">Normalkühlung (−10 °C / 45 °C)</div>`;
+                html += `<div class="embraco-grid">
+                    ${compCard(matches.nk.weaker,   'weaker',   matches.nk.target_w, 'capacityNK')}
+                    ${compCard(matches.nk.stronger,  'stronger', matches.nk.target_w, 'capacityNK')}
+                </div>`;
+            }
+
+            if (hasTK) {
+                html += `<div class="embraco-section-label" style="${hasNK ? 'margin-top:22px;' : ''}">Tiefkühlung (−25 °C / 45 °C)</div>`;
+                html += `<div class="embraco-grid">
+                    ${compCard(matches.tk.weaker,   'weaker',   matches.tk.target_w, 'capacityTK')}
+                    ${compCard(matches.tk.stronger,  'stronger', matches.tk.target_w, 'capacityTK')}
+                </div>`;
+            }
+
+            embracoContent.innerHTML = html;
+        }
+
+        function copyCompressorName(name, btn) {
+            if (!name) return;
+            navigator.clipboard.writeText(name).then(() => {
+                const orig = btn.textContent;
+                btn.textContent = '✅ Kopiert!';
+                setTimeout(() => { btn.textContent = orig; }, 1800);
+            }).catch(() => {});
         }
 
         function renderAiResults(specs) {
@@ -597,10 +827,11 @@
                 return;
             }
 
-            setAiStatus('KI Recherche laeuft...', false);
+            setAiStatus('KI Recherche läuft...', false);
             if (aiSearchBtn) aiSearchBtn.disabled = true;
             if (aiPdfBtn) aiPdfBtn.disabled = true;
             if (aiResultsCard) aiResultsCard.classList.add('hidden');
+            if (embracoCard) embracoCard.classList.add('hidden');
             lastAiResult = null;
 
             try {
@@ -610,11 +841,13 @@
                     specs: data.specs || {},
                     en12900: data.en12900 || [],
                     sources: data.sources || [],
-                    summary: data.summary || ''
+                    summary: data.summary || '',
+                    embraco_matches: data.embraco_matches || {}
                 };
                 renderAiResults(lastAiResult.specs);
                 renderAiEn12900(lastAiResult.en12900);
                 renderAiSources(lastAiResult.sources);
+                renderEmbracoMatches(lastAiResult.embraco_matches, (data.specs || {}).refrigerant || '');
                 if (aiResultsCard) aiResultsCard.classList.remove('hidden');
                 setAiStatus(data.summary || 'KI Recherche abgeschlossen.', false);
                 if (aiPdfBtn) aiPdfBtn.disabled = false;
@@ -622,6 +855,7 @@
                 renderAiResults({});
                 renderAiEn12900([]);
                 renderAiSources([]);
+                if (embracoCard) embracoCard.classList.add('hidden');
                 if (aiResultsCard) aiResultsCard.classList.add('hidden');
                 setAiStatus(error.message || 'KI Anfrage fehlgeschlagen.', true);
             } finally {
@@ -745,6 +979,34 @@
                 });
             });
 
+            const em = lastAiResult.embraco_matches || {};
+            const emSections = [
+                { key: 'nk', label: 'Embraco Ersatz – Normalkühlung (NK)', field: 'capacityNK' },
+                { key: 'tk', label: 'Embraco Ersatz – Tiefkühlung (TK)', field: 'capacityTK' }
+            ];
+            emSections.forEach(({ key, label, field }) => {
+                const sec = em[key];
+                if (!sec || (!sec.weaker && !sec.stronger)) return;
+                if (y > 265) { doc.addPage(); y = 15; }
+                y += 6;
+                doc.setFontSize(12);
+                doc.text(label, 10, y);
+                y += 7;
+                doc.setFontSize(10);
+                [['Schwächer', sec.weaker], ['Stärker', sec.stronger]].forEach(([role, comp]) => {
+                    if (!comp) return;
+                    const cap = comp[field] || 0;
+                    const diff = sec.target_w > 0 ? (((cap - sec.target_w) / sec.target_w) * 100).toFixed(1) : null;
+                    const line = `${role}: ${comp.name || comp.id} | ${comp.refrigerant} | ${cap} W | ${comp.price ? comp.price + ' EUR' : '-'}${diff ? ' | ' + (diff > 0 ? '+' : '') + diff + '%' : ''}`;
+                    const lines = doc.splitTextToSize(line, 180);
+                    lines.forEach((textLine) => {
+                        if (y > 280) { doc.addPage(); y = 15; }
+                        doc.text(textLine, 10, y);
+                        y += 6;
+                    });
+                });
+            });
+
             doc.save(`pakora-verdichter-${slugify(lastAiResult.query)}.pdf`);
         }
 
@@ -755,6 +1017,14 @@
         if (aiPdfBtn) {
             aiPdfBtn.addEventListener('click', generateAiPdf);
         }
+
+        [aiQueryInput, aiBrandInput, aiRefrigerantInput, aiNotesInput].forEach((input) => {
+            if (input) {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') runAiLookup();
+                });
+            }
+        });
     </script>
 
     <style>
