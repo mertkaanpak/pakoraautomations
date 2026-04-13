@@ -933,6 +933,11 @@
         function closeQuickDetail() {
             qsDetail.classList.add('hidden');
             qsCurrentProduct = null;
+            qsInput.value = '';
+            qsClearBtn.classList.remove('visible');
+            qsDropdown.classList.add('hidden');
+            qsDropdown.innerHTML = '';
+            document.getElementById('quickSearchBar').classList.remove('qs-visible');
         }
 
         function escQs(val) {
