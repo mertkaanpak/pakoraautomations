@@ -227,6 +227,10 @@
             position: relative;
             margin-bottom: 22px;
             flex-shrink: 0;
+            display: none;
+        }
+        #quickSearchBar.qs-visible {
+            display: block;
         }
 
         #quickSearchWrap {
@@ -549,6 +553,9 @@
                 <h1 class="dashboard-welcome">Willkommen, <span id="welcomeName">Chef</span>!</h1>
                 <div class="dashboard-date" id="currentDate">Lade System...</div>
             </div>
+            <button onclick="openQuickSearch()" style="display:flex;align-items:center;gap:8px;margin-bottom:22px;padding:12px 20px;background:#1e293b;color:#94a3b8;border:1.5px solid #334155;border-radius:12px;cursor:pointer;font-size:15px;width:100%;text-align:left;">
+                <span>🔍</span> <span>Artikel suchen… (Name, Art.-Nr.)</span>
+            </button>
             <div class="dash-grid">
                  <div class="dash-card card-blue" onclick="nav('calc')">
                     <div>
@@ -908,13 +915,19 @@
             document.getElementById('qsFinalPrice').textContent     = qsFormatPrice(final);
         }
 
+        function openQuickSearch() {
+            const bar = document.getElementById('quickSearchBar');
+            bar.classList.add('qs-visible');
+            qsInput.focus();
+        }
+
         function clearQuickSearch() {
             qsInput.value = '';
             qsClearBtn.classList.remove('visible');
             qsDropdown.classList.add('hidden');
             qsDropdown.innerHTML = '';
             closeQuickDetail();
-            qsInput.focus();
+            document.getElementById('quickSearchBar').classList.remove('qs-visible');
         }
 
         function closeQuickDetail() {
