@@ -30,6 +30,13 @@ service cloud.firestore {
       allow create, delete: if false;
     }
 
+    // An den Kollegen weitergeleitete Anfragen: vom Bot (Admin SDK) geschrieben,
+    // Mitarbeiter dürfen nur lesen.
+    match /whatsappForwards/{doc} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // --- Frontend-Collections: nur für eingeloggte Mitarbeiter ---
     match /messages/{doc} {
       allow read, write: if signedIn();

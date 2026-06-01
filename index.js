@@ -20,7 +20,10 @@ const openai = new OpenAI({
 try {
     const serviceAccount = require('./serviceAccountKey.json');
     admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+        credential: admin.credential.cert(serviceAccount),
+        // Realtime Database: Lagerbestand (/catalog + /stock) - fuer die
+        // automatische Lagerpruefung des Bots.
+        databaseURL: 'https://pakora-automations-chat-default-rtdb.europe-west1.firebasedatabase.app'
     });
 } catch (e) {
     console.error("FEHLER: 'serviceAccountKey.json' fehlt oder ist kaputt.");
@@ -28,6 +31,7 @@ try {
 }
 
 const db = admin.firestore();
+const rtdb = admin.database();
 
 // --- WHATSAPP CLIENT SETUP ---
 const client = new Client({
@@ -43,8 +47,13 @@ client.on('qr', (qr) => {
     console.log('--> Bitte jetzt mit WhatsApp Business (m.pak) scannen!');
 });
 
+let reminderTimer = null;
 client.on('ready', () => {
     console.log('Pakora Bot ist ONLINE und bereit!');
+    // Erinnerungs-Scan starten (einmal kurz nach Start, dann regelmaessig).
+    if (reminderTimer) clearInterval(reminderTimer);
+    setTimeout(() => { checkOpenForwards().catch(() => {}); }, 30 * 1000);
+    reminderTimer = setInterval(() => { checkOpenForwards().catch(() => {}); }, REMINDER_SCAN_MS);
 });
 
 // --- HAUPTLOGIK ---
@@ -74,6 +83,11 @@ if (!COLLEAGUE_CHAT_ID) {
 
 // Cache der bekannten Chat-IDs des Kollegen (WhatsApp nutzt teils @lid statt @c.us).
 const colleagueChatIds = new Set();
+
+// Erinnerung: bleibt eine weitergeleitete Anfrage laenger als REMINDER_MINUTES
+// offen, stupst der Bot den Kollegen an UND schreibt Mert in den Selbst-Chat.
+const REMINDER_MINUTES = 30;
+const REMINDER_SCAN_MS = 5 * 60 * 1000; // alle 5 Minuten pruefen
 
 // Prueft anhand der ECHTEN Telefonnummer, ob eine Nachricht vom Kollegen stammt.
 // getContact() loest @lid-Adressen auf die Telefonnummer auf.
@@ -188,9 +202,28 @@ async function handleBatch(chatId) {
             return;
         }
 
-        // 4b. Konkrete Lager-/Preis-/Angebotsanfrage? -> an Kollegen weiterleiten,
-        //     statt selbst zu antworten. Allgemeine Fragen beantwortet der Bot weiter.
+        // 4b. Konkrete Lager-/Preis-/Angebotsanfrage?
         if (COLLEAGUE_CHAT_ID && combinedText && await isForwardInquiry(combinedText)) {
+            // Erst versuchen, eine reine Verfuegbarkeitsfrage direkt aus dem
+            // Lagerbestand zu beantworten (nur bei sicherem Treffer + Bestand).
+            const stockAnswer = await tryInventoryAnswer(combinedText);
+            if (stockAnswer) {
+                await lastMsg.reply(stockAnswer);
+                const c = await lastMsg.getContact();
+                await db.collection('whatsappRequests').add({
+                    phone: '+' + senderNumber,
+                    name: c.pushname || c.name || '',
+                    message: combinedText,
+                    reply: stockAnswer,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    status: 'open',
+                    autoReplied: true,
+                    stockChecked: true
+                });
+                console.log(`[LAGER-AUTO-ANTWORT AN ${senderNumber}]`);
+                return;
+            }
+            // Sonst wie bisher: an den Kollegen weiterleiten.
             await forwardToColleague(lastMsg, senderNumber, combinedText);
             return;
         }
@@ -385,6 +418,95 @@ async function isForwardInquiry(text) {
     }
 }
 
+// --- AUTOMATISCHE LAGERPRUEFUNG ---
+// Liest Katalog (/catalog) + Bestand (/stock) aus der Realtime Database und
+// haelt sie kurz im Speicher (Cache), damit nicht bei jeder Nachricht neu
+// geladen werden muss.
+let inventoryCache = { at: 0, products: [] };
+const INVENTORY_TTL_MS = 2 * 60 * 1000; // 2 Minuten
+
+async function loadInventory() {
+    if (Date.now() - inventoryCache.at < INVENTORY_TTL_MS) return inventoryCache.products;
+    try {
+        const [catSnap, stockSnap] = await Promise.all([
+            rtdb.ref('/catalog').get(),
+            rtdb.ref('/stock').get()
+        ]);
+        const catalog = catSnap.exists() ? catSnap.val() : {};
+        const stock = stockSnap.exists() ? stockSnap.val() : {};
+        const products = Object.entries(catalog).map(([key, p]) => ({
+            key,
+            id: (p && p.id) || key,
+            name: (p && p.name) || (p && p.id) || key,
+            manufacturer: (p && p.manufacturer) || '',
+            refrigerant: (p && p.refrigerant) || '',
+            qty: Math.max(0, Math.round(Number((stock || {})[key] || 0)))
+        }));
+        inventoryCache = { at: Date.now(), products };
+        return products;
+    } catch (e) {
+        console.error('Lagerbestand konnte nicht geladen werden:', e.message);
+        return inventoryCache.products; // ggf. veralteter Cache statt nichts
+    }
+}
+
+// Versucht, eine reine VERFUEGBARKEITS-Anfrage direkt aus dem Lagerbestand zu
+// beantworten. Gibt den Antworttext zurueck - oder null, wenn unsicher (dann
+// wird wie bisher an den Kollegen weitergeleitet).
+async function tryInventoryAnswer(text) {
+    if (!text || !text.trim()) return null;
+    const products = await loadInventory();
+    if (!products.length) return null;
+
+    // Kompakte Produktliste fuer das Modell (id | Name | Hersteller).
+    const list = products
+        .map(p => `${p.id} | ${p.name}${p.manufacturer ? ' | ' + p.manufacturer : ''}`)
+        .join('\n');
+
+    let parsed;
+    try {
+        const r = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            temperature: 0,
+            max_tokens: 60,
+            messages: [
+                {
+                    role: 'system',
+                    content: `Du ordnest eine WhatsApp-Kundennachricht einem Produkt aus einer Lagerliste zu.
+Antworte AUSSCHLIESSLICH mit JSON: {"type":"availability"|"price"|"other","productId":"<id aus Liste oder null>"}.
+- "availability": Kunde fragt, ob etwas auf Lager/verfuegbar ist bzw. ob er es bekommt.
+- "price": Kunde fragt nach Preis/Kosten/Angebot.
+- "other": etwas anderes.
+Setze productId NUR auf eine id aus der Liste, wenn du sehr sicher bist, dass der Kunde genau dieses Produkt meint. Sonst null.
+
+LAGERLISTE (id | Name | Hersteller):
+${list}`
+                },
+                { role: 'user', content: text }
+            ]
+        });
+        let raw = (r.choices[0].message.content || '').trim();
+        raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+        parsed = JSON.parse(raw);
+    } catch (e) {
+        console.error('Lager-Zuordnung fehlgeschlagen:', e.message);
+        return null;
+    }
+
+    // Nur reine Verfuegbarkeitsanfragen automatisch beantworten. Preis-/Angebots-
+    // anfragen gehen weiter an den Kollegen.
+    if (!parsed || parsed.type !== 'availability' || !parsed.productId) return null;
+    const prod = products.find(p => String(p.id) === String(parsed.productId));
+    if (!prod) return null;
+
+    // Nur bei vorhandenem Bestand selbst zusagen. Bei 0/unklar -> Kollege.
+    if (prod.qty > 0) {
+        return `Ja, *${prod.name}* haben wir aktuell auf Lager (${prod.qty} Stueck verfuegbar). ` +
+            `Sag gern Bescheid, wenn du ein Angebot oder weitere Infos brauchst - dann meldet sich ein Kollege mit den Details. 😊`;
+    }
+    return null;
+}
+
 // Leitet eine Kundenanfrage an den Kollegen weiter und merkt sich die Zuordnung,
 // damit dessen Antwort spaeter an den richtigen Kunden zurueckgeht.
 async function forwardToColleague(lastMsg, senderNumber, combinedText) {
@@ -473,6 +595,56 @@ async function handleColleagueReply(msg) {
     });
     await msg.reply(`✅ An ${record.customerName || ('+' + record.customerNumber) || 'den Kunden'} weitergeleitet.`);
     console.log(`[KOLLEGEN-ANTWORT -> KUNDE ${record.customerNumber}]`);
+}
+
+// --- ERINNERUNG BEI LIEGENGEBLIEBENEN ANFRAGEN ---
+// Prueft regelmaessig, ob weitergeleitete Anfragen zu lange offen sind, und
+// erinnert dann einmalig den Kollegen + Mert (Selbst-Chat).
+async function checkOpenForwards() {
+    if (!COLLEAGUE_CHAT_ID) return;
+    try {
+        const cutoff = new Date(Date.now() - REMINDER_MINUTES * 60 * 1000);
+        // Nur nach Zeit sortieren (kein zusammengesetzter Index noetig), Status
+        // und remindedAt im Code filtern.
+        const snap = await db.collection('whatsappForwards')
+            .orderBy('createdAt', 'desc')
+            .limit(40)
+            .get();
+
+        // Eigene WhatsApp-ID (= Merts Nummer) fuer den "Mit dir selbst"-Chat.
+        const selfId = (client.info && client.info.wid && client.info.wid._serialized) || null;
+
+        for (const doc of snap.docs) {
+            const r = doc.data();
+            if (r.status !== 'open') continue; // schon beantwortet/erledigt
+            if (r.remindedAt) continue; // schon erinnert
+            const created = r.createdAt && r.createdAt.toDate ? r.createdAt.toDate() : null;
+            if (!created || created > cutoff) continue; // noch nicht alt genug
+
+            const wartetMin = Math.round((Date.now() - created.getTime()) / 60000);
+            const wer = r.customerName || ('+' + (r.customerNumber || '?'));
+            const kurz = (r.originalText || '').slice(0, 140);
+
+            // 1. Kollegen anstupsen.
+            try {
+                await client.sendMessage(COLLEAGUE_CHAT_ID,
+                    `⏰ *Erinnerung*: Die Anfrage von ${wer} wartet seit ${wartetMin} Min noch auf deine Antwort:\n\n"${kurz}"`);
+            } catch (e) { console.error('Erinnerung an Kollegen fehlgeschlagen:', e.message); }
+
+            // 2. Mert im Selbst-Chat informieren.
+            if (selfId) {
+                try {
+                    await client.sendMessage(selfId,
+                        `⏰ Offene Kundenanfrage seit ${wartetMin} Min ohne Antwort vom Kollegen:\n${wer}\n"${kurz}"`);
+                } catch (e) { console.error('Erinnerung an Selbst-Chat fehlgeschlagen:', e.message); }
+            }
+
+            await doc.ref.update({ remindedAt: admin.firestore.FieldValue.serverTimestamp() });
+            console.log(`[ERINNERUNG] Anfrage von ${wer} (${wartetMin} Min offen)`);
+        }
+    } catch (e) {
+        console.error('Erinnerungs-Pruefung fehlgeschlagen:', e.message);
+    }
 }
 
 client.initialize();

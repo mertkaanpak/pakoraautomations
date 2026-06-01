@@ -73,6 +73,12 @@
         }
         .admin-btn.done { background: #d1f4cc; border-color: rgba(0,128,105,.35); color:#0b3220; }
         .empty-state { text-align: center; color: var(--muted); font-size: 14px; margin-top: 40px; }
+        .section-title { font-size: 16px; font-weight: 700; color: #0b4b2f; margin: 8px 0 4px 0; }
+        .section-sub { margin: 0 0 14px 0; color: var(--muted); font-size: 12px; }
+        .badge { display:inline-block; font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; }
+        .badge.open { background:#fde8c8; color:#8a5a00; }
+        .badge.answered { background:#d1f4cc; color:#0b3220; }
+        .answer-box { background:#f0f7f3; border:1px solid rgba(0,128,105,.25); border-radius:10px; padding:8px 10px; font-size:13px; color:#0b3220; }
     </style>
     <link rel="stylesheet" href="app-theme.css?v=5">
 </head>
@@ -115,6 +121,13 @@
             </div>
             <a href="kommunikation.html" style="text-decoration: none; color: var(--accent); font-weight: 600;">Zum Team-Chat</a>
         </div>
+        <h2 class="section-title">An Kollegen weitergeleitet</h2>
+        <p class="section-sub">Lager-/Preis-/Angebotsanfragen, die an den Kollegen gegangen sind. Sobald er antwortet, wird der Status auf „Beantwortet" gesetzt.</p>
+        <section class="request-list" id="forwardList">
+            <div class="empty-state">Lade Weiterleitungen...</div>
+        </section>
+
+        <h2 class="section-title" style="margin-top:28px;">Alle WhatsApp-Anfragen</h2>
         <section class="request-list" id="requestList">
             <div class="empty-state">Lade Anfragen...</div>
         </section>
@@ -230,6 +243,59 @@
             });
         }
 
+        function renderForwards(forwards) {
+            const listEl = document.getElementById('forwardList');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+            if (!forwards.length) {
+                listEl.innerHTML = '<div class="empty-state">Keine weitergeleiteten Anfragen.</div>';
+                return;
+            }
+            forwards.forEach((f) => {
+                const card = document.createElement('div');
+                card.className = 'request-card';
+
+                const author = document.createElement('strong');
+                const num = f.customerNumber ? ('+' + f.customerNumber) : '-';
+                author.textContent = `${f.customerName || 'Kunde'} (${num})`;
+
+                const text = document.createElement('p');
+                text.textContent = f.originalText || '';
+
+                const meta = document.createElement('span');
+                const answered = f.status === 'answered';
+                const badge = answered ? '<span class="badge answered">Beantwortet</span>' : '<span class="badge open">Offen</span>';
+                meta.innerHTML = `${badge} &nbsp; ${formatTime(f.createdAt)}`;
+
+                card.appendChild(author);
+                card.appendChild(text);
+                card.appendChild(meta);
+
+                if (answered && f.answer) {
+                    const ans = document.createElement('div');
+                    ans.className = 'answer-box';
+                    ans.textContent = 'Antwort: ' + f.answer;
+                    card.appendChild(ans);
+                }
+                listEl.appendChild(card);
+            });
+        }
+
+        function listenWhatsappForwards() {
+            db.collection('whatsappForwards')
+                .orderBy('createdAt', 'desc')
+                .limit(100)
+                .onSnapshot((snapshot) => {
+                    const forwards = [];
+                    snapshot.forEach((doc) => forwards.push({ id: doc.id, ...doc.data() }));
+                    renderForwards(forwards);
+                }, (error) => {
+                    console.error('Fehler beim Laden der Weiterleitungen:', error);
+                    const listEl = document.getElementById('forwardList');
+                    if (listEl) listEl.innerHTML = '<div class="empty-state">Fehler beim Laden.</div>';
+                });
+        }
+
         function listenWhatsappRequests() {
             db.collection('whatsappRequests')
                 .orderBy('createdAt', 'desc')
@@ -247,6 +313,7 @@
                 });
         }
 
+        listenWhatsappForwards();
         listenWhatsappRequests();
     </script>
     <script>
