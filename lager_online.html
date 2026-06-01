@@ -9,6 +9,7 @@
     <script src="auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
     <style>
         /* --- DESIGN SYSTEM (IDENTISCH ZUR HAUPT-APP) --- */
@@ -616,9 +617,13 @@
         }
 
         async function inventoryPost(payload) {
+            const token = window.pakoraIdToken ? await window.pakoraIdToken() : "";
             const response = await fetch(INVENTORY_API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+                },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
@@ -766,22 +771,8 @@
     <script>
         (function () {
             const ACCOUNTS = window.PAKORA_ACCOUNTS;
-            const AUTH_KEY = window.PAKORA_AUTH_KEY;
-            const APP_VERSION = "20.0.1";
+            const APP_VERSION = "21.0.0";
             const VERSION_KEY = "pakora_app_version";
-
-            const storage = (() => {
-                try { localStorage.setItem("__probe__", "1"); localStorage.removeItem("__probe__"); return localStorage; }
-                catch (e) { return sessionStorage; }
-            })();
-            const readStored  = (k) => { try { return storage.getItem(k); } catch (e) { return null; } };
-            const writeStored = (k, v) => { try { storage.setItem(k, v); } catch (e) {} };
-            const removeStored = (k) => { try { storage.removeItem(k); } catch (e) {} };
-
-            if (readStored(VERSION_KEY) !== APP_VERSION) {
-                writeStored(VERSION_KEY, APP_VERSION);
-                removeStored(AUTH_KEY);
-            }
 
             const overlay     = document.getElementById("authOverlay");
             const form        = document.getElementById("authForm");
@@ -790,9 +781,7 @@
             const errorDiv    = document.getElementById("authError");
             const logoutBtn   = document.getElementById("logoutBtn");
             const welcomeName = document.getElementById("welcomeName");
-
-            const getStoredUser = () => (readStored(AUTH_KEY) || "").toLowerCase();
-            const isAuthed      = () => !!ACCOUNTS[getStoredUser()];
+            const submitBtn   = form ? form.querySelector("button[type=submit]") : null;
 
             function showAuth() {
                 overlay.hidden = false;
@@ -801,14 +790,12 @@
                 setTimeout(() => userInput.focus(), 50);
             }
 
-            function hideAuth() {
+            function hideAuth(userId) {
                 overlay.hidden = true;
                 if (logoutBtn) logoutBtn.hidden = false;
                 document.body.style.overflow = "";
                 if (window.pakoraApplyRoles) window.pakoraApplyRoles();
-                const userId = getStoredUser();
                 if (welcomeName) welcomeName.textContent = ACCOUNTS[userId]?.label || "Mitarbeiter";
-                // Avatar initialen setzen
                 const avatar = document.getElementById('userAvatar');
                 if (avatar) {
                     const label = ACCOUNTS[userId]?.label || 'M';
@@ -816,30 +803,40 @@
                 }
             }
 
-            if (!isAuthed()) {
-                showAuth();
-            } else {
-                hideAuth();
-            }
+            try {
+                if (localStorage.getItem(VERSION_KEY) !== APP_VERSION) {
+                    localStorage.setItem(VERSION_KEY, APP_VERSION);
+                    if (window.pakoraLogout) window.pakoraLogout();
+                }
+            } catch (e) {}
+
+            showAuth();
+            window.pakoraOnAuth((username) => {
+                if (username && ACCOUNTS[username]) {
+                    hideAuth(username);
+                } else {
+                    showAuth();
+                }
+            });
 
             form.addEventListener("submit", (e) => {
                 e.preventDefault();
                 errorDiv.textContent = "";
                 const userId = userInput.value.trim().toLowerCase();
-                if (ACCOUNTS[userId] && passInput.value === ACCOUNTS[userId].pass) {
-                    writeStored(AUTH_KEY, userId);
-                    hideAuth();
-                    return;
-                }
-                errorDiv.textContent = "Falsche Zugangsdaten.";
-                passInput.value = "";
-                passInput.focus();
+                if (submitBtn) submitBtn.disabled = true;
+                window.pakoraLogin(userId, passInput.value)
+                    .then(() => { passInput.value = ""; })
+                    .catch(() => {
+                        errorDiv.textContent = "Falsche Zugangsdaten.";
+                        passInput.value = "";
+                        passInput.focus();
+                    })
+                    .finally(() => { if (submitBtn) submitBtn.disabled = false; });
             });
 
             if (logoutBtn) {
                 logoutBtn.addEventListener("click", () => {
-                    removeStored(AUTH_KEY);
-                    showAuth();
+                    window.pakoraLogout();
                 });
             }
         })();

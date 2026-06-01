@@ -6,6 +6,8 @@
     <title>Pakora | Verdichter Recherche</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
@@ -802,9 +804,10 @@
         }
 
         async function fetchAiData(payload) {
+            const token = window.pakoraIdToken ? await window.pakoraIdToken() : "";
             const response = await fetch(AI_FUNCTION_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
@@ -1101,39 +1104,32 @@
     </div>\n
     <script>
         (function () {
-            const AUTH_KEY = "pakora_auth_user";
-            const LEGACY_AUTH_KEY = "pakora_chat_user";
-
             const overlay = document.getElementById("authOverlay");
             const logoutBtn = document.getElementById("logoutBtn");
+            const ACCOUNTS = window.PAKORA_ACCOUNTS || {};
 
-            const getStoredUser = () => (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
-            const getLegacyUser = () => (localStorage.getItem(LEGACY_AUTH_KEY) || '').toLowerCase();
-
-            const userId = getStoredUser() || getLegacyUser();
-            if (!userId) {
-                window.location.href = "index.html?redirect=verdichterrechereche.html";
-                return;
-            }
-
-            if (overlay) overlay.hidden = true;
             if (logoutBtn) {
-                logoutBtn.hidden = false;
                 logoutBtn.addEventListener("click", () => {
-                    localStorage.removeItem(AUTH_KEY);
-                    localStorage.removeItem(LEGACY_AUTH_KEY);
+                    if (window.pakoraLogout) window.pakoraLogout();
                     window.location.href = "index.html";
                 });
             }
-            // Avatar und Welcome-Name setzen
-            const ACCOUNTS = window.PAKORA_ACCOUNTS || {};
-            const avatar = document.getElementById('userAvatar');
-            if (avatar) {
-                const label = ACCOUNTS[userId]?.label || 'M';
-                avatar.textContent = label.charAt(0).toUpperCase();
-            }
-            const wn = document.getElementById('welcomeName');
-            if (wn) wn.textContent = ACCOUNTS[userId]?.label || 'Mitarbeiter';
+
+            window.pakoraOnAuth((username) => {
+                if (!username || !ACCOUNTS[username]) {
+                    window.location.href = "index.html?redirect=verdichterrechereche.html";
+                    return;
+                }
+                if (overlay) overlay.hidden = true;
+                if (logoutBtn) logoutBtn.hidden = false;
+                const avatar = document.getElementById('userAvatar');
+                if (avatar) {
+                    const label = ACCOUNTS[username]?.label || 'M';
+                    avatar.textContent = label.charAt(0).toUpperCase();
+                }
+                const wn = document.getElementById('welcomeName');
+                if (wn) wn.textContent = ACCOUNTS[username]?.label || 'Mitarbeiter';
+            });
         })();
     </script>
     <script>

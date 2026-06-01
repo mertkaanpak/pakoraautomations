@@ -21,6 +21,7 @@
   "dependencies": {
     "firebase-admin": "^13.6.0",
     "openai": "^6.15.0",
+    "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
     "whatsapp-web.js": "^1.34.1"
   }

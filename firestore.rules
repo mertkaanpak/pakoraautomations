@@ -2,33 +2,49 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Geschrieben nur von Cloud Functions (Admin SDK) ---
-    // Frontend hat KEINEN Schreibzugriff auf diese Collections
+    // Eingeloggt = angemeldeter Pakora-Mitarbeiter (Firebase Auth)
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // --- Nur von Cloud Functions (Admin SDK) beschreibbar ---
+    // Admin SDK umgeht diese Regeln, Frontend hat keinen Zugriff.
     match /pushLogs/{doc} {
       allow read, write: if false;
     }
+    match /whatsappMessageIds/{doc} {
+      allow read, write: if false;
+    }
 
-    // WhatsApp-Anfragen: nur lesbar vom Frontend (geschrieben via Webhook)
-    match /whatsappRequests/{doc} {
-      allow read: if true;
+    // WhatsApp-Konversationen: vom Webhook (Admin SDK) geschrieben,
+    // Frontend darf höchstens lesen.
+    match /whatsappConversations/{doc=**} {
+      allow read: if signedIn();
       allow write: if false;
     }
 
-    // --- Frontend-zugängliche Collections ---
+    // WhatsApp-Anfragen: vom Webhook geschrieben, Mitarbeiter dürfen
+    // lesen und den Status (erledigt) aktualisieren.
+    match /whatsappRequests/{doc} {
+      allow read, update: if signedIn();
+      allow create, delete: if false;
+    }
+
+    // --- Frontend-Collections: nur für eingeloggte Mitarbeiter ---
     match /messages/{doc} {
-      allow read, write: if true;
+      allow read, write: if signedIn();
     }
-
     match /importantNotes/{doc} {
-      allow read, write: if true;
+      allow read, write: if signedIn();
     }
-
     match /pushTokens/{doc} {
-      allow read, write: if true;
+      allow read, write: if signedIn();
     }
-
     match /whatsappBotSettings/{doc} {
-      allow read, write: if true;
+      allow read, write: if signedIn();
+    }
+    match /calendarEvents/{doc} {
+      allow read, write: if signedIn();
     }
 
     // --- Alles andere sperren ---

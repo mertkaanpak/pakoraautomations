@@ -7,6 +7,19 @@ admin.initializeApp({
   databaseURL: "https://pakora-automations-chat-default-rtdb.europe-west1.firebasedatabase.app"
 });
 
+// Prüft den Firebase-ID-Token aus dem Authorization-Header.
+// Gibt das dekodierte Token zurück oder null (nicht eingeloggt).
+async function verifyRequestAuth(req) {
+    const header = (req.get && req.get("Authorization")) || req.headers.authorization || "";
+    const match = String(header).match(/^Bearer\s+(.+)$/i);
+    if (!match) return null;
+    try {
+        return await admin.auth().verifyIdToken(match[1].trim());
+    } catch (err) {
+        return null;
+    }
+}
+
 function parseNumber(value) {
     if (typeof value === "number" && !Number.isNaN(value)) return value;
     const normalized = String(value || "")
@@ -75,6 +88,13 @@ exports.inventoryApi = functions.https.onRequest(async (req, res) => {
 
         if (req.method !== "POST") {
             res.status(405).json({ error: "Use GET, POST or OPTIONS." });
+            return;
+        }
+
+        // Schreibzugriffe nur für eingeloggte Mitarbeiter.
+        const decoded = await verifyRequestAuth(req);
+        if (!decoded) {
+            res.status(401).json({ error: "Nicht autorisiert. Bitte einloggen." });
             return;
         }
 
@@ -378,6 +398,13 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
 
   if (req.method !== "POST") {
     res.status(405).json({ error: "Use POST." });
+    return;
+  }
+
+  // Nur eingeloggte Mitarbeiter dürfen die (kostenpflichtige) KI-Suche nutzen.
+  const decoded = await verifyRequestAuth(req);
+  if (!decoded) {
+    res.status(401).json({ error: "Nicht autorisiert. Bitte einloggen." });
     return;
   }
 

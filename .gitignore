@@ -26,13 +26,17 @@ login-daten.txt
 firebase-adminsdk-*.json
 
 # --- WHATSAPP SITZUNG ---
-# Das hier speichert deinen Login. Nicht hochladen, 
+# Das hier speichert deinen Login. Nicht hochladen,
 # sonst loggt sich der Server ständig aus/ein.
 .wwebjs_auth/
 .wwebjs_cache/
+whatsapp-qr.png
 
 # --- LOKALE ENTWICKLUNGSKONFIGURATION ---
 functions/.runtimeconfig.json
+
+# --- ENTHÄLT PASSWÖRTER (nur lokal ausführen) ---
+functions/tools/seed-auth-users.js
 
 # --- ABHÄNGIGKEITEN (Konfliktvermeidung) ---
 package-lock.json

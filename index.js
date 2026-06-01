@@ -70,14 +70,17 @@ client.on('message', async msg => {
 
     try {
         // 3. KI Logik
+        // Bevorzugt den in der Oberflaeche (whatsapp_bot.html) gepflegten
+        // customPrompt. Faellt nur zurueck, wenn keiner gesetzt ist.
+        const customPrompt = (settings.customPrompt || "").trim();
         const style = settings.styleSamples || "Freundlich, kurz, professionell.";
 
-        const systemPrompt = `
+        const systemPrompt = customPrompt || `
       Du bist Mert (m.pak) von Pakora Automations.
       Antworte dem Kunden auf WhatsApp.
-      
+
       DEIN SPRACHSTIL: "${style}"
-      
+
       REGELN:
       1. Erkenne die Sprache (DE/EN/TR) und antworte in derselben Sprache.
       2. Wenn es um Angebote/Technik geht: "Wir kümmern uns und melden uns."
@@ -90,7 +93,7 @@ client.on('message', async msg => {
                 { role: "system", content: systemPrompt },
                 { role: "user", content: msg.body }
             ],
-            max_tokens: 150
+            max_tokens: 300
         });
 
         const replyText = gptResponse.choices[0].message.content;
@@ -120,3 +123,17 @@ client.on('message', async msg => {
 });
 
 client.initialize();
+
+// Sauberes Herunterfahren: schliesst Chromium, damit bei pm2 restart/stop
+// keine verwaisten Browser-Prozesse die WhatsApp-Session blockieren.
+let shuttingDown = false;
+async function gracefulShutdown() {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log('Bot wird beendet, schliesse WhatsApp-Client ...');
+    try { await client.destroy(); } catch (e) {}
+    process.exit(0);
+}
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
+process.on('message', (m) => { if (m === 'shutdown') gracefulShutdown(); });

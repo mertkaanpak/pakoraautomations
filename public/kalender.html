@@ -20,6 +20,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <style>
@@ -780,42 +781,42 @@
             });
         }
 
+        const submitBtn = form ? form.querySelector('button[type=submit]') : null;
+
         form.addEventListener('submit', (event) => {
             event.preventDefault();
             error.textContent = '';
             const user = userInput.value.trim().toLowerCase();
-            const pass = passInput.value.trim();
-            if (ACCOUNTS[user] && ACCOUNTS[user].pass === pass) {
-                localStorage.setItem(AUTH_KEY, user);
-                setCurrentUser(user);
-                hideAuth();
-                renderWeekdays();
-                eventDate.value = toDateKey(selectedDate);
-                listenEvents();
-                return;
-            }
-            error.textContent = 'Falsche Zugangsdaten.';
-            passInput.value = '';
-            passInput.focus();
+            if (submitBtn) submitBtn.disabled = true;
+            window.pakoraLogin(user, passInput.value.trim())
+                .then(() => { passInput.value = ''; })
+                .catch(() => {
+                    error.textContent = 'Falsche Zugangsdaten.';
+                    passInput.value = '';
+                    passInput.focus();
+                })
+                .finally(() => { if (submitBtn) submitBtn.disabled = false; });
         });
 
         if (logoutBtn) {
             logoutBtn.addEventListener('click', () => {
-                localStorage.removeItem(AUTH_KEY);
-                location.reload();
+                window.pakoraLogout();
             });
         }
 
-        const storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
-        if (storedUser && ACCOUNTS[storedUser]) {
-            setCurrentUser(storedUser);
-            hideAuth();
-            renderWeekdays();
-            eventDate.value = toDateKey(selectedDate);
-            listenEvents();
-        } else {
-            showAuth();
-        }
+        let eventsInitialized = false;
+        window.pakoraOnAuth((username) => {
+            if (username && ACCOUNTS[username]) {
+                setCurrentUser(username);
+                hideAuth();
+                renderWeekdays();
+                eventDate.value = toDateKey(selectedDate);
+                if (!eventsInitialized) { eventsInitialized = true; listenEvents(); }
+            } else {
+                setCurrentUser(null);
+                showAuth();
+            }
+        });
     </script>
     <script>
         (function () {

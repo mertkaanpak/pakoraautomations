@@ -2,6 +2,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
@@ -359,13 +360,6 @@
 <script>
     (function () {
         const ACCOUNTS = window.PAKORA_ACCOUNTS;
-        const AUTH_KEY = window.PAKORA_AUTH_KEY;
-        const storage = (() => { try { localStorage.setItem('__p__','1'); localStorage.removeItem('__p__'); return localStorage; } catch(e) { return sessionStorage; } })();
-        const readStored  = (k) => { try { return storage.getItem(k); } catch(e) { return null; } };
-        const writeStored = (k, v) => { try { storage.setItem(k, v); } catch(e) {} };
-        const removeStored = (k) => { try { storage.removeItem(k); } catch(e) {} };
-        const getStoredUser = () => (readStored(AUTH_KEY) || readStored('pakora_chat_user') || '').toLowerCase();
-        const isAuthed = () => !!ACCOUNTS[getStoredUser()];
 
         const overlay   = document.getElementById('authOverlay');
         const form      = document.getElementById('authForm');
@@ -373,9 +367,9 @@
         const passInput = document.getElementById('authPass');
         const errorDiv  = document.getElementById('authError');
         const logoutBtn = document.getElementById('logoutBtn');
+        const submitBtn = form ? form.querySelector('button[type=submit]') : null;
 
-        function updateUserDisplay() {
-            const userId = getStoredUser();
+        function updateUserDisplay(userId) {
             const label = ACCOUNTS[userId]?.label || 'Mitarbeiter';
             const wn = document.getElementById('welcomeName');
             if (wn) wn.textContent = label;
@@ -390,32 +384,40 @@
             setTimeout(() => userInput.focus(), 50);
         }
 
-        function hideAuth() {
+        function hideAuth(userId) {
             overlay.hidden = true;
             if (logoutBtn) logoutBtn.hidden = false;
             document.body.style.overflow = '';
-            updateUserDisplay();
+            updateUserDisplay(userId);
             if (window.pakoraApplyRoles) window.pakoraApplyRoles();
         }
 
-        if (!isAuthed()) { showAuth(); } else { hideAuth(); }
+        showAuth();
+        window.pakoraOnAuth((username) => {
+            if (username && ACCOUNTS[username]) {
+                hideAuth(username);
+            } else {
+                showAuth();
+            }
+        });
 
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             errorDiv.textContent = '';
             const userId = userInput.value.trim().toLowerCase();
-            if (ACCOUNTS[userId] && passInput.value === ACCOUNTS[userId].pass) {
-                writeStored(AUTH_KEY, userId);
-                hideAuth();
-                return;
-            }
-            errorDiv.textContent = 'Falsche Zugangsdaten.';
-            passInput.value = '';
-            passInput.focus();
+            if (submitBtn) submitBtn.disabled = true;
+            window.pakoraLogin(userId, passInput.value)
+                .then(() => { passInput.value = ''; })
+                .catch(() => {
+                    errorDiv.textContent = 'Falsche Zugangsdaten.';
+                    passInput.value = '';
+                    passInput.focus();
+                })
+                .finally(() => { if (submitBtn) submitBtn.disabled = false; });
         });
 
         if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => { removeStored(AUTH_KEY); showAuth(); });
+            logoutBtn.addEventListener('click', () => { window.pakoraLogout(); });
         }
     })();
 </script>

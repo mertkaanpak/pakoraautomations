@@ -16,6 +16,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <style>
     :root { --bg:#e9edf1; --panel:#fff; --text:#111b21; --muted:#667781; --accent:#008069; --border:#d1d7db; --shadow:0 10px 26px rgba(11,20,26,.12); }
@@ -227,23 +228,24 @@
       event.preventDefault();
       error.textContent = '';
       const user = userInput.value.trim().toLowerCase();
-      const pass = passInput.value;
-      if (ACCOUNTS[user] && ACCOUNTS[user].pass === pass) {
-        if (!isAdmin(user)) {
+      const submitBtn = form.querySelector('button[type=submit]');
+      if (submitBtn) submitBtn.disabled = true;
+      try {
+        const username = await window.pakoraLogin(user, passInput.value);
+        passInput.value = '';
+        if (!isAdmin(username)) {
             error.textContent = 'Diese Seite ist nur für Administratoren.';
-            passInput.value = '';
             setTimeout(() => window.location.replace('index.html'), 1500);
             return;
         }
-        localStorage.setItem(AUTH_KEY, user);
-        localStorage.removeItem(LEGACY_AUTH_KEY);
-        hideAuth();
-        loadSettings();
-        return;
+        // hideAuth/loadSettings übernimmt der pakoraOnAuth-Listener unten.
+      } catch (err) {
+        error.textContent = 'Falsche Zugangsdaten.';
+        passInput.value = '';
+        passInput.focus();
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
       }
-      error.textContent = 'Falsche Zugangsdaten.';
-      passInput.value = '';
-      passInput.focus();
     });
 
     saveBot.addEventListener('click', async () => {
@@ -253,24 +255,23 @@
       alert('Gespeichert.');
     });
 
-    (function bootstrap() {
-      let storedUser = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
-      if (!storedUser) {
-        storedUser = (localStorage.getItem(LEGACY_AUTH_KEY) || '').toLowerCase();
-        if (storedUser) { localStorage.setItem(AUTH_KEY, storedUser); localStorage.removeItem(LEGACY_AUTH_KEY); }
-      }
-      if (storedUser && ACCOUNTS[storedUser]) {
-        if (!isAdmin(storedUser)) {
-            // Kein Admin → zurück zur Startseite
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => { window.pakoraLogout(); });
+    }
+
+    let botSettingsLoaded = false;
+    window.pakoraOnAuth((username) => {
+      if (username && ACCOUNTS[username]) {
+        if (!isAdmin(username)) {
             window.location.replace('index.html');
             return;
         }
         hideAuth();
-        loadSettings();
+        if (!botSettingsLoaded) { botSettingsLoaded = true; loadSettings(); }
       } else {
         showAuth();
       }
-    })();
+    });
   </script>
     <script>
         (function () {

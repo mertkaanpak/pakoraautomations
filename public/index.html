@@ -23,6 +23,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
     <style>
         /* --- DESIGN SYSTEM --- */
@@ -1547,56 +1548,17 @@ const CURRENT_NEWS_VERSION = 1;
     <script>
         (function () {
     const ACCOUNTS = window.PAKORA_ACCOUNTS;
-    const AUTH_KEY = "pakora_auth_user";
-    const APP_VERSION = "20.0.1";
+    const APP_VERSION = "21.0.0";
     const VERSION_KEY = "pakora_app_version";
-    const storage = (() => {
-        try {
-            const probeKey = "__pakora_probe__";
-            localStorage.setItem(probeKey, "1");
-            localStorage.removeItem(probeKey);
-            return localStorage;
-        } catch (error) {
-            return sessionStorage;
-        }
-    })();
-    const readStored = (key) => {
-        try {
-            return storage.getItem(key);
-        } catch (error) {
-            return null;
-        }
-    };
-    const writeStored = (key, value) => {
-        try {
-            storage.setItem(key, value);
-        } catch (error) {
-            console.warn("Storage write failed:", error);
-        }
-    };
-    const removeStored = (key) => {
-        try {
-            storage.removeItem(key);
-        } catch (error) {
-            console.warn("Storage remove failed:", error);
-        }
-    };
 
-    const storedVersion = readStored(VERSION_KEY);
-    if (storedVersion !== APP_VERSION) {
-        writeStored(VERSION_KEY, APP_VERSION);
-        removeStored(AUTH_KEY);
-    }
-const overlay = document.getElementById("authOverlay");
+    const overlay = document.getElementById("authOverlay");
     const form = document.getElementById("authForm");
     const user = document.getElementById("authUser");
     const pass = document.getElementById("authPass");
     const error = document.getElementById("authError");
     const logoutBtn = document.getElementById("logoutBtn");
-    const welcomeName = document.getElementById("welcomeName");
+    const submitBtn = form ? form.querySelector("button[type=submit]") : null;
 
-    const getStoredUser = () => (readStored(AUTH_KEY) || "").toLowerCase();
-    const isAuthed = () => !!ACCOUNTS[getStoredUser()];
     const setWelcome = (userId) => {
         const label = ACCOUNTS[userId]?.label || "Mitarbeiter";
         const wn = document.getElementById("welcomeName");
@@ -1618,32 +1580,49 @@ const overlay = document.getElementById("authOverlay");
         if (window.pakoraApplyRoles) window.pakoraApplyRoles();
     };
 
-    if (!isAuthed()) {
-        showAuth();
-    } else {
-        setWelcome(getStoredUser());
-        hideAuth();
-    }
+    // Bei neuer App-Version einmalig abmelden (erzwingt frische Anmeldung).
+    try {
+        const storedVersion = localStorage.getItem(VERSION_KEY);
+        if (storedVersion !== APP_VERSION) {
+            localStorage.setItem(VERSION_KEY, APP_VERSION);
+            if (window.pakoraLogout) window.pakoraLogout();
+        }
+    } catch (e) {}
+
+    // Firebase steuert den Login-Status. Zuerst sperren, bis geklärt.
+    showAuth();
+    window.pakoraOnAuth((username) => {
+        if (username && ACCOUNTS[username]) {
+            setWelcome(username);
+            hideAuth();
+        } else {
+            showAuth();
+        }
+    });
 
     form.addEventListener("submit", (event) => {
         event.preventDefault();
         error.textContent = "";
         const userId = user.value.trim().toLowerCase();
-        if (ACCOUNTS[userId] && pass.value === ACCOUNTS[userId].pass) {
-            writeStored(AUTH_KEY, userId);
-            setWelcome(userId);
-            hideAuth();
-            return;
-        }
-        error.textContent = "Falsche Zugangsdaten.";
-        pass.value = "";
-        pass.focus();
+        if (submitBtn) submitBtn.disabled = true;
+        window.pakoraLogin(userId, pass.value)
+            .then(() => {
+                pass.value = "";
+            })
+            .catch((err) => {
+                console.warn("Login fehlgeschlagen:", err && err.code);
+                error.textContent = "Falsche Zugangsdaten.";
+                pass.value = "";
+                pass.focus();
+            })
+            .finally(() => {
+                if (submitBtn) submitBtn.disabled = false;
+            });
     });
 
     if (logoutBtn) {
         logoutBtn.addEventListener("click", () => {
-            removeStored(AUTH_KEY);
-            showAuth();
+            window.pakoraLogout();
         });
     }
 })();

@@ -6,6 +6,8 @@
     <title>Pakora | Zellen-Konfigurator</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="auth.js"></script>
 
     <style>
@@ -690,7 +692,6 @@
     </div>
     <script>
         (function () {
-            const AUTH_KEY = "pakora_auth_user";
             const ACCOUNTS = window.PAKORA_ACCOUNTS;
 
             const overlay = document.getElementById("authOverlay");
@@ -699,54 +700,53 @@
             const pass = document.getElementById("authPass");
             const error = document.getElementById("authError");
             const logoutBtn = document.getElementById("logoutBtn");
+            const submitBtn = form ? form.querySelector("button[type=submit]") : null;
 
-            const getStoredUser = () => (localStorage.getItem(AUTH_KEY) || "").toLowerCase();
-            const isAuthed = () => !!ACCOUNTS[getStoredUser()];
             const showAuth = () => {
                 overlay.hidden = false;
                 if (logoutBtn) logoutBtn.hidden = true;
                 document.body.style.overflow = "hidden";
                 setTimeout(() => user.focus(), 50);
             };
-            const hideAuth = () => {
+            const hideAuth = (userId) => {
                 overlay.hidden = true;
                 if (logoutBtn) logoutBtn.hidden = false;
                 document.body.style.overflow = "";
-                // Avatar initialen setzen
                 const avatar = document.getElementById('userAvatar');
                 if (avatar) {
-                    const label = ACCOUNTS[getStoredUser()]?.label || 'M';
+                    const label = ACCOUNTS[userId]?.label || 'M';
                     avatar.textContent = label.charAt(0).toUpperCase();
                 }
                 const wn = document.getElementById('welcomeName');
-                if (wn) wn.textContent = ACCOUNTS[getStoredUser()]?.label || 'Mitarbeiter';
+                if (wn) wn.textContent = ACCOUNTS[userId]?.label || 'Mitarbeiter';
             };
 
-            if (!isAuthed()) {
-                showAuth();
-            }
+            showAuth();
+            window.pakoraOnAuth((username) => {
+                if (username && ACCOUNTS[username]) {
+                    hideAuth(username);
+                } else {
+                    showAuth();
+                }
+            });
 
             form.addEventListener("submit", (event) => {
                 event.preventDefault();
                 error.textContent = "";
                 const userId = user.value.trim().toLowerCase();
-
-                const password = pass.value.trim();
-
-                if (ACCOUNTS[userId] && password === ACCOUNTS[userId].pass) {
-                    localStorage.setItem(AUTH_KEY, userId);
-                    hideAuth();
-                    return;
-                }
-
-                error.textContent = "Falsche Zugangsdaten.";
-                pass.value = "";
-                pass.focus();
+                if (submitBtn) submitBtn.disabled = true;
+                window.pakoraLogin(userId, pass.value.trim())
+                    .then(() => { pass.value = ""; })
+                    .catch(() => {
+                        error.textContent = "Falsche Zugangsdaten.";
+                        pass.value = "";
+                        pass.focus();
+                    })
+                    .finally(() => { if (submitBtn) submitBtn.disabled = false; });
             });
             if (logoutBtn) {
                 logoutBtn.addEventListener("click", () => {
-                    localStorage.removeItem(AUTH_KEY);
-                    location.reload();
+                    window.pakoraLogout();
                 });
             }
         })();
