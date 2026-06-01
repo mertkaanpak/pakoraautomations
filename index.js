@@ -54,6 +54,11 @@ client.on('ready', () => {
     if (reminderTimer) clearInterval(reminderTimer);
     setTimeout(() => { checkOpenForwards().catch(() => {}); }, 30 * 1000);
     reminderTimer = setInterval(() => { checkOpenForwards().catch(() => {}); }, REMINDER_SCAN_MS);
+
+    // Heartbeat starten (sofort + regelmaessig).
+    writeHeartbeat();
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    heartbeatTimer = setInterval(writeHeartbeat, HEARTBEAT_MS);
 });
 
 // --- HAUPTLOGIK ---
@@ -647,7 +652,45 @@ async function checkOpenForwards() {
     }
 }
 
+// Entfernt verwaiste Chromium-Sperrdateien aus der WhatsApp-Session. Diese
+// bleiben liegen, wenn der Browser bei einem Neustart nicht sauber beendet
+// wurde, und fuehren sonst zum Fehler "browser is already running".
+function cleanupChromeLocks() {
+    const sessionDir = path.join(__dirname, '.wwebjs_auth', 'session');
+    const lockFiles = ['SingletonLock', 'SingletonCookie', 'SingletonSocket', 'DevToolsActivePort'];
+    for (const f of lockFiles) {
+        const p = path.join(sessionDir, f);
+        try {
+            if (fs.existsSync(p)) {
+                fs.rmSync(p, { force: true, recursive: true });
+                console.log(`Verwaiste Sperrdatei entfernt: ${f}`);
+            }
+        } catch (e) {
+            console.error(`Konnte Sperrdatei ${f} nicht entfernen:`, e.message);
+        }
+    }
+}
+
+cleanupChromeLocks();
 client.initialize();
+
+// --- HEARTBEAT (Lebenszeichen) ---
+// Der Bot schreibt regelmaessig einen Zeitstempel nach Firestore. Eine geplante
+// Cloud Function prueft diesen und schlaegt Alarm (Push), wenn er veraltet ist.
+const HEARTBEAT_MS = 2 * 60 * 1000; // alle 2 Minuten
+let heartbeatTimer = null;
+async function writeHeartbeat() {
+    try {
+        await db.collection('systemStatus').doc('whatsappBot').set({
+            lastHeartbeat: admin.firestore.FieldValue.serverTimestamp(),
+            online: true,
+            host: os.hostname(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+    } catch (e) {
+        console.error('Heartbeat-Schreiben fehlgeschlagen:', e.message);
+    }
+}
 
 // Sauberes Herunterfahren: schliesst Chromium, damit bei pm2 restart/stop
 // keine verwaisten Browser-Prozesse die WhatsApp-Session blockieren.

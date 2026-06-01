@@ -1183,3 +1183,86 @@ exports.whatsappWebhook = functions.https.onRequest(async (req, res) => {
   }
 });
 
+// --- WATCHDOG: Ausfall-Alarm fuer den WhatsApp-Bot ---
+// Schickt eine Push-Benachrichtigung an alle registrierten Geraete.
+async function pushToAllDevices(title, body, link) {
+  const tokensSnap = await admin.firestore().collection("pushTokens").get();
+  const tokens = [];
+  tokensSnap.forEach((doc) => { if (doc.id) tokens.push(doc.id); });
+  if (!tokens.length) return { successCount: 0, failureCount: 0, tokensCount: 0 };
+
+  const response = await admin.messaging().sendEachForMulticast({
+    tokens,
+    notification: { title, body },
+    webpush: {
+      fcmOptions: { link: link || "https://pakora-automations-chat.web.app/index.html" }
+    }
+  });
+
+  // Tote Tokens aufraeumen.
+  const deletes = [];
+  response.responses.forEach((resp, idx) => {
+    if (!resp.success && resp.error) {
+      const code = resp.error.code;
+      if (code === "messaging/registration-token-not-registered" ||
+          code === "messaging/invalid-registration-token") {
+        deletes.push(admin.firestore().collection("pushTokens").doc(tokens[idx]).delete());
+      }
+    }
+  });
+  await Promise.all(deletes);
+  return { successCount: response.successCount, failureCount: response.failureCount, tokensCount: tokens.length };
+}
+
+// Laeuft alle 5 Minuten und prueft den Heartbeat des Bots. Ist er aelter als
+// STALE_MINUTES, gilt der Bot als offline -> einmalig Alarm. Kommt er zurueck,
+// einmalig Entwarnung.
+const BOT_STALE_MINUTES = 10;
+exports.watchdogBotHeartbeat = functions.pubsub
+  .schedule("every 5 minutes")
+  .timeZone("Europe/Berlin")
+  .onRun(async () => {
+    const ref = admin.firestore().collection("systemStatus").doc("whatsappBot");
+    const snap = await ref.get();
+    const data = snap.exists ? (snap.data() || {}) : {};
+
+    const lastBeat = data.lastHeartbeat && data.lastHeartbeat.toMillis ? data.lastHeartbeat.toMillis() : 0;
+    const ageMin = lastBeat ? Math.round((Date.now() - lastBeat) / 60000) : Infinity;
+    const isStale = ageMin > BOT_STALE_MINUTES;
+    const alreadyAlerted = data.alerted === true;
+
+    if (isStale && !alreadyAlerted) {
+      const res = await pushToAllDevices(
+        "⚠️ WhatsApp-Bot offline",
+        lastBeat
+          ? `Kein Lebenszeichen seit ${ageMin} Min. Bitte PC/Bot pruefen.`
+          : "Kein Lebenszeichen vom Bot. Bitte PC/Bot pruefen.",
+        "https://pakora-automations-chat.web.app/index.html"
+      );
+      await ref.set({
+        online: false,
+        alerted: true,
+        lastAlertAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      await admin.firestore().collection("pushLogs").add({
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        note: "watchdog: bot offline alert",
+        ageMin: ageMin === Infinity ? null : ageMin,
+        ...res
+      });
+    } else if (!isStale && alreadyAlerted) {
+      const res = await pushToAllDevices(
+        "✅ WhatsApp-Bot wieder online",
+        "Der Bot sendet wieder Lebenszeichen.",
+        "https://pakora-automations-chat.web.app/index.html"
+      );
+      await ref.set({ online: true, alerted: false }, { merge: true });
+      await admin.firestore().collection("pushLogs").add({
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        note: "watchdog: bot recovered",
+        ...res
+      });
+    }
+    return null;
+  });
+

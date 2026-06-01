@@ -37,6 +37,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Systemstatus (z.B. Bot-Heartbeat): vom Bot/Watchdog (Admin SDK) geschrieben,
+    // Mitarbeiter dürfen nur lesen.
+    match /systemStatus/{doc} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // --- Frontend-Collections: nur für eingeloggte Mitarbeiter ---
     match /messages/{doc} {
       allow read, write: if signedIn();
