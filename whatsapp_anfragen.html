@@ -79,6 +79,10 @@
         .badge.open { background:#fde8c8; color:#8a5a00; }
         .badge.answered { background:#d1f4cc; color:#0b3220; }
         .answer-box { background:#f0f7f3; border:1px solid rgba(0,128,105,.25); border-radius:10px; padding:8px 10px; font-size:13px; color:#0b3220; }
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin-bottom:24px; }
+        .stat-card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:var(--shadow); text-align:center; }
+        .stat-num { font-size:26px; font-weight:800; color:#0b4b2f; line-height:1.1; }
+        .stat-label { font-size:12px; color:var(--muted); margin-top:4px; }
     </style>
     <link rel="stylesheet" href="app-theme.css?v=5">
 </head>
@@ -121,6 +125,15 @@
             </div>
             <a href="kommunikation.html" style="text-decoration: none; color: var(--accent); font-weight: 600;">Zum Team-Chat</a>
         </div>
+        <section class="stats-grid" id="statsGrid">
+            <div class="stat-card"><div class="stat-num" id="statToday">–</div><div class="stat-label">Anfragen heute</div></div>
+            <div class="stat-card"><div class="stat-num" id="statWeek">–</div><div class="stat-label">Diese Woche</div></div>
+            <div class="stat-card"><div class="stat-num" id="statBot">–</div><div class="stat-label">Vom Bot beantwortet</div></div>
+            <div class="stat-card"><div class="stat-num" id="statForwarded">–</div><div class="stat-label">An Kollegen</div></div>
+            <div class="stat-card"><div class="stat-num" id="statOpen">–</div><div class="stat-label">Davon offen</div></div>
+            <div class="stat-card"><div class="stat-num" id="statResp">–</div><div class="stat-label">Ø Reaktionszeit Kollege</div></div>
+        </section>
+
         <h2 class="section-title">An Kollegen weitergeleitet</h2>
         <p class="section-sub">Lager-/Preis-/Angebotsanfragen, die an den Kollegen gegangen sind. Sobald er antwortet, wird der Status auf „Beantwortet" gesetzt.</p>
         <section class="request-list" id="forwardList">
@@ -243,6 +256,55 @@
             });
         }
 
+        let latestRequests = [];
+        let latestForwards = [];
+
+        function toDateSafe(ts) {
+            if (!ts) return null;
+            try { return ts.toDate ? ts.toDate() : new Date(ts); } catch (e) { return null; }
+        }
+
+        function renderStats() {
+            const now = new Date();
+            const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const startWeek = new Date(startToday.getTime() - 6 * 24 * 60 * 60 * 1000);
+
+            let today = 0, week = 0, bot = 0;
+            latestRequests.forEach((r) => {
+                const d = toDateSafe(r.createdAt);
+                if (!d) return;
+                if (d >= startToday) today++;
+                if (d >= startWeek) week++;
+                if (r.autoReplied) bot++;
+            });
+
+            const forwarded = latestForwards.length;
+            const open = latestForwards.filter((f) => f.status === 'open').length;
+
+            // Durchschnittliche Reaktionszeit (answeredAt - createdAt) der beantworteten.
+            let sumMin = 0, cnt = 0;
+            latestForwards.forEach((f) => {
+                if (f.status !== 'answered') return;
+                const c = toDateSafe(f.createdAt), a = toDateSafe(f.answeredAt);
+                if (!c || !a) return;
+                sumMin += (a.getTime() - c.getTime()) / 60000;
+                cnt++;
+            });
+            let respText = '–';
+            if (cnt > 0) {
+                const avg = Math.round(sumMin / cnt);
+                respText = avg >= 60 ? `${Math.round(avg / 60 * 10) / 10} h` : `${avg} min`;
+            }
+
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            set('statToday', today);
+            set('statWeek', week);
+            set('statBot', bot);
+            set('statForwarded', forwarded);
+            set('statOpen', open);
+            set('statResp', respText);
+        }
+
         function renderForwards(forwards) {
             const listEl = document.getElementById('forwardList');
             if (!listEl) return;
@@ -288,7 +350,9 @@
                 .onSnapshot((snapshot) => {
                     const forwards = [];
                     snapshot.forEach((doc) => forwards.push({ id: doc.id, ...doc.data() }));
+                    latestForwards = forwards;
                     renderForwards(forwards);
+                    renderStats();
                 }, (error) => {
                     console.error('Fehler beim Laden der Weiterleitungen:', error);
                     const listEl = document.getElementById('forwardList');
@@ -305,7 +369,9 @@
                     snapshot.forEach((doc) => {
                         requests.push({ id: doc.id, ...doc.data() });
                     });
+                    latestRequests = requests;
                     renderRequests(requests);
+                    renderStats();
                 }, (error) => {
                     console.error('Fehler beim Laden der WhatsApp-Anfragen:', error);
                     const listEl = document.getElementById('requestList');
