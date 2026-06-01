@@ -63,9 +63,26 @@ const HANDOVER_KEYWORDS = [
     'speak to a human', 'talk to a human'
 ];
 
+// Kollege, an den konkrete Lager-/Preis-/Angebotsanfragen weitergeleitet werden.
+// Nummer steht in config.json (NICHT im oeffentlichen Repo). Seine Antwort
+// (am besten per "Antworten"/Zitieren) schickt der Bot an den Kunden zurueck.
+const COLLEAGUE_NUMBER = String(config.colleagueNumber || '').replace(/\D/g, '');
+const COLLEAGUE_CHAT_ID = COLLEAGUE_NUMBER ? COLLEAGUE_NUMBER + '@c.us' : null;
+if (!COLLEAGUE_CHAT_ID) {
+    console.warn('WARNUNG: Keine colleagueNumber in config.json - Weiterleitung an Kollegen ist deaktiviert.');
+}
+
 client.on('message', async msg => {
     // Filter: keine eigenen Nachrichten, keine Status-Updates.
     if (msg.fromMe || msg.isStatus) return;
+
+    // Antwort des Kollegen -> direkt an den passenden Kunden weiterleiten
+    // (laeuft NICHT durch die normale Kunden-/KI-Logik).
+    if (msg.from === COLLEAGUE_CHAT_ID) {
+        handleColleagueReply(msg).catch(e => console.error('Kollegen-Antwort fehlgeschlagen:', e.message));
+        return;
+    }
+
     // Nur unterstuetzte Typen: Text, Sprachnachricht, Bild.
     if (!['chat', 'ptt', 'audio', 'image'].includes(msg.type)) return;
 
@@ -146,6 +163,13 @@ async function handleBatch(chatId) {
         const lower = combinedText.toLowerCase();
         if (combinedText && HANDOVER_KEYWORDS.some(w => lower.includes(w))) {
             await markForHuman(lastMsg, senderNumber, combinedText);
+            return;
+        }
+
+        // 4b. Konkrete Lager-/Preis-/Angebotsanfrage? -> an Kollegen weiterleiten,
+        //     statt selbst zu antworten. Allgemeine Fragen beantwortet der Bot weiter.
+        if (COLLEAGUE_CHAT_ID && combinedText && await isForwardInquiry(combinedText)) {
+            await forwardToColleague(lastMsg, senderNumber, combinedText);
             return;
         }
 
@@ -310,6 +334,116 @@ async function markForHuman(lastMsg, senderNumber, combinedText) {
     } catch (e) {
         console.error('Uebergabe fehlgeschlagen:', e.message);
     }
+}
+
+// Entscheidet, ob eine Kundennachricht eine konkrete LAGER-/VERFUEGBARKEITS-
+// oder PREIS-/ANGEBOTS-Anfrage ist (-> an Kollegen weiterleiten).
+async function isForwardInquiry(text) {
+    if (!text || !text.trim()) return false;
+    try {
+        const r = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            temperature: 0,
+            max_tokens: 3,
+            messages: [
+                {
+                    role: 'system',
+                    content: `Du klassifizierst WhatsApp-Kundennachrichten einer Kaeltetechnik-Firma. Antworte NUR mit "JA" oder "NEIN".
+"JA" = konkrete LAGER-/VERFUEGBARKEITS-Anfrage (z.B. "Habt ihr X auf Lager?", "Ist Y verfuegbar?", "Bekomme ich Z?") ODER PREIS-/ANGEBOTS-Anfrage (Preis, Kosten, Angebot, Kostenvoranschlag, "was kostet ...").
+"NEIN" = allgemeine Beratungs-/Kaeltetechnik-Fragen, Smalltalk, Begruessungen oder sonstiges ohne konkrete Verfuegbarkeits-/Preisanfrage.`
+                },
+                { role: 'user', content: text }
+            ]
+        });
+        const ans = (r.choices[0].message.content || '').trim().toUpperCase();
+        return ans.startsWith('JA') || ans.startsWith('YES');
+    } catch (e) {
+        console.error('Klassifizierung fehlgeschlagen:', e.message);
+        return false; // im Zweifel normal vom Bot beantworten lassen
+    }
+}
+
+// Leitet eine Kundenanfrage an den Kollegen weiter und merkt sich die Zuordnung,
+// damit dessen Antwort spaeter an den richtigen Kunden zurueckgeht.
+async function forwardToColleague(lastMsg, senderNumber, combinedText) {
+    const contact = await lastMsg.getContact();
+    const senderName = contact.pushname || contact.name || '';
+    const fwdText = `📩 *Neue Anfrage* von ${senderName || 'Kunde'} (+${senderNumber}):\n\n"${combinedText}"\n\n↩️ Tippe auf *Antworten* und schreib zurueck – ich leite deine Antwort direkt an den Kunden weiter.`;
+    const sent = await client.sendMessage(COLLEAGUE_CHAT_ID, fwdText);
+
+    await db.collection('whatsappForwards').add({
+        forwardedMsgId: sent.id._serialized,
+        customerChatId: lastMsg.from,
+        customerName: senderName,
+        customerNumber: senderNumber,
+        originalText: combinedText,
+        status: 'open',
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Kurze Zwischennachricht an den Kunden.
+    await lastMsg.reply('Einen Moment, ich kläre das kurz für dich und melde mich gleich. 🙏');
+
+    // Protokoll wie bei den uebrigen Anfragen.
+    await db.collection('whatsappRequests').add({
+        phone: '+' + senderNumber,
+        name: senderName,
+        message: combinedText,
+        reply: '[An Kollegen weitergeleitet]',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        status: 'open',
+        forwardedToColleague: true,
+        autoReplied: false
+    });
+    console.log(`[WEITERGELEITET AN KOLLEGEN] Kunde ${senderNumber}`);
+}
+
+// Antwort des Kollegen dem passenden Kunden zustellen. Zuordnung bevorzugt per
+// "Antworten"/Zitieren der weitergeleiteten Nachricht, sonst ueber die zuletzt
+// offene Anfrage.
+async function handleColleagueReply(msg) {
+    const text = (msg.body || '').trim();
+    if (!text) {
+        await msg.reply('Bitte als *Text* antworten – ich kann nur Textantworten an den Kunden weiterleiten.');
+        return;
+    }
+
+    let recordId = null;
+    let record = null;
+
+    // 1. Bevorzugt: Kollege hat die weitergeleitete Nachricht zitiert/beantwortet.
+    if (msg.hasQuotedMsg) {
+        try {
+            const quoted = await msg.getQuotedMessage();
+            const snap = await db.collection('whatsappForwards')
+                .where('forwardedMsgId', '==', quoted.id._serialized).limit(1).get();
+            if (!snap.empty) { recordId = snap.docs[0].id; record = snap.docs[0].data(); }
+        } catch (e) {
+            console.error('Zitat-Zuordnung fehlgeschlagen:', e.message);
+        }
+    }
+
+    // 2. Fallback: zuletzt offene Anfrage (wenn der Kollege normal zurueckschreibt).
+    if (!record) {
+        const snap = await db.collection('whatsappForwards')
+            .orderBy('createdAt', 'desc').limit(10).get();
+        const openDoc = snap.docs.find(d => d.data().status === 'open');
+        if (openDoc) { recordId = openDoc.id; record = openDoc.data(); }
+    }
+
+    if (!record) {
+        await msg.reply('Ich konnte die Antwort keinem offenen Kundengespraech zuordnen. Bitte direkt auf die weitergeleitete Nachricht tippen und *Antworten* waehlen.');
+        return;
+    }
+
+    await client.sendMessage(record.customerChatId, text);
+    await db.collection('whatsappForwards').doc(recordId).update({
+        status: 'answered',
+        answer: text,
+        answeredAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    await msg.reply(`✅ An ${record.customerName || ('+' + record.customerNumber) || 'den Kunden'} weitergeleitet.`);
+    console.log(`[KOLLEGEN-ANTWORT -> KUNDE ${record.customerNumber}]`);
 }
 
 client.initialize();
