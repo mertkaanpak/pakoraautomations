@@ -713,7 +713,9 @@
                             <div class="totals-area">
                                 <div class="total-row"><span>Zwischensumme (Netto)</span><span id="subTotal">0,00 €</span></div>
                                 <div class="total-row" style="color:#f87171"><span>Rabatt (<span id="dispDisc">0</span>%)</span><span id="discAmount">-0,00 €</span></div>
-                                <div class="total-row total-final"><span>GESAMTBETRAG</span><span id="finalTotal">0,00 €</span></div>
+                                <div class="total-row"><span>Netto nach Rabatt</span><span id="netTotal">0,00 €</span></div>
+                                <div class="total-row"><span>zzgl. 19% MwSt</span><span id="vatAmount">0,00 €</span></div>
+                                <div class="total-row total-final"><span>GESAMTBETRAG (Brutto)</span><span id="finalTotal">0,00 €</span></div>
                             </div>
                             <button class="btn btn-offer" onclick="generatePDF()" style="margin-top:20px;">📄 PDF Erstellen</button>
                         </div>
@@ -1194,16 +1196,25 @@
             updateTotals();
         }
 
+        const VAT_RATE = 0.19;
         function updateTotals() {
             const discPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
             const discAmount = currentOffer.subTotal * (discPercent / 100);
-            const final = currentOffer.subTotal - discAmount;
+            const net = currentOffer.subTotal - discAmount;
+            const vat = net * VAT_RATE;
+            const gross = net + vat;
             currentOffer.discount = discAmount;
-            currentOffer.total = final;
-            document.getElementById('subTotal').innerText = currentOffer.subTotal.toFixed(2) + " €";
+            currentOffer.discPercent = discPercent;
+            currentOffer.total = net;   // Netto nach Rabatt
+            currentOffer.vat = vat;
+            currentOffer.gross = gross;
+            const fmt = (n) => n.toFixed(2) + " €";
+            document.getElementById('subTotal').innerText = fmt(currentOffer.subTotal);
             document.getElementById('dispDisc').innerText = discPercent;
-            document.getElementById('discAmount').innerText = "-" + discAmount.toFixed(2) + " €";
-            document.getElementById('finalTotal').innerText = final.toFixed(2) + " €";
+            document.getElementById('discAmount').innerText = "-" + fmt(discAmount);
+            const netEl = document.getElementById('netTotal'); if (netEl) netEl.innerText = fmt(net);
+            const vatEl = document.getElementById('vatAmount'); if (vatEl) vatEl.innerText = fmt(vat);
+            document.getElementById('finalTotal').innerText = fmt(gross);
         }
 
         function resetOffer() {
@@ -1323,27 +1334,112 @@
             renderOfferTable();
         }
 
-       function generatePDF() {
+        // Firmendaten fuer den Briefkopf / die Fusszeile des Angebots.
+        const PAKORA_FIRMA = {
+            name: 'Pakora GmbH',
+            strasse: 'Langemarckstraße 37a',
+            ort: '45141 Essen',
+            email: 'm.pak@pakorakaelte.de',
+            telefon: '',
+            ustId: ''
+        };
+
+        function offerNumber() {
+            const d = new Date();
+            const p = (n) => String(n).padStart(2, '0');
+            return `AN-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+        }
+
+        function generatePDF() {
+            updateTotals(); // sicherstellen, dass currentOffer aktuell ist
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            const client = document.getElementById('clientName').value || "Kunde";
-            const logoImg = document.querySelector('.logo img');
-            
-            doc.text(`Angebot für: ${client}`, 15, 20);
+            const pageW = doc.internal.pageSize.getWidth();
+            const marginL = 15, marginR = pageW - 15;
+            const client = (document.getElementById('clientName').value || 'Kunde').trim();
+            const fmt = (n) => (Number(n) || 0).toFixed(2).replace('.', ',') + ' €';
+            const today = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const angNr = offerNumber();
 
+            // --- Briefkopf: Logo + Firmendaten ---
+            let headerBottom = 20;
+            try {
+                const logoImg = document.querySelector('.logo img');
+                if (logoImg && logoImg.complete && logoImg.naturalWidth) {
+                    const w = 38;
+                    const h = w * (logoImg.naturalHeight / logoImg.naturalWidth);
+                    doc.addImage(logoImg, 'PNG', marginL, 12, w, h);
+                    headerBottom = Math.max(headerBottom, 12 + h);
+                }
+            } catch (e) { /* Logo optional */ }
+
+            doc.setFontSize(10); doc.setTextColor(60);
+            const firmaLines = [PAKORA_FIRMA.name, PAKORA_FIRMA.strasse, PAKORA_FIRMA.ort, PAKORA_FIRMA.email];
+            if (PAKORA_FIRMA.telefon) firmaLines.push('Tel: ' + PAKORA_FIRMA.telefon);
+            let fy = 16;
+            firmaLines.forEach((ln) => { doc.text(ln, marginR, fy, { align: 'right' }); fy += 5; });
+            headerBottom = Math.max(headerBottom, fy);
+
+            // --- Titel + Meta ---
+            let y = headerBottom + 12;
+            doc.setFontSize(18); doc.setTextColor(20); doc.setFont(undefined, 'bold');
+            doc.text('Angebot', marginL, y);
+            doc.setFont(undefined, 'normal'); doc.setFontSize(10); doc.setTextColor(90);
+            doc.text(`Angebots-Nr.: ${angNr}`, marginR, y - 5, { align: 'right' });
+            doc.text(`Datum: ${today}`, marginR, y, { align: 'right' });
+
+            // --- Kundenblock ---
+            y += 10;
+            doc.setFontSize(10); doc.setTextColor(120);
+            doc.text('Für:', marginL, y);
+            doc.setFontSize(12); doc.setTextColor(20); doc.setFont(undefined, 'bold');
+            doc.text(client, marginL, y + 6);
+            doc.setFont(undefined, 'normal');
+
+            // --- Positionstabelle ---
             doc.autoTable({
-                startY: 30,
-                head: [['Typ', 'Beschreibung', 'Preis']],
-                body: currentOffer.items.map(i => [i.type, i.name, i.price.toFixed(2) + " €"]),
-                foot: [
-                    ['', 'Zwischensumme', `${currentOffer.subTotal.toFixed(2)} €`],
-                    ['', `Rabatt (${document.getElementById('discountPercent').value}%)`, `-${currentOffer.discount.toFixed(2)} €`],
-                    ['', 'Gesamtsumme', `${currentOffer.total.toFixed(2)} €`],
-                ],
-                theme: 'grid'
+                startY: y + 14,
+                head: [['Komponente', 'Artikel', 'Preis (Netto)']],
+                body: currentOffer.items.map(i => [i.type, i.name, fmt(i.price)]),
+                theme: 'striped',
+                headStyles: { fillColor: [37, 99, 235], textColor: 255 },
+                columnStyles: { 2: { halign: 'right' } },
+                styles: { fontSize: 10, cellPadding: 3 },
+                margin: { left: marginL, right: 15 }
             });
 
-            doc.save(`Angebot_${client}.pdf`);
+            // --- Summen ---
+            let sy = doc.lastAutoTable.finalY + 8;
+            const labelX = marginR - 60, valX = marginR;
+            const sumRow = (label, val, bold) => {
+                doc.setFont(undefined, bold ? 'bold' : 'normal');
+                doc.setFontSize(bold ? 12 : 10);
+                doc.setTextColor(bold ? 20 : 80);
+                doc.text(label, labelX, sy);
+                doc.text(val, valX, sy, { align: 'right' });
+                sy += bold ? 8 : 6;
+            };
+            sumRow('Zwischensumme (Netto)', fmt(currentOffer.subTotal));
+            if (currentOffer.discount > 0) sumRow(`Rabatt (${currentOffer.discPercent || 0}%)`, '-' + fmt(currentOffer.discount));
+            sumRow('Netto nach Rabatt', fmt(currentOffer.total));
+            sumRow('zzgl. 19% MwSt', fmt(currentOffer.vat));
+            doc.setDrawColor(200); doc.line(labelX, sy - 2, valX, sy - 2);
+            sumRow('Gesamtbetrag (Brutto)', fmt(currentOffer.gross), true);
+
+            // --- Fusszeile mit Hinweisen ---
+            const pageH = doc.internal.pageSize.getHeight();
+            let fyy = Math.max(sy + 14, pageH - 38);
+            doc.setDrawColor(220); doc.line(marginL, fyy - 6, marginR, fyy - 6);
+            doc.setFontSize(8); doc.setTextColor(120); doc.setFont(undefined, 'normal');
+            const footer = [
+                'Dieses Angebot ist 14 Tage gültig. Zahlung: 14 Tage netto, sofern nicht anders vereinbart.',
+                'Preise zzgl. gesetzlicher MwSt. Lieferung und Montage nach Absprache.',
+                `${PAKORA_FIRMA.name} · ${PAKORA_FIRMA.strasse} · ${PAKORA_FIRMA.ort} · ${PAKORA_FIRMA.email}`
+            ];
+            footer.forEach((ln) => { doc.text(ln, marginL, fyy); fyy += 5; });
+
+            const safeClient = client.replace(/[^a-z0-9äöüß _-]/gi, '').trim() || 'Kunde';
+            doc.save(`Angebot_${safeClient}_${angNr}.pdf`);
         }
 
         const DB_CAT_LABELS = {
