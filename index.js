@@ -2,6 +2,9 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const admin = require('firebase-admin');
 const OpenAI = require('openai');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 const config = require('./config.json');
 
@@ -45,37 +48,139 @@ client.on('ready', () => {
 });
 
 // --- HAUPTLOGIK ---
+
+// Antwort-Bremse: mehrere schnell hintereinander gesendete Nachrichten pro Chat
+// werden gesammelt und gebuendelt EINMAL beantwortet (statt 3x einzeln).
+const DEBOUNCE_MS = 7000;
+const pendingByChat = new Map();
+
+// Schluesselwoerter, bei denen der Bot an Mert uebergibt statt selbst zu antworten.
+const HANDOVER_KEYWORDS = [
+    'echte person', 'echten menschen', 'mit jemandem sprechen', 'mit jemanden sprechen',
+    'mit dir sprechen', 'mit mert', 'mert sprechen', 'persoenlich', 'persönlich',
+    'anrufen', 'rückruf', 'rueckruf', 'ruf mich', 'ruft mich', 'telefon', 'telefonisch',
+    'kein bot', 'echter mensch', 'mitarbeiter', 'real person', 'call me',
+    'speak to a human', 'talk to a human'
+];
+
 client.on('message', async msg => {
-    // Filter: Nur echte Chat-Nachrichten von anderen
-    if (msg.fromMe || msg.isStatus || msg.type !== 'chat') return;
+    // Filter: keine eigenen Nachrichten, keine Status-Updates.
+    if (msg.fromMe || msg.isStatus) return;
+    // Nur unterstuetzte Typen: Text, Sprachnachricht, Bild.
+    if (!['chat', 'ptt', 'audio', 'image'].includes(msg.type)) return;
 
-    const senderNumber = msg.from.replace('@c.us', '');
-
-    // 1. Einstellungen aus Firebase lesen
-    const settingsDoc = await db.collection('whatsappBotSettings').doc('global').get();
-    const settings = settingsDoc.exists ? settingsDoc.data() : { enabled: false };
-
-    // CHECK: Ist Bot an?
-    if (!settings.enabled) return;
-
-    // CHECK: Ist Nummer blockiert?
-    if (settings.excludedNumbers && settings.excludedNumbers.includes('+' + senderNumber)) {
-        console.log(`Blockierte Nummer: ${senderNumber}`);
-        return;
+    const chatId = msg.from;
+    let entry = pendingByChat.get(chatId);
+    if (!entry) {
+        entry = { messages: [], timer: null };
+        pendingByChat.set(chatId, entry);
     }
+    entry.messages.push(msg);
 
-    // 2. "Tippt..." anzeigen
-    const chat = await msg.getChat();
-    await chat.sendStateTyping();
+    // Timer zuruecksetzen: erst wenn fuer DEBOUNCE_MS Ruhe herrscht, wird geantwortet.
+    if (entry.timer) clearTimeout(entry.timer);
+    entry.timer = setTimeout(() => { handleBatch(chatId); }, DEBOUNCE_MS);
+});
+
+// Verarbeitet alle gepufferten Nachrichten eines Chats gebuendelt.
+async function handleBatch(chatId) {
+    const entry = pendingByChat.get(chatId);
+    pendingByChat.delete(chatId);
+    if (!entry || entry.messages.length === 0) return;
+
+    const messages = entry.messages;
+    const lastMsg = messages[messages.length - 1];
+    const senderNumber = chatId.replace('@c.us', '');
 
     try {
-        // 3. KI Logik
+        // 1. Einstellungen lesen (VOR allen kostenpflichtigen OpenAI-Aufrufen).
+        const settingsDoc = await db.collection('whatsappBotSettings').doc('global').get();
+        const settings = settingsDoc.exists ? settingsDoc.data() : { enabled: false };
+
+        // CHECK: Ist Bot an?
+        if (!settings.enabled) return;
+
+        // CHECK: Ist Nummer blockiert?
+        if (settings.excludedNumbers && settings.excludedNumbers.includes('+' + senderNumber)) {
+            console.log(`Blockierte Nummer: ${senderNumber}`);
+            return;
+        }
+
+        // 2. "Tippt..." anzeigen
+        const chat = await lastMsg.getChat();
+        await chat.sendStateTyping();
+
+        // 3. Eingehende Nachrichten aufbereiten:
+        //    Text direkt, Sprachnachricht -> Whisper-Transkript, Bild -> Vision-Anhang.
+        let combinedText = '';
+        const imageParts = [];
+        for (const m of messages) {
+            if (m.type === 'chat') {
+                if (m.body) combinedText += (combinedText ? '\n' : '') + m.body;
+            } else if (m.type === 'ptt' || m.type === 'audio') {
+                const transcript = await transcribeVoice(m);
+                if (transcript) combinedText += (combinedText ? '\n' : '') + transcript;
+            } else if (m.type === 'image') {
+                try {
+                    const media = await m.downloadMedia();
+                    if (media && media.data) {
+                        imageParts.push({
+                            type: 'image_url',
+                            image_url: { url: `data:${media.mimetype};base64,${media.data}` }
+                        });
+                    }
+                } catch (e) {
+                    console.error('Konnte Bild nicht laden:', e.message);
+                }
+                if (m.body) combinedText += (combinedText ? '\n' : '') + m.body; // Bildunterschrift
+            }
+        }
+
+        // Nichts Verwertbares (z.B. Transkription fehlgeschlagen, kein Bild): abbrechen.
+        if (!combinedText && imageParts.length === 0) {
+            console.log(`Keine verwertbare Nachricht von ${senderNumber}`);
+            return;
+        }
+
+        // 4. Uebergabe an Mensch: bei Schluesselwoertern nicht selbst antworten.
+        const lower = combinedText.toLowerCase();
+        if (combinedText && HANDOVER_KEYWORDS.some(w => lower.includes(w))) {
+            await markForHuman(lastMsg, senderNumber, combinedText);
+            return;
+        }
+
+        // 5. Chat-Verlauf lesen (Kontext + Merts Stil aus genau diesem Chat).
+        let history = [];
+        const bufferedIds = new Set(messages.map(m => m.id.id));
+        try {
+            const fetched = await chat.fetchMessages({ limit: 30 });
+            history = fetched
+                .filter(m => m.type === 'chat' && m.body && !bufferedIds.has(m.id.id))
+                .map(m => ({ role: m.fromMe ? 'assistant' : 'user', content: m.body }));
+        } catch (e) {
+            console.error('Konnte Chat-Verlauf nicht laden:', e.message);
+        }
+
+        // 6. Stilprofil: Merts Nachrichten chat-uebergreifend sammeln, damit auch
+        //    Neukontakte ohne Verlauf in seinem Stil beantwortet werden.
+        const styleProfile = Array.isArray(settings.styleProfile) ? settings.styleProfile : [];
+        const myFromThisChat = history.filter(h => h.role === 'assistant').map(h => h.content);
+        const mergedProfile = Array.from(new Set([...styleProfile, ...myFromThisChat]))
+            .filter(s => s && s.length <= 200)
+            .slice(-40);
+        if (mergedProfile.length !== styleProfile.length) {
+            db.collection('whatsappBotSettings').doc('global')
+                .update({ styleProfile: mergedProfile })
+                .catch(e => console.error('styleProfile-Update fehlgeschlagen:', e.message));
+        }
+
+        // 7. KI Logik
         // Bevorzugt den in der Oberflaeche (whatsapp_bot.html) gepflegten
         // customPrompt. Faellt nur zurueck, wenn keiner gesetzt ist.
         const customPrompt = (settings.customPrompt || "").trim();
         const style = settings.styleSamples || "Freundlich, kurz, professionell.";
 
-        const systemPrompt = customPrompt || `
+        const basePrompt = customPrompt || `
       Du bist Mert (m.pak) von Pakora Automations.
       Antworte dem Kunden auf WhatsApp.
 
@@ -87,28 +192,51 @@ client.on('message', async msg => {
       3. Sei kurz und menschlich.
     `;
 
+        const profileText = mergedProfile.length
+            ? `\n\nSO SCHREIBT MERT TYPISCHERWEISE (echte Beispiele aus Chats, ahme genau diesen Stil/Ton nach):\n- ${mergedProfile.slice(-25).join('\n- ')}`
+            : '';
+
+        // Stil-Anweisung: zwingt das Modell, aus dem Verlauf Merts Ton zu lernen.
+        const styleInstruction = `
+
+WICHTIG - SCHREIBSTIL NACHAHMEN:
+Die bisherigen Nachrichten mit der Rolle "assistant" in diesem Chat stammen von Mert selbst.
+Lies den gesamten Verlauf und ahme Merts persoenlichen Stil exakt nach: Wortwahl, Satzlaenge,
+Begruessung/Verabschiedung, Emojis, Dialekt und Ton. Antworte so, wie Mert in genau diesem
+Chat geschrieben haette. Gibt es noch keine eigenen Nachrichten, nutze die Beispiele unten.
+Beziehe dich auf den bisherigen Gespraechsverlauf und wiederhole keine Fragen, die schon geklaert sind.
+Wenn ein Bild geschickt wurde, gehe konkret darauf ein (z.B. Geraet/Typenschild beschreiben).`;
+
+        const systemPrompt = basePrompt + styleInstruction + profileText;
+
+        // Bei Bildern muss content ein Array (Text + Bilder) sein, sonst reicht Text.
+        const userContent = imageParts.length > 0
+            ? [{ type: 'text', text: combinedText || 'Bitte schau dir das Bild an.' }, ...imageParts]
+            : combinedText;
+
         const gptResponse = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: msg.body }
+                ...history,
+                { role: "user", content: userContent }
             ],
             max_tokens: 300
         });
 
         const replyText = gptResponse.choices[0].message.content;
 
-        // 4. Antworten
-        await msg.reply(replyText);
+        // 8. Antworten
+        await lastMsg.reply(replyText);
 
-        // 5. Speichern
-        const chatContact = await msg.getContact();
+        // 9. Speichern
+        const chatContact = await lastMsg.getContact();
         const senderName = chatContact.pushname || chatContact.name || '';
-        
+
         await db.collection('whatsappRequests').add({
             phone: '+' + senderNumber,
             name: senderName,
-            message: msg.body,
+            message: combinedText || '[Bild]',
             reply: replyText,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             status: 'open',
@@ -120,7 +248,51 @@ client.on('message', async msg => {
     } catch (error) {
         console.error('Fehler:', error);
     }
-});
+}
+
+// Wandelt eine WhatsApp-Sprachnachricht per OpenAI Whisper in Text um.
+async function transcribeVoice(m) {
+    let tmpFile = null;
+    try {
+        const media = await m.downloadMedia();
+        if (!media || !media.data) return '';
+        const ext = (media.mimetype && media.mimetype.includes('ogg')) ? 'ogg' : 'mp3';
+        tmpFile = path.join(os.tmpdir(), `wa-voice-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`);
+        fs.writeFileSync(tmpFile, Buffer.from(media.data, 'base64'));
+        const result = await openai.audio.transcriptions.create({
+            file: fs.createReadStream(tmpFile),
+            model: 'whisper-1'
+        });
+        return (result && result.text) ? result.text.trim() : '';
+    } catch (e) {
+        console.error('Sprachnachricht-Transkription fehlgeschlagen:', e.message);
+        return '';
+    } finally {
+        if (tmpFile) { try { fs.unlinkSync(tmpFile); } catch (e) {} }
+    }
+}
+
+// Markiert einen Chat zur persoenlichen Bearbeitung durch Mert (keine KI-Antwort).
+async function markForHuman(lastMsg, senderNumber, combinedText) {
+    try {
+        const contact = await lastMsg.getContact();
+        const senderName = contact.pushname || contact.name || '';
+        await lastMsg.reply('Alles klar, ich gebe das direkt an Mert weiter - er meldet sich persoenlich bei dir. 🙏');
+        await db.collection('whatsappRequests').add({
+            phone: '+' + senderNumber,
+            name: senderName,
+            message: combinedText,
+            reply: '',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            status: 'open',
+            needsHuman: true,
+            autoReplied: false
+        });
+        console.log(`[UEBERGABE AN MENSCH] ${senderNumber}`);
+    } catch (e) {
+        console.error('Uebergabe fehlgeschlagen:', e.message);
+    }
+}
 
 client.initialize();
 
