@@ -72,13 +72,35 @@ if (!COLLEAGUE_CHAT_ID) {
     console.warn('WARNUNG: Keine colleagueNumber in config.json - Weiterleitung an Kollegen ist deaktiviert.');
 }
 
+// Cache der bekannten Chat-IDs des Kollegen (WhatsApp nutzt teils @lid statt @c.us).
+const colleagueChatIds = new Set();
+
+// Prueft anhand der ECHTEN Telefonnummer, ob eine Nachricht vom Kollegen stammt.
+// getContact() loest @lid-Adressen auf die Telefonnummer auf.
+async function isFromColleague(msg) {
+    if (!COLLEAGUE_NUMBER) return false;
+    if (colleagueChatIds.has(msg.from)) return true;
+    try {
+        const c = await msg.getContact();
+        const num = String((c && c.number) || '').replace(/\D/g, '');
+        if (num && num === COLLEAGUE_NUMBER) {
+            colleagueChatIds.add(msg.from); // fuer naechste Nachrichten cachen
+            return true;
+        }
+    } catch (e) {
+        console.error('Kontakt-Aufloesung fehlgeschlagen:', e.message);
+    }
+    return false;
+}
+
 client.on('message', async msg => {
     // Filter: keine eigenen Nachrichten, keine Status-Updates.
     if (msg.fromMe || msg.isStatus) return;
 
     // Antwort des Kollegen -> direkt an den passenden Kunden weiterleiten
-    // (laeuft NICHT durch die normale Kunden-/KI-Logik).
-    if (msg.from === COLLEAGUE_CHAT_ID) {
+    // (laeuft NICHT durch die normale Kunden-/KI-Logik). Pruefung ueber die echte
+    // Telefonnummer, da WhatsApp teils @lid- statt @c.us-Adressen verwendet.
+    if (await isFromColleague(msg)) {
         handleColleagueReply(msg).catch(e => console.error('Kollegen-Antwort fehlgeschlagen:', e.message));
         return;
     }
@@ -368,14 +390,21 @@ async function isForwardInquiry(text) {
 async function forwardToColleague(lastMsg, senderNumber, combinedText) {
     const contact = await lastMsg.getContact();
     const senderName = contact.pushname || contact.name || '';
-    const fwdText = `📩 *Neue Anfrage* von ${senderName || 'Kunde'} (+${senderNumber}):\n\n"${combinedText}"\n\n↩️ Tippe auf *Antworten* und schreib zurueck – ich leite deine Antwort direkt an den Kunden weiter.`;
+    // Ziel-Chat zum Zuruecksenden: die Original-Chat-ID (lastMsg.from). Bei
+    // Privacy-Kontakten ist das @lid - genau dorthin antwortet der Bot sonst
+    // auch erfolgreich. @c.us-Form + echte Nummer aus dem Kontakt nur als Info.
+    const customerChatId = lastMsg.from;
+    const customerCusId = (contact.id && contact.id._serialized) || null;
+    const customerNumber = String(contact.number || '').replace(/\D/g, '') || senderNumber;
+    const fwdText = `📩 *Neue Anfrage* von ${senderName || 'Kunde'} (+${customerNumber}):\n\n"${combinedText}"\n\n↩️ Tippe auf *Antworten* und schreib zurueck – ich leite deine Antwort direkt an den Kunden weiter.`;
     const sent = await client.sendMessage(COLLEAGUE_CHAT_ID, fwdText);
 
     await db.collection('whatsappForwards').add({
         forwardedMsgId: sent.id._serialized,
-        customerChatId: lastMsg.from,
+        customerChatId: customerChatId,
+        customerCusId: customerCusId,
         customerName: senderName,
-        customerNumber: senderNumber,
+        customerNumber: customerNumber,
         originalText: combinedText,
         status: 'open',
         createdAt: admin.firestore.FieldValue.serverTimestamp()
