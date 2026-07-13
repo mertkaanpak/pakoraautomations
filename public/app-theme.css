@@ -59,14 +59,19 @@ html { color-scheme: light; }
 body {
     font-family: "Sora", "Inter", "Segoe UI", sans-serif !important;
     background:
-        radial-gradient(1200px 600px at 12% -8%, #f2f5fb 0%, rgba(242,245,251,0) 55%),
-        radial-gradient(1000px 700px at 108% 8%, #eaf0fb 0%, rgba(234,240,251,0) 50%),
-        linear-gradient(165deg, var(--c-bg-2) 0%, var(--c-bg) 55%, #e4e9f2 100%) !important;
+        radial-gradient(1100px 600px at 12% -10%, rgba(79,110,247,0.14) 0%, rgba(79,110,247,0) 55%),
+        radial-gradient(1000px 700px at 112% 4%, rgba(34,211,238,0.10) 0%, rgba(34,211,238,0) 50%),
+        linear-gradient(165deg, #111a2d 0%, #0c1322 55%, #0a0f1d 100%) !important;
     background-attachment: fixed !important;
-    color: var(--c-text) !important;
+    color: #c7d2e2 !important;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }
+
+/* Loser Text im Arbeitsbereich (direkt auf dem dunklen Grund) = hell.
+   In Karten wird die Textfarbe unten wieder auf dunkel gesetzt. */
+.main { color: #c7d2e2 !important; }
+.main a:not(.nav-item):not(.btn) { color: #9db4ff !important; }
 
 /* --- Sidebar --- */
 .sidebar {
@@ -259,6 +264,17 @@ body {
     border: 1px solid var(--c-border) !important;
     border-radius: var(--r-lg) !important;
     box-shadow: var(--shadow-sm) !important;
+    color: var(--c-text) !important;
+}
+
+/* Alle hellen Flächen setzen die Textfarbe wieder auf dunkel, damit Inhalte
+   auf weissem Grund lesbar bleiben (der dunkle Grund faerbt nur losen Text hell). */
+.card, .dashboard-header, .header-card, .stat-card, .modal-content, .summary-box,
+.res-card, .dash-card, .config-card, .selection-card,
+.chat-list, .chat-panel, .notes-panel, .request-card,
+.stock-table td, .offer-table td, table td,
+#authCard, #pushPromptCard {
+    color: var(--c-text) !important;
 }
 
 /* feiner Glanz oben auf Karten */
@@ -312,7 +328,7 @@ body {
 
 /* --- Typografie --- */
 h1, h2, h3 {
-    color: var(--c-text) !important;
+    color: inherit !important;
     letter-spacing: -0.032em !important;
     font-weight: 800 !important;
 }

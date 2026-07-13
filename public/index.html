@@ -492,7 +492,7 @@
         .offer-table th { background: #334155; color: #e2e8f0; }
         .info-bar { background: #1e40af; color: #dbeafe; border-color: #2563eb; }
     </style>
-    <link rel="stylesheet" href="app-theme.css?v=6">
+    <link rel="stylesheet" href="app-theme.css?v=7">
 </head>
 <body> 
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
@@ -1490,32 +1490,30 @@
             doc.text(client, marginL, y + 6);
             doc.setFont(undefined, 'normal');
 
-            // --- Positionstabelle ---
+            // --- Positionstabelle (OHNE Einzelpreise - Kunde sieht nur den Umfang) ---
             doc.autoTable({
                 startY: y + 14,
-                head: [['Komponente', 'Artikel', 'Preis (Netto)']],
-                body: currentOffer.items.map(i => [i.type, i.name, fmt(i.price)]),
+                head: [['Pos.', 'Leistung / Komponente']],
+                body: currentOffer.items.map((i, idx) => [String(idx + 1), `${i.type}: ${i.name}`]),
                 theme: 'striped',
                 headStyles: { fillColor: [37, 99, 235], textColor: 255 },
-                columnStyles: { 2: { halign: 'right' } },
+                columnStyles: { 0: { cellWidth: 16, halign: 'center' } },
                 styles: { fontSize: 10, cellPadding: 3 },
                 margin: { left: marginL, right: 15 }
             });
 
-            // --- Summen ---
-            let sy = doc.lastAutoTable.finalY + 8;
-            const labelX = marginR - 60, valX = marginR;
+            // --- Summen (nur Gesamtpreis, keine Einzelpreise) ---
+            let sy = doc.lastAutoTable.finalY + 10;
+            const labelX = marginR - 70, valX = marginR;
             const sumRow = (label, val, bold) => {
                 doc.setFont(undefined, bold ? 'bold' : 'normal');
-                doc.setFontSize(bold ? 12 : 10);
+                doc.setFontSize(bold ? 13 : 10);
                 doc.setTextColor(bold ? 20 : 80);
                 doc.text(label, labelX, sy);
                 doc.text(val, valX, sy, { align: 'right' });
-                sy += bold ? 8 : 6;
+                sy += bold ? 9 : 6;
             };
-            sumRow('Zwischensumme (Netto)', fmt(currentOffer.subTotal));
-            if (currentOffer.discount > 0) sumRow(`Rabatt (${currentOffer.discPercent || 0}%)`, '-' + fmt(currentOffer.discount));
-            sumRow('Netto nach Rabatt', fmt(currentOffer.total));
+            sumRow('Nettobetrag', fmt(currentOffer.total));
             sumRow('zzgl. 19% MwSt', fmt(currentOffer.vat));
             doc.setDrawColor(200); doc.line(labelX, sy - 2, valX, sy - 2);
             sumRow('Gesamtbetrag (Brutto)', fmt(currentOffer.gross), true);
