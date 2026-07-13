@@ -227,6 +227,21 @@
         .total-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #64748b; }
         .total-row span:last-child { font-weight: 600; font-family: monospace; font-size: 15px; }
         .total-final { margin-top: 10px; padding-top: 15px; border-top: 1px solid #e2e8f0; font-size: 20px; font-weight: 800; color: var(--primary); display: flex; justify-content: space-between; }
+        /* Netto fett unten hervorgehoben */
+        .total-net { margin-top: 10px; padding: 14px 16px; border-radius: 12px; background: #0f172a; color: #fff; font-size: 22px; font-weight: 900; letter-spacing: -0.02em; }
+        .total-net span:last-child { font-weight: 900 !important; font-size: 24px !important; color: #fff !important; }
+
+        /* Alternativen (aehnliche Geraete / eine Nummer kleiner) */
+        #offerAlternatives { margin-top: 18px; display: flex; flex-direction: column; gap: 14px; }
+        .alt-group { }
+        .alt-title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+        .alt-hint { font-weight: 500; color: #94a3b8; font-size: 12px; }
+        .alt-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .alt-chip { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 12px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: #fff; cursor: pointer; text-align: left; transition: border-color 120ms, transform 100ms, box-shadow 120ms; max-width: 240px; }
+        .alt-chip:hover { border-color: var(--primary); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.14); }
+        .alt-chip-selected { border-color: var(--primary); background: rgba(37,99,235,0.06); box-shadow: inset 0 0 0 1px var(--primary); }
+        .alt-name { font-size: 13px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; }
+        .alt-meta { font-size: 12px; color: #64748b; font-family: monospace; }
 
         /* ===== QUICK SEARCH ===== */
         #quickSearchBar {
@@ -710,12 +725,16 @@
                                     <tbody id="offerTableBody"></tbody>
                                 </table>
                             </div>
+
+                            <!-- Alternativen (aehnliche + eine Nummer kleiner) -->
+                            <div id="offerAlternatives"></div>
+
                             <div class="totals-area">
                                 <div class="total-row"><span>Zwischensumme (Netto)</span><span id="subTotal">0,00 €</span></div>
                                 <div class="total-row" style="color:#f87171"><span>Rabatt (<span id="dispDisc">0</span>%)</span><span id="discAmount">-0,00 €</span></div>
-                                <div class="total-row"><span>Netto nach Rabatt</span><span id="netTotal">0,00 €</span></div>
                                 <div class="total-row"><span>zzgl. 19% MwSt</span><span id="vatAmount">0,00 €</span></div>
                                 <div class="total-row total-final"><span>GESAMTBETRAG (Brutto)</span><span id="finalTotal">0,00 €</span></div>
+                                <div class="total-row total-net"><span>NETTO-BETRAG</span><span id="netTotal">0,00 €</span></div>
                             </div>
                             <button class="btn btn-offer" onclick="generatePDF()" style="margin-top:20px;">📄 PDF Erstellen</button>
                         </div>
@@ -1117,7 +1136,11 @@
             matchProducts(watts, tempVal, currentUnitType);
         }
 
-        function matchProducts(watts, temp, unitType) {
+        // Merkt sich die zuletzt berechnete Auswahl, damit Alternativen umgeschaltet
+        // werden koennen, ohne alles neu einzugeben.
+        let lastMatch = null;
+
+        function matchProducts(watts, temp, unitType, overrides = {}) {
             const items = [];
             let subTotal = 0;
             const type = temp >= 0 ? 'NK' : 'TK';
@@ -1128,16 +1151,16 @@
 
             // Hilfsfunktion: Kapazität eines Produkts für den aktuellen Typ
             const getCap = p => normalizeCapacityWatts(type === 'NK' ? p.capacityNK : p.capacityTK);
+            const idOf = p => p && (p.id || p.name);
 
-            // 1. Außeneinheit — nächste Größe über dem Bedarf, sonst größte verfügbare
-            const allUnitsOfType = onStockProducts.filter(u => u.category === unitType);
-            let unit = allUnitsOfType
-                .filter(u => getCap(u) > watts)
-                .sort((a,b) => getCap(a) - getCap(b))[0];
-
-            // Fallback: größte Einheit wenn keine über Bedarf gefunden
+            // 1. Außeneinheit — nach Kapazität sortiert, nächste Größe über dem Bedarf.
+            const unitsSorted = onStockProducts
+                .filter(u => u.category === unitType)
+                .sort((a, b) => getCap(a) - getCap(b));
+            let unit = overrides.unitId ? unitsSorted.find(u => idOf(u) === overrides.unitId) : null;
             if (!unit) {
-                unit = allUnitsOfType.sort((a,b) => getCap(b) - getCap(a))[0];
+                unit = unitsSorted.filter(u => getCap(u) > watts)[0]
+                    || unitsSorted[unitsSorted.length - 1];
             }
 
             let usedCap = 0;
@@ -1150,16 +1173,15 @@
                 subTotal += unit.price;
             }
 
-            // 2. Verdampfer — mind. 110% der Außeneinheitsleistung, sonst größter verfügbarer
+            // 2. Verdampfer — mind. 110% der Außeneinheitsleistung, nach Kapazität sortiert.
             const evapMinCap = usedCap > 0 ? usedCap * 1.10 : watts;
-            const allEvaps = onStockProducts.filter(e => e.category === 'evaporator');
-            let evap = allEvaps
-                .filter(e => getCap(e) >= evapMinCap)
-                .sort((a,b) => getCap(a) - getCap(b))[0];
-
-            // Fallback: größter Verdampfer
+            const evapsSorted = onStockProducts
+                .filter(e => e.category === 'evaporator')
+                .sort((a, b) => getCap(a) - getCap(b));
+            let evap = overrides.evapId ? evapsSorted.find(e => idOf(e) === overrides.evapId) : null;
             if (!evap) {
-                evap = allEvaps.sort((a,b) => getCap(b) - getCap(a))[0];
+                evap = evapsSorted.filter(e => getCap(e) >= evapMinCap)[0]
+                    || evapsSorted[evapsSorted.length - 1];
             }
 
             if (evap) {
@@ -1178,7 +1200,74 @@
             currentOffer.items = items;
             currentOffer.subTotal = subTotal;
             currentOffer.watts = watts;
+
+            // Alternativen ermitteln: gewaehltes Produkt + Nachbarn (eine Nummer
+            // kleiner und groesser) aus derselben Kategorie.
+            const neighbors = (sorted, chosen) => {
+                if (!chosen) return [];
+                const i = sorted.findIndex(p => idOf(p) === idOf(chosen));
+                if (i < 0) return [chosen];
+                return [sorted[i - 2], sorted[i - 1], sorted[i], sorted[i + 1], sorted[i + 2]].filter(Boolean);
+            };
+            lastMatch = {
+                watts, temp, unitType, catLabel, getCap,
+                unitId: idOf(unit), evapId: idOf(evap),
+                unitAlts: neighbors(unitsSorted, unit),
+                evapAlts: neighbors(evapsSorted, evap)
+            };
+
             renderOfferTable();
+            renderAlternatives();
+        }
+
+        // Schaltet auf eine alternative Aussen-/Innen-Einheit um und rechnet neu.
+        function useAlternative(kind, idx) {
+            if (!lastMatch) return;
+            const arr = kind === 'unit' ? lastMatch.unitAlts : lastMatch.evapAlts;
+            const p = arr && arr[idx];
+            if (!p) return;
+            const pid = p.id || p.name;
+            const overrides = { unitId: lastMatch.unitId, evapId: lastMatch.evapId };
+            if (kind === 'unit') overrides.unitId = pid; else overrides.evapId = pid;
+            matchProducts(lastMatch.watts, lastMatch.temp, lastMatch.unitType, overrides);
+        }
+
+        function escHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, c => (
+                { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+            ));
+        }
+
+        // Zeigt aehnliche Geraete (inkl. eine Nummer kleiner) als anklickbare Chips.
+        function renderAlternatives() {
+            const box = document.getElementById('offerAlternatives');
+            if (!box || !lastMatch) { if (box) box.innerHTML = ''; return; }
+            const { getCap } = lastMatch;
+            const fmtP = n => (Number(n) || 0).toFixed(2).replace('.', ',') + ' €';
+
+            const chip = (kind, p, idx, chosenId) => {
+                const id = p.id || p.name;
+                const cap = getCap(p);
+                const sel = id === chosenId;
+                const capTxt = cap > 0 ? `${cap.toLocaleString('de-DE')} W` : '–';
+                return `<button type="button" class="alt-chip${sel ? ' alt-chip-selected' : ''}"
+                    onclick="useAlternative('${kind}', ${idx})" title="${escHtml(p.name)}">
+                    <span class="alt-name">${escHtml(p.name)}</span>
+                    <span class="alt-meta">${capTxt} · ${fmtP(p.price)}</span>
+                </button>`;
+            };
+
+            const section = (title, kind, alts, chosenId) => {
+                if (!alts || alts.length <= 1) return '';
+                return `<div class="alt-group">
+                    <div class="alt-title">${title} <span class="alt-hint">– ähnliche & eine Nummer kleiner (zum Tauschen tippen)</span></div>
+                    <div class="alt-chips">${alts.map((p, i) => chip(kind, p, i, chosenId)).join('')}</div>
+                </div>`;
+            };
+
+            const html = section(lastMatch.catLabel, 'unit', lastMatch.unitAlts, lastMatch.unitId)
+                       + section('Verdampfer', 'evap', lastMatch.evapAlts, lastMatch.evapId);
+            box.innerHTML = html;
         }
 
 
@@ -1324,6 +1413,11 @@
             currentOffer.items    = items;
             currentOffer.subTotal = subTotal;
             currentOffer.watts    = 0;
+
+            // Im manuellen Angebot keine Smart-Alternativen anzeigen.
+            lastMatch = null;
+            const altBox = document.getElementById('offerAlternatives');
+            if (altBox) altBox.innerHTML = '';
 
             // Show result section — skip calc cards, go straight to offer
             document.getElementById('resultSection').style.display    = 'block';
