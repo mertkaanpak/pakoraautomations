@@ -1,48 +1,54 @@
 /* ==========================================================
-   Pakora Automations — Design System v3
+   Pakora Automations — Design System v4
+   "Graphit & Akzent" — edel, modern, premium
    Zentrale CSS-Datei für alle Seiten
    ========================================================== */
 
 :root {
-    /* Farben */
-    --c-bg: #f0f4f9;
+    /* Canvas & Flächen */
+    --c-bg: #e9edf4;
+    --c-bg-2: #eef1f7;
     --c-surface: #ffffff;
-    --c-surface-muted: #f8fafc;
-    --c-border: rgba(15, 23, 42, 0.09);
-    --c-border-strong: rgba(15, 23, 42, 0.16);
+    --c-surface-muted: #f5f7fb;
+    --c-border: rgba(15, 23, 42, 0.08);
+    --c-border-strong: rgba(15, 23, 42, 0.15);
 
-    --c-primary: #2563eb;
-    --c-primary-dark: #1d4ed8;
-    --c-primary-glow: rgba(37, 99, 235, 0.18);
+    /* Akzent (kräftiges Indigo-Blau) + Zweitakzent (Cyan) */
+    --c-primary: #4f6ef7;
+    --c-primary-dark: #3a52d6;
+    --c-primary-deep: #2a3bb0;
+    --c-primary-glow: rgba(79, 110, 247, 0.30);
+    --c-accent-2: #22d3ee;
 
-    --c-success: #16a34a;
-    --c-warning: #d97706;
-    --c-danger: #dc2626;
+    --c-success: #10b981;
+    --c-warning: #f59e0b;
+    --c-danger: #ef4444;
 
     --c-text: #0f172a;
-    --c-text-muted: #64748b;
+    --c-text-muted: #5a6577;
     --c-text-subtle: #94a3b8;
 
-    /* Sidebar */
-    --c-sidebar-bg: #0c1524;
-    --c-sidebar-border: rgba(255, 255, 255, 0.06);
-    --c-sidebar-text: rgba(203, 213, 225, 0.85);
-    --c-sidebar-active-bg: rgba(37, 99, 235, 0.22);
-    --c-sidebar-active-border: rgba(96, 165, 250, 0.5);
-    --c-sidebar-hover-bg: rgba(255, 255, 255, 0.07);
-    --c-sidebar-width: 278px;
+    /* Sidebar — tiefes Anthrazit mit Akzent-Glow */
+    --c-sidebar-bg: #0b1120;
+    --c-sidebar-bg-2: #111a2e;
+    --c-sidebar-border: rgba(255, 255, 255, 0.07);
+    --c-sidebar-text: #cbd5e1;
+    --c-sidebar-active-bg: rgba(79, 110, 247, 0.20);
+    --c-sidebar-active-border: rgba(120, 150, 255, 0.55);
+    --c-sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+    --c-sidebar-width: 280px;
 
-    /* Abstände & Radien */
+    /* Radien */
     --r-sm: 10px;
     --r-md: 14px;
     --r-lg: 18px;
     --r-xl: 24px;
 
-    /* Schatten */
-    --shadow-xs: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06);
-    --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.05);
-    --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.10), 0 4px 8px rgba(15, 23, 42, 0.06);
-    --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.12), 0 8px 16px rgba(15, 23, 42, 0.07);
+    /* Schatten — weicher, mehrschichtig, premium */
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.05);
+    --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.06), 0 6px 16px rgba(15, 23, 42, 0.07);
+    --shadow-md: 0 4px 10px rgba(15, 23, 42, 0.07), 0 14px 32px rgba(15, 23, 42, 0.10);
+    --shadow-lg: 0 8px 20px rgba(15, 23, 42, 0.10), 0 24px 56px rgba(15, 23, 42, 0.14);
 }
 
 /* --- Basis --- */
@@ -52,20 +58,27 @@ html { color-scheme: light; }
 
 body {
     font-family: "Sora", "Inter", "Segoe UI", sans-serif !important;
-    background: linear-gradient(160deg, #eef3fb 0%, var(--c-bg) 50%, #e8edf5 100%) !important;
+    background:
+        radial-gradient(1200px 600px at 12% -8%, #f2f5fb 0%, rgba(242,245,251,0) 55%),
+        radial-gradient(1000px 700px at 108% 8%, #eaf0fb 0%, rgba(234,240,251,0) 50%),
+        linear-gradient(165deg, var(--c-bg-2) 0%, var(--c-bg) 55%, #e4e9f2 100%) !important;
+    background-attachment: fixed !important;
     color: var(--c-text) !important;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 /* --- Sidebar --- */
 .sidebar {
     width: var(--c-sidebar-width) !important;
-    background: var(--c-sidebar-bg) !important;
+    background:
+        radial-gradient(420px 220px at 30% 0%, rgba(79,110,247,0.18) 0%, rgba(79,110,247,0) 60%),
+        linear-gradient(180deg, var(--c-sidebar-bg-2) 0%, var(--c-sidebar-bg) 42%, #080d18 100%) !important;
     border-right: 1px solid var(--c-sidebar-border) !important;
-    box-shadow: 4px 0 24px rgba(7, 12, 22, 0.20) !important;
+    box-shadow: 6px 0 40px rgba(5, 9, 18, 0.35) !important;
     display: flex !important;
     flex-direction: column !important;
-    padding: 24px 16px !important;
+    padding: 22px 15px !important;
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -77,17 +90,18 @@ body {
 }
 
 .logo img {
-    max-height: 80px !important;
+    max-height: 78px !important;
     object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.35));
 }
 
 /* Nav-Gruppen */
 .sidebar-label {
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(148, 163, 184, 0.5);
+    color: rgba(148, 163, 184, 0.75);
     padding: 16px 10px 6px;
     display: block;
 }
@@ -107,12 +121,12 @@ body {
     border-radius: var(--r-md) !important;
     color: var(--c-sidebar-text) !important;
     font-size: 14px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     text-decoration: none !important;
     border: 1px solid transparent !important;
     cursor: pointer;
-    transition: background 140ms, color 140ms, border-color 140ms, transform 100ms !important;
-    margin-bottom: 2px !important;
+    transition: background 160ms, color 160ms, border-color 160ms, transform 120ms, box-shadow 160ms !important;
+    margin-bottom: 3px !important;
     position: relative;
     background: transparent !important;
     width: 100%;
@@ -129,6 +143,7 @@ body {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
+    opacity: 0.92;
 }
 
 .nav-item .nav-text {
@@ -141,15 +156,17 @@ body {
 .nav-item:hover {
     background: var(--c-sidebar-hover-bg) !important;
     color: #ffffff !important;
-    transform: translateX(2px) !important;
+    transform: translateX(3px) !important;
 }
 
 .nav-item.active {
-    background: var(--c-sidebar-active-bg) !important;
+    background: linear-gradient(100deg, var(--c-sidebar-active-bg), rgba(79,110,247,0.08)) !important;
     color: #ffffff !important;
     border-color: var(--c-sidebar-active-border) !important;
-    box-shadow: inset 3px 0 0 var(--c-primary), 0 4px 14px rgba(12, 26, 50, 0.28) !important;
+    box-shadow: inset 3px 0 0 var(--c-primary), 0 6px 20px rgba(20, 32, 74, 0.45) !important;
 }
+
+.nav-item.active .nav-icon { opacity: 1; }
 
 /* Sidebar Footer */
 .sidebar-footer {
@@ -165,14 +182,15 @@ body {
     padding: 10px 12px;
     margin-bottom: 6px;
     border-radius: var(--r-md);
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255,255,255,0.05);
 }
 
 .sidebar-user-avatar {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--c-primary), var(--c-primary-dark));
+    background: linear-gradient(135deg, var(--c-primary), var(--c-primary-deep));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -180,6 +198,7 @@ body {
     font-weight: 700;
     color: #fff;
     flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(79,110,247,0.45);
 }
 
 .sidebar-user-info {
@@ -190,7 +209,7 @@ body {
 .sidebar-user-name {
     font-size: 13px;
     font-weight: 600;
-    color: #e2e8f0;
+    color: #e8edf6;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -198,7 +217,7 @@ body {
 
 .sidebar-user-role {
     font-size: 11px;
-    color: rgba(148, 163, 184, 0.6);
+    color: rgba(148, 163, 184, 0.65);
     margin-top: 1px;
 }
 
@@ -210,9 +229,9 @@ body {
 }
 
 .logout-btn:hover {
-    background: rgba(220, 38, 38, 0.12) !important;
+    background: rgba(239, 68, 68, 0.12) !important;
     color: #fca5a5 !important;
-    border-color: rgba(220, 38, 38, 0.3) !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
     transform: none !important;
 }
 
@@ -221,7 +240,7 @@ body {
 
 /* --- Main Area --- */
 .main {
-    padding: 28px 28px 28px !important;
+    padding: 30px 30px 34px !important;
     background: transparent !important;
 }
 
@@ -242,25 +261,29 @@ body {
     box-shadow: var(--shadow-sm) !important;
 }
 
+/* feiner Glanz oben auf Karten */
+.card, .dash-card, .config-card, .selection-card, .res-card, .stat-card {
+    position: relative;
+}
+
 .dash-card,
 .selection-card,
 .res-card {
-    transition: transform 140ms, box-shadow 140ms, border-color 140ms !important;
+    transition: transform 160ms cubic-bezier(.2,.7,.2,1), box-shadow 160ms, border-color 160ms !important;
 }
 
 .dash-card:hover,
 .selection-card:hover,
 .res-card:hover {
-    transform: translateY(-3px) !important;
+    transform: translateY(-4px) !important;
     box-shadow: var(--shadow-md) !important;
-    border-color: var(--c-border-strong) !important;
+    border-color: rgba(79, 110, 247, 0.35) !important;
 }
 
 /* Stat Cards */
 .stat-card {
     border-left: 0 !important;
     overflow: hidden;
-    position: relative;
 }
 
 .stat-card::before {
@@ -268,7 +291,7 @@ body {
     position: absolute;
     top: 0; left: 0; bottom: 0;
     width: 4px;
-    background: linear-gradient(180deg, var(--c-primary), var(--c-success));
+    background: linear-gradient(180deg, var(--c-primary), var(--c-accent-2));
     border-radius: 4px 0 0 4px;
 }
 
@@ -290,10 +313,11 @@ body {
 /* --- Typografie --- */
 h1, h2, h3 {
     color: var(--c-text) !important;
-    letter-spacing: -0.03em !important;
+    letter-spacing: -0.032em !important;
     font-weight: 800 !important;
 }
 
+h1 { line-height: 1.12 !important; }
 h2 { font-size: 22px !important; }
 
 .subtitle, p.subtitle {
@@ -325,8 +349,8 @@ textarea {
 input:not([type="checkbox"]):not([type="radio"]):focus,
 select:focus,
 textarea:focus {
-    border-color: rgba(37, 99, 235, 0.5) !important;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10) !important;
+    border-color: rgba(79, 110, 247, 0.55) !important;
+    box-shadow: 0 0 0 4px rgba(79, 110, 247, 0.14) !important;
     outline: none !important;
     background: var(--c-surface) !important;
 }
@@ -354,7 +378,7 @@ button[type="submit"]:not(.btn-qty):not(.mobile-toggle) {
     background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-primary-dark) 100%) !important;
     color: #fff !important;
     border: 0 !important;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28) !important;
+    box-shadow: 0 6px 18px rgba(79, 110, 247, 0.34) !important;
 }
 
 .btn-primary:hover,
@@ -364,11 +388,11 @@ button[type="submit"]:not(.btn-qty):not(.mobile-toggle) {
 #saveBot:hover {
     filter: brightness(1.06) !important;
     transform: translateY(-1px) !important;
-    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.36) !important;
+    box-shadow: 0 10px 26px rgba(79, 110, 247, 0.44) !important;
 }
 
-.btn-new { background: linear-gradient(135deg, #16a34a, #15803d) !important; color: #fff !important; border: 0 !important; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25) !important; }
-.btn-upload { background: linear-gradient(135deg, #d97706, #b45309) !important; color: #fff !important; border: 0 !important; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.25) !important; }
+.btn-new { background: linear-gradient(135deg, #10b981, #059669) !important; color: #fff !important; border: 0 !important; box-shadow: 0 6px 18px rgba(16, 185, 129, 0.30) !important; }
+.btn-upload { background: linear-gradient(135deg, #f59e0b, #d97706) !important; color: #fff !important; border: 0 !important; box-shadow: 0 6px 18px rgba(245, 158, 11, 0.30) !important; }
 
 .btn-secondary,
 #pushPromptLater {
@@ -432,7 +456,7 @@ table td {
 }
 
 .chat-item.active {
-    background: rgba(37, 99, 235, 0.06) !important;
+    background: rgba(79, 110, 247, 0.07) !important;
     border-left: 3px solid var(--c-primary) !important;
 }
 
@@ -440,8 +464,8 @@ table td {
 .modal-overlay,
 #authOverlay,
 #pushPrompt {
-    background: rgba(9, 15, 28, 0.55) !important;
-    backdrop-filter: blur(10px) !important;
+    background: rgba(8, 13, 24, 0.60) !important;
+    backdrop-filter: blur(12px) !important;
 }
 
 .modal-content,
@@ -507,7 +531,7 @@ table td {
     border: 1px solid var(--c-border) !important;
     border-radius: var(--r-lg) !important;
     box-shadow: var(--shadow-xs) !important;
-    transition: transform 140ms, box-shadow 140ms !important;
+    transition: transform 160ms, box-shadow 160ms !important;
 }
 
 .request-card:hover {
@@ -534,7 +558,7 @@ table td {
     background: linear-gradient(135deg, var(--c-primary), var(--c-primary-dark)) !important;
     border: 0 !important;
     color: #fff !important;
-    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.32) !important;
+    box-shadow: 0 8px 22px rgba(79, 110, 247, 0.40) !important;
     display: none !important;
     align-items: center !important;
     justify-content: center !important;
@@ -553,14 +577,14 @@ table td {
 }
 
 .calendar-cell.selected {
-    border-color: rgba(37, 99, 235, 0.4) !important;
-    background: rgba(37, 99, 235, 0.07) !important;
+    border-color: rgba(79, 110, 247, 0.45) !important;
+    background: rgba(79, 110, 247, 0.08) !important;
 }
 
 /* --- Performance Badges --- */
 .performance-badge.nk {
-    background: #dbeafe !important;
-    color: #1d4ed8 !important;
+    background: #e0e7ff !important;
+    color: #3a52d6 !important;
     border-radius: 999px !important;
 }
 
@@ -573,13 +597,26 @@ table td {
 /* --- Dashboard Header / Header Card --- */
 .dashboard-header,
 .header-card {
-    padding: 20px 24px !important;
+    padding: 22px 26px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
     flex-wrap: wrap;
     gap: 14px;
-    margin-bottom: 22px !important;
+    margin-bottom: 24px !important;
+    position: relative;
+    overflow: hidden;
+}
+
+/* dezenter Akzentstreif oben am Header */
+.dashboard-header::after,
+.header-card::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--c-primary), var(--c-accent-2) 70%, transparent);
+    opacity: 0.9;
 }
 
 /* --- Gaps & Grids --- */
@@ -591,10 +628,10 @@ table td {
 }
 
 /* --- Scrollbars (subtle) --- */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.25); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.45); }
+::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.28); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.5); }
 
 /* --- Responsive --- */
 @media (max-width: 1100px) {

@@ -40,3 +40,6 @@ functions/tools/seed-auth-users.js
 
 # --- ABHÄNGIGKEITEN (Konfliktvermeidung) ---
 package-lock.json
+
+# Claude Code Arbeitsdateien (nicht committen)
+.claude/
