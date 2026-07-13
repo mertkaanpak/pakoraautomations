@@ -112,9 +112,13 @@ exports.inventoryApi = functions.https.onRequest(async (req, res) => {
                 res.status(404).json({ error: "Artikel nicht gefunden." });
                 return;
             }
-            const stockSnapshot = await stockRef.child(key).get();
-            const nextQty = normalizeStockQuantity((stockSnapshot.exists() ? stockSnapshot.val() : 0) + parseNumber(body.delta || 0));
-            await stockRef.child(key).set(nextQty);
+            // Atomar erhoehen/verringern, damit parallele Aenderungen sich nicht
+            // gegenseitig ueberschreiben (Race Condition).
+            const delta = parseNumber(body.delta || 0);
+            const result = await stockRef.child(key).transaction(
+                (cur) => normalizeStockQuantity((Number(cur) || 0) + delta)
+            );
+            const nextQty = normalizeStockQuantity(result.snapshot.val());
             res.status(200).json({ ok: true, qty: nextQty });
             return;
         }
@@ -179,7 +183,7 @@ exports.inventoryApi = functions.https.onRequest(async (req, res) => {
         res.status(400).json({ error: "Unbekannte action." });
     } catch (error) {
         console.error("inventoryApi failed:", error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: "Interner Fehler." });
     }
 });
 
@@ -779,7 +783,8 @@ exports.aiCompressorLookup = functions.https.onRequest(async (req, res) => {
       embraco_matches: embracoMatches
     });
   } catch (error) {
-    res.status(500).json({ error: error && error.message ? error.message : String(error) });
+    console.error("aiCompressorLookup failed:", error);
+    res.status(500).json({ error: "Interner Fehler bei der Verdichtersuche." });
   }
 });
 
@@ -1024,6 +1029,16 @@ ${historyLines}` : "",
 exports.whatsappWebhook = functions.https.onRequest(async (req, res) => {
   const config = functions.config();
   const verifyToken = config.whatsapp && config.whatsapp.verify_token;
+
+  // Der Meta-Cloud-API-Webhook ist derzeit NICHT konfiguriert (der aktive Bot
+  // laeuft ueber whatsapp-web.js in index.js). Ohne Konfiguration nichts
+  // verarbeiten - sonst koennte dieser offene Endpunkt per gefaelschtem POST
+  // OpenAI-Aufrufe und Firestore-Schreibvorgaenge (Kosten/Missbrauch) ausloesen.
+  const whatsappConfigured = !!(config.whatsapp && config.whatsapp.token && config.whatsapp.verify_token);
+  if (!whatsappConfigured) {
+    res.status(404).send("Not configured");
+    return;
+  }
 
   if (req.method === "GET") {
     const mode = req.query["hub.mode"];
