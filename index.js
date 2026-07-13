@@ -89,6 +89,25 @@ if (!COLLEAGUE_CHAT_ID) {
 // Cache der bekannten Chat-IDs des Kollegen (WhatsApp nutzt teils @lid statt @c.us).
 const colleagueChatIds = new Set();
 
+// Globaler An/Aus-Schalter (aus whatsappBotSettings/global.enabled). Wird per
+// Live-Listener aktualisiert, damit der Bot SOFORT verstummt, wenn er in der
+// Oberflaeche ausgeschaltet wird. Fail-closed: solange unbekannt -> AUS.
+let botEnabled = false;
+let switchInitialized = false;
+db.collection('whatsappBotSettings').doc('global').onSnapshot(
+    (doc) => {
+        const val = doc.exists && doc.data().enabled === true;
+        if (!switchInitialized) {
+            console.log('Bot-Schalter geladen:', val ? 'AN' : 'AUS');
+            switchInitialized = true;
+        } else if (val !== botEnabled) {
+            console.log('Bot-Schalter geaendert:', val ? 'AN' : 'AUS');
+        }
+        botEnabled = val;
+    },
+    (e) => { console.error('Einstellungs-Listener fehlgeschlagen:', e.message); }
+);
+
 // Erinnerung: bleibt eine weitergeleitete Anfrage laenger als REMINDER_MINUTES
 // offen, stupst der Bot den Kollegen an UND schreibt Mert in den Selbst-Chat.
 const REMINDER_MINUTES = 30;
@@ -115,6 +134,10 @@ async function isFromColleague(msg) {
 client.on('message', async msg => {
     // Filter: keine eigenen Nachrichten, keine Status-Updates.
     if (msg.fromMe || msg.isStatus) return;
+
+    // GLOBALER SCHALTER: Ist der Bot aus, wird GAR NICHTS gesendet - auch keine
+    // Weiterleitung von Kollegen-Antworten und keine KI-Antworten.
+    if (!botEnabled) return;
 
     // Antwort des Kollegen -> direkt an den passenden Kunden weiterleiten
     // (laeuft NICHT durch die normale Kunden-/KI-Logik). Pruefung ueber die echte
@@ -607,6 +630,7 @@ async function handleColleagueReply(msg) {
 // erinnert dann einmalig den Kollegen + Mert (Selbst-Chat).
 async function checkOpenForwards() {
     if (!COLLEAGUE_CHAT_ID) return;
+    if (!botEnabled) return; // Bot aus -> keine Erinnerungen senden
     try {
         const cutoff = new Date(Date.now() - REMINDER_MINUTES * 60 * 1000);
         // Nur nach Zeit sortieren (kein zusammengesetzter Index noetig), Status
