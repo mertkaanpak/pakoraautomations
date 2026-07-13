@@ -758,7 +758,7 @@
         <div class="header-section">
             <div class="header-title">
                 <h1>Team Chat</h1>
-                <p>WhatsApp-Stil fuer Pakora Automation</p>
+                <p>WhatsApp-Stil für Pakora Automation</p>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
                 <div class="presence"><span></span>Verbunden</div>
@@ -781,7 +781,7 @@
                 <div class="chat-header">
                     <div class="chat-title">
                         <strong id="chatTitle">Pakora Team</strong>
-                        <span id="chatSubtitle">Gruppenchat fuer das Team</span>
+                        <span id="chatSubtitle">Gruppenchat für das Team</span>
                     </div>
                     <div class="chat-actions" id="activeUser">-</div>
                 </div>
@@ -800,7 +800,7 @@
             <aside class="notes-panel">
                 <div class="notes-header">
                     <h3>Wichtige Hinweise</h3>
-                    <p>Angespinnte Infos fuer das Team</p>
+                    <p>Angespinnte Infos für das Team</p>
                 </div>
                 <form class="notes-form" id="noteForm">
                     <textarea id="noteInput" placeholder="Wichtige Info anpinnen..."></textarea>
@@ -812,7 +812,7 @@
 
                 <div class="notes-header">
                     <h3>WhatsApp Anfragen</h3>
-                    <p>Eingehende Anfragen fuer das Team</p>
+                    <p>Eingehende Anfragen für das Team</p>
                 </div>
                 <div class="notes-list" id="whatsappList">
                     <div class="empty-state">Keine WhatsApp-Anfragen.</div>
@@ -842,7 +842,7 @@
             <p>Damit du neue Nachrichten sofort siehst, brauchen wir deine Erlaubnis.</p>
             <div id="pushPromptActions">
                 <button id="pushPromptEnable">Push aktivieren</button>
-                <button id="pushPromptLater">Spaeter</button>
+                <button id="pushPromptLater">Später</button>
             </div>
         </div>
     </div>
@@ -1216,7 +1216,7 @@
                     const delBtn = document.createElement('button');
                     delBtn.className = 'admin-delete';
                     delBtn.type = 'button';
-                    delBtn.textContent = 'Loeschen';
+                    delBtn.textContent = 'Löschen';
                     delBtn.dataset.messageId = msg.id;
                     actions.appendChild(delBtn);
                     wrapper.appendChild(actions);
@@ -1339,7 +1339,7 @@
                     const delBtn = document.createElement('button');
                     delBtn.className = 'admin-delete';
                     delBtn.type = 'button';
-                    delBtn.textContent = 'Loeschen';
+                    delBtn.textContent = 'Löschen';
                     delBtn.dataset.noteId = note.id;
                     card.appendChild(delBtn);
                 }
@@ -1576,12 +1576,12 @@
 
         async function registerPush(promptUser) {
             if (!isPwa) {
-                updatePushUi('Push: PWA noetig', false, false);
+                updatePushUi('Push: PWA nötig', false, false);
                 return;
             }
 
             if (!messaging || !('Notification' in window) || !('serviceWorker' in navigator)) {
-                updatePushUi(isPwa ? 'Push: nicht verfuegbar' : 'Push: PWA noetig', false, false);
+                updatePushUi(isPwa ? 'Push: nicht verfügbar' : 'Push: PWA nötig', false, false);
                 return;
             }
 
@@ -1661,7 +1661,7 @@
                 console.log('Push erhalten:', payload);
             });
         } else {
-            updatePushUi(isPwa ? 'Push: nicht verfuegbar' : 'Push: PWA noetig', false, false);
+            updatePushUi(isPwa ? 'Push: nicht verfügbar' : 'Push: PWA nötig', false, false);
         }
 
         if (pushEnableBtn) {

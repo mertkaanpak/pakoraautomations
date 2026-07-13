@@ -89,9 +89,9 @@
 <body>
     <nav class="sidebar">
         <div class="logo"><img src="logo.png" alt="Pakora"></div>
-        <a href="index.html" class="nav-item" data-section="dashboard"><span class="nav-icon">🏠</span><span class="nav-text">Uebersicht</span></a>
+        <a href="index.html" class="nav-item" data-section="dashboard"><span class="nav-icon">🏠</span><span class="nav-text">Übersicht</span></a>
         <a href="index.html#calc" class="nav-item" data-section="calc"><span class="nav-icon">📐</span><span class="nav-text">Smart-Kalkulation</span></a>
-        <a href="konfigurator.html" class="nav-item"><span class="nav-icon">🧊</span><span class="nav-text">Kuehlzellen Kalkulator</span></a>
+        <a href="konfigurator.html" class="nav-item"><span class="nav-icon">🧊</span><span class="nav-text">Kühlzellen Kalkulator</span></a>
         <a href="whatsapp_bot.html" class="nav-item only-mpak"><span class="nav-icon">🤖</span><span class="nav-text">WhatsApp Bot</span></a>
         <a href="whatsapp_anfragen.html" class="nav-item"><span class="nav-icon">💬</span><span class="nav-text">WhatsApp Anfragen</span></a>
         <a href="kommunikation.html" class="nav-item"><span class="nav-icon">📨</span><span class="nav-text">Kommunikation</span></a>
@@ -118,7 +118,7 @@
 
     <main class="main">
         <div class="header-section">
-            <a class="back-link" href="index.html">Zurueck zur Uebersicht</a>
+            <a class="back-link" href="index.html">Zurück zur Übersicht</a>
 <div class="header-title">
                 <h1>WhatsApp Anfragen</h1>
                 <p>Eingehende Kundenanfragen via WhatsApp</p>
@@ -240,7 +240,7 @@
 
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'admin-btn';
-                    deleteBtn.textContent = 'Loeschen';
+                    deleteBtn.textContent = 'Löschen';
                     deleteBtn.onclick = () => {
                         if (!isAdmin()) { alert('Nur m.pak darf loeschen.'); return; }
                         if (!confirm('Anfrage wirklich loeschen?')) return;
