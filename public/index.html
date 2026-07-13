@@ -1444,91 +1444,158 @@
             return `AN-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
         }
 
+        // Verkleinert das Logo (aus dem DOM) fuer eine kleine PDF-Dateigroesse.
+        function logoForPdf(imgEl, targetW) {
+            try {
+                const ratio = imgEl.naturalHeight / imgEl.naturalWidth;
+                const canvas = document.createElement('canvas');
+                canvas.width = targetW;
+                canvas.height = Math.round(targetW * ratio);
+                canvas.getContext('2d').drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+                return canvas.toDataURL('image/png');
+            } catch (e) { return null; }
+        }
+
+        // Waehrungsformat mit Tausenderpunkt (de-DE): 4.974,20 €
+        function fmtEUR(n) {
+            const s = (Number(n) || 0).toFixed(2).split('.');
+            return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + s[1] + ' €';
+        }
+
         function generatePDF() {
             updateTotals(); // sicherstellen, dass currentOffer aktuell ist
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const pageW = doc.internal.pageSize.getWidth();
-            const marginL = 15, marginR = pageW - 15;
-            const client = (document.getElementById('clientName').value || 'Kunde').trim();
-            const fmt = (n) => (Number(n) || 0).toFixed(2).replace('.', ',') + ' €';
-            const today = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const angNr = offerNumber();
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
-            // --- Briefkopf: Logo + Firmendaten ---
-            let headerBottom = 20;
+            // Marken-Farben
+            const ACCENT = [79, 110, 247], ACCENT_DARK = [42, 59, 176];
+            const INK = [17, 24, 39], MUTED = [108, 122, 140];
+            const HAIR = [223, 228, 238], PANEL = [246, 248, 252];
+
+            const W = doc.internal.pageSize.getWidth();
+            const H = doc.internal.pageSize.getHeight();
+            const M = 18, contentR = W - M;
+            const F = PAKORA_FIRMA;
+
+            const client = (document.getElementById('clientName').value || 'Kunde').trim();
+            const angNr = offerNumber();
+            const now = new Date();
+            const today = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const gueltig = new Date(now.getTime() + 14 * 864e5).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            // ---- Kopf: Akzentbalken ----
+            doc.setFillColor(...ACCENT); doc.rect(0, 0, W, 4, 'F');
+            doc.setFillColor(...ACCENT_DARK); doc.rect(0, 4, W, 0.8, 'F');
+
+            // ---- Logo ----
+            let logoBottom = 13;
             try {
                 const logoImg = document.querySelector('.logo img');
                 if (logoImg && logoImg.complete && logoImg.naturalWidth) {
-                    const w = 38;
-                    const h = w * (logoImg.naturalHeight / logoImg.naturalWidth);
-                    doc.addImage(logoImg, 'PNG', marginL, 12, w, h);
-                    headerBottom = Math.max(headerBottom, 12 + h);
+                    const data = logoForPdf(logoImg, 150);
+                    const logoW = 33, logoH = logoW * (logoImg.naturalHeight / logoImg.naturalWidth);
+                    if (data) { doc.addImage(data, 'PNG', M, 13, logoW, logoH, 'logo', 'FAST'); logoBottom = 13 + logoH; }
                 }
             } catch (e) { /* Logo optional */ }
 
-            doc.setFontSize(10); doc.setTextColor(60);
-            const firmaLines = [PAKORA_FIRMA.name, PAKORA_FIRMA.strasse, PAKORA_FIRMA.ort, PAKORA_FIRMA.email];
-            if (PAKORA_FIRMA.telefon) firmaLines.push('Tel: ' + PAKORA_FIRMA.telefon);
-            let fy = 16;
-            firmaLines.forEach((ln) => { doc.text(ln, marginR, fy, { align: 'right' }); fy += 5; });
-            headerBottom = Math.max(headerBottom, fy);
+            // ---- Firmenblock rechts ----
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...INK);
+            doc.text(F.name, contentR, 17, { align: 'right' });
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.6); doc.setTextColor(...MUTED);
+            let ry = 22.5;
+            const rechts = [F.strasse, F.ort, F.email];
+            if (F.telefon) rechts.push('Tel. ' + F.telefon);
+            rechts.forEach(t => { doc.text(t, contentR, ry, { align: 'right' }); ry += 4.4; });
 
-            // --- Titel + Meta ---
-            let y = headerBottom + 12;
-            doc.setFontSize(18); doc.setTextColor(20); doc.setFont(undefined, 'bold');
-            doc.text('Angebot', marginL, y);
-            doc.setFont(undefined, 'normal'); doc.setFontSize(10); doc.setTextColor(90);
-            doc.text(`Angebots-Nr.: ${angNr}`, marginR, y - 5, { align: 'right' });
-            doc.text(`Datum: ${today}`, marginR, y, { align: 'right' });
+            // ---- Trennlinie ----
+            const headBottom = Math.max(logoBottom, ry) + 4;
+            doc.setDrawColor(...HAIR); doc.setLineWidth(0.4); doc.line(M, headBottom, contentR, headBottom);
 
-            // --- Kundenblock ---
-            y += 10;
-            doc.setFontSize(10); doc.setTextColor(120);
-            doc.text('Für:', marginL, y);
-            doc.setFontSize(12); doc.setTextColor(20); doc.setFont(undefined, 'bold');
-            doc.text(client, marginL, y + 6);
-            doc.setFont(undefined, 'normal');
+            // ---- Titel ----
+            let y = headBottom + 14;
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(26); doc.setTextColor(...INK);
+            doc.text('ANGEBOT', M, y);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...MUTED);
+            doc.text('Kältetechnik', M, y + 5.5);
 
-            // --- Positionstabelle (OHNE Einzelpreise - Kunde sieht nur den Umfang) ---
-            doc.autoTable({
-                startY: y + 14,
-                head: [['Pos.', 'Leistung / Komponente']],
-                body: currentOffer.items.map((i, idx) => [String(idx + 1), `${i.type}: ${i.name}`]),
-                theme: 'striped',
-                headStyles: { fillColor: [37, 99, 235], textColor: 255 },
-                columnStyles: { 0: { cellWidth: 16, halign: 'center' } },
-                styles: { fontSize: 10, cellPadding: 3 },
-                margin: { left: marginL, right: 15 }
+            // ---- Meta-Panel rechts ----
+            const panelW = 62, panelH = 24, panelX = contentR - panelW, panelY = y - 8;
+            doc.setFillColor(...PANEL); doc.roundedRect(panelX, panelY, panelW, panelH, 2.4, 2.4, 'F');
+            [['Angebots-Nr.', angNr], ['Datum', today], ['Gültig bis', gueltig]].forEach(([k, v], i) => {
+                const my = panelY + 7 + i * 6.4;
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(8.4); doc.setTextColor(...MUTED);
+                doc.text(k, panelX + 5, my);
+                doc.setFont('helvetica', 'bold'); doc.setTextColor(...INK);
+                doc.text(String(v), panelX + panelW - 5, my, { align: 'right' });
             });
 
-            // --- Summen (nur Gesamtpreis, keine Einzelpreise) ---
-            let sy = doc.lastAutoTable.finalY + 10;
-            const labelX = marginR - 70, valX = marginR;
-            const sumRow = (label, val, bold) => {
-                doc.setFont(undefined, bold ? 'bold' : 'normal');
-                doc.setFontSize(bold ? 13 : 10);
-                doc.setTextColor(bold ? 20 : 80);
-                doc.text(label, labelX, sy);
-                doc.text(val, valX, sy, { align: 'right' });
-                sy += bold ? 9 : 6;
-            };
-            sumRow('Nettobetrag', fmt(currentOffer.total));
-            sumRow('zzgl. 19% MwSt', fmt(currentOffer.vat));
-            doc.setDrawColor(200); doc.line(labelX, sy - 2, valX, sy - 2);
-            sumRow('Gesamtbetrag (Brutto)', fmt(currentOffer.gross), true);
+            // ---- Empfänger ----
+            y += 20;
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...ACCENT);
+            doc.text('ANGEBOT FÜR', M, y);
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...INK);
+            doc.text(client, M, y + 6.5);
 
-            // --- Fusszeile mit Hinweisen ---
-            const pageH = doc.internal.pageSize.getHeight();
-            let fyy = Math.max(sy + 14, pageH - 38);
-            doc.setDrawColor(220); doc.line(marginL, fyy - 6, marginR, fyy - 6);
-            doc.setFontSize(8); doc.setTextColor(120); doc.setFont(undefined, 'normal');
-            const footer = [
-                'Dieses Angebot ist 14 Tage gültig. Zahlung: 14 Tage netto, sofern nicht anders vereinbart.',
-                'Preise zzgl. gesetzlicher MwSt. Lieferung und Montage nach Absprache.',
-                `${PAKORA_FIRMA.name} · ${PAKORA_FIRMA.strasse} · ${PAKORA_FIRMA.ort} · ${PAKORA_FIRMA.email}`
-            ];
-            footer.forEach((ln) => { doc.text(ln, marginL, fyy); fyy += 5; });
+            // ---- Einleitung ----
+            y += 16;
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(9.8); doc.setTextColor(...MUTED);
+            doc.text('Vielen Dank für Ihre Anfrage. Gerne unterbreiten wir Ihnen folgendes Angebot:', M, y);
+
+            // ---- Positionstabelle (OHNE Einzelpreise) ----
+            doc.autoTable({
+                startY: y + 6,
+                head: [['Pos.', 'Leistung / Komponente']],
+                body: currentOffer.items.map((i, idx) => [String(idx + 1), `${i.type}: ${i.name}`]),
+                theme: 'plain',
+                headStyles: { fillColor: ACCENT, textColor: 255, fontStyle: 'bold', fontSize: 9.5, cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 } },
+                bodyStyles: { fontSize: 9.8, textColor: INK, cellPadding: { top: 3.6, bottom: 3.6, left: 4, right: 4 }, lineColor: HAIR, lineWidth: { bottom: 0.3 } },
+                alternateRowStyles: { fillColor: [250, 251, 253] },
+                columnStyles: { 0: { cellWidth: 16, halign: 'center', textColor: MUTED, fontStyle: 'bold' } },
+                margin: { left: M, right: M }
+            });
+
+            // ---- Summen ----
+            let sy = doc.lastAutoTable.finalY + 10;
+            const sumLabelX = contentR - 78;
+            const sumLine = (label, val) => {
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(9.6); doc.setTextColor(...MUTED);
+                doc.text(label, sumLabelX, sy);
+                doc.setFont('helvetica', 'bold'); doc.setTextColor(...INK);
+                doc.text(val, contentR, sy, { align: 'right' });
+                sy += 6.4;
+            };
+            sumLine('Nettobetrag', fmtEUR(currentOffer.total));
+            sumLine('zzgl. 19 % MwSt.', fmtEUR(currentOffer.vat));
+
+            // ---- Gesamtbetrag-Box ----
+            sy += 1;
+            const boxX = sumLabelX - 4, boxH = 13;
+            doc.setFillColor(...INK); doc.roundedRect(boxX, sy, contentR - boxX, boxH, 2.2, 2.2, 'F');
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(255, 255, 255);
+            doc.text('Gesamtbetrag', boxX + 5, sy + 8.4);
+            doc.setFontSize(13.5); doc.text(fmtEUR(currentOffer.gross), contentR - 5, sy + 8.5, { align: 'right' });
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7.6); doc.setTextColor(...MUTED);
+            doc.text('inkl. 19 % MwSt.', contentR, sy + boxH + 4, { align: 'right' });
+
+            // ---- Konditionen ----
+            let ky = sy + boxH + 16;
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...INK);
+            doc.text('Konditionen', M, ky);
+            doc.setDrawColor(...HAIR); doc.line(M, ky + 2.5, M + 26, ky + 2.5);
+            ky += 8;
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.8); doc.setTextColor(...MUTED);
+            [
+                'Dieses Angebot ist 14 Tage ab Angebotsdatum gültig.',
+                'Zahlung: 14 Tage netto ab Rechnungsdatum, sofern nicht anders vereinbart.',
+                'Lieferung und Montage nach Absprache. Preise verstehen sich zzgl. gesetzlicher MwSt.'
+            ].forEach(t => { doc.setFillColor(...ACCENT); doc.circle(M + 1, ky - 1.4, 0.7, 'F'); doc.text(t, M + 5, ky); ky += 5.6; });
+
+            // ---- Fußzeile ----
+            const fy = H - 16;
+            doc.setDrawColor(...HAIR); doc.setLineWidth(0.4); doc.line(M, fy, contentR, fy);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7.8); doc.setTextColor(...MUTED);
+            doc.text(`${F.name}  ·  ${F.strasse}  ·  ${F.ort}  ·  ${F.email}`, M, fy + 5);
+            doc.text('Seite 1 von 1', contentR, fy + 5, { align: 'right' });
 
             const safeClient = client.replace(/[^a-z0-9äöüß _-]/gi, '').trim() || 'Kunde';
             doc.save(`Angebot_${safeClient}_${angNr}.pdf`);
