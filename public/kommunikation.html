@@ -714,7 +714,8 @@
             100% { opacity: 1; }
         }
     </style>
-    <link rel="stylesheet" href="app-theme.css?v=7">
+    <link rel="stylesheet" href="app-theme.css?v=8">
+    <script defer src="app-ui.js?v=1"></script>
 </head>
 <body>
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
@@ -1385,7 +1386,7 @@
             if (!activeChat || !canWriteToChat(activeChat)) return;
             if ((!text && !pendingAttachment) || !currentUser) return;
             if (attachmentUploading) {
-                alert('Anhang wird noch hochgeladen. Bitte kurz warten.');
+                showToast('Anhang wird noch hochgeladen. Bitte kurz warten.', 'info');
                 return;
             }
 
@@ -1421,7 +1422,7 @@
                 }
                 const maxSize = 10 * 1024 * 1024;
                 if (file.size > maxSize) {
-                    alert('Anhang zu gross. Bitte unter 10 MB.');
+                    showToast('Anhang zu groß. Bitte unter 10 MB.', 'warning');
                     clearAttachment();
                     return;
                 }
@@ -1445,7 +1446,7 @@
                     if (attachName) attachName.textContent = file.name;
                 } catch (error) {
                     console.error('Upload fehlgeschlagen:', error);
-                    alert('Anhang konnte nicht hochgeladen werden.');
+                    showToast('Anhang konnte nicht hochgeladen werden.', 'error');
                     clearAttachment();
                 } finally {
                     attachmentUploading = false;
@@ -1459,8 +1460,9 @@
                 if (!isAdmin() || !target || !target.dataset) return;
                 const messageId = target.dataset.messageId;
                 if (!messageId) return;
-                if (!confirm('Nachricht wirklich loeschen?')) return;
+                if (!(await confirmDialog('Nachricht wirklich löschen?', { title: 'Nachricht löschen', danger: true }))) return;
                 await db.collection('messages').doc(messageId).delete();
+                showToast('Nachricht gelöscht.', 'success');
             });
         }
 
@@ -1470,7 +1472,7 @@
                 if (!isAdmin() || !target || !target.dataset) return;
                 if (!target.dataset.clearChat) return;
                 if (!activeChat) return;
-                if (!confirm('Chat wirklich komplett leeren?')) return;
+                if (!(await confirmDialog('Chat wirklich komplett leeren? Alle Nachrichten werden gelöscht.', { title: 'Chat leeren', danger: true, okText: 'Leeren' }))) return;
                 const snapshot = await db.collection('messages')
                     .where('chatId', '==', activeChat.id)
                     .get();
@@ -1497,8 +1499,9 @@
                     const payload = `${data.name || ''} ${data.phone || ''} - ${data.message || ''}`.trim();
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                         await navigator.clipboard.writeText(payload);
+                        showToast('In Zwischenablage kopiert.', 'success');
                     } else {
-                        alert(payload);
+                        showToast(payload, 'info');
                     }
                 }
                 if (target.dataset.doneRequestId) {
@@ -1517,8 +1520,9 @@
                 if (!isAdmin() || !target || !target.dataset) return;
                 const noteId = target.dataset.noteId;
                 if (!noteId) return;
-                if (!confirm('Hinweis wirklich loeschen?')) return;
+                if (!(await confirmDialog('Hinweis wirklich löschen?', { title: 'Hinweis löschen', danger: true }))) return;
                 await db.collection('importantNotes').doc(noteId).delete();
+                showToast('Hinweis gelöscht.', 'success');
             });
         }
 

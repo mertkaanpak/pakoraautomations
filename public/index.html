@@ -492,7 +492,8 @@
         .offer-table th { background: #334155; color: #e2e8f0; }
         .info-bar { background: #1e40af; color: #dbeafe; border-color: #2563eb; }
     </style>
-    <link rel="stylesheet" href="app-theme.css?v=7">
+    <link rel="stylesheet" href="app-theme.css?v=8">
+    <script defer src="app-ui.js?v=1"></script>
 </head>
 <body> 
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
@@ -1044,7 +1045,7 @@
             const amb = parseFloat(document.getElementById('calcAmb').value) || 35;
             const temp = document.getElementById('calcTemp').value;
 
-            if(!vol || vol < 5) return alert("Volumen zu klein (min 5m³)");
+            if(!vol || vol < 5) return showToast("Volumen zu klein (min. 5 m³)", 'warning');
 
             let baseNormal = 0, baseHeavy = 0, infoText = "";
             
@@ -1387,9 +1388,9 @@
         }
 
         function buildManualOffer() {
-            if (!manualUnitType) return alert('Bitte zuerst einen Gerätetyp (CP-Box oder Verflüssigungssatz) auswählen.');
+            if (!manualUnitType) return showToast('Bitte zuerst einen Gerätetyp (CP-Box oder Verflüssigungssatz) auswählen.', 'warning');
             const unitVal = document.getElementById('manUnitSelect').value;
-            if (!unitVal) return alert('Bitte ein Gerät aus der Liste auswählen.');
+            if (!unitVal) return showToast('Bitte ein Gerät aus der Liste auswählen.', 'warning');
 
             const unitProduct = allProducts.find(p => (p.id || p.name) === unitVal);
             const evapVal     = document.getElementById('manEvapSelect').value;

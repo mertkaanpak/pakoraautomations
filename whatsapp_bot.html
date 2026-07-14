@@ -48,7 +48,8 @@
     #authCard button { width:100%; padding:12px 14px; border:none; border-radius:10px; background:#00a884; color:#fff; font-weight:600; }
     #authError { color:#f87171; font-size:13px; min-height:18px; }
   </style>
-  <link rel="stylesheet" href="app-theme.css?v=7">
+  <link rel="stylesheet" href="app-theme.css?v=8">
+    <script defer src="app-ui.js?v=1"></script>
 </head>
 <body>
     <nav class="sidebar">
@@ -250,9 +251,9 @@
 
     saveBot.addEventListener('click', async () => {
       const user = (localStorage.getItem(AUTH_KEY) || '').toLowerCase();
-      if (!isAdmin(user)) { alert('Kein Zugriff.'); return; }
+      if (!isAdmin(user)) { showToast('Kein Zugriff.', 'error'); return; }
       await saveSettings(user);
-      alert('Gespeichert.');
+      showToast('Gespeichert.', 'success');
     });
 
     if (logoutBtn) {

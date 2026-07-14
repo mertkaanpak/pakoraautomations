@@ -84,7 +84,8 @@
         .stat-num { font-size:26px; font-weight:800; color:#0b4b2f; line-height:1.1; }
         .stat-label { font-size:12px; color:var(--muted); margin-top:4px; }
     </style>
-    <link rel="stylesheet" href="app-theme.css?v=7">
+    <link rel="stylesheet" href="app-theme.css?v=8">
+    <script defer src="app-ui.js?v=1"></script>
 </head>
 <body>
     <nav class="sidebar">
@@ -217,7 +218,7 @@
                 copyBtn.textContent = 'Inhalt kopieren';
                 copyBtn.onclick = () => {
                     const payload = `${req.name || ''} ${req.phone || ''} - ${req.message || ''}`.trim();
-                    navigator.clipboard.writeText(payload).then(() => alert('Kopiert!'));
+                    navigator.clipboard.writeText(payload).then(() => showToast('Kopiert!', 'success'));
                 };
                 
                 actions.appendChild(copyBtn);
@@ -227,7 +228,7 @@
                     doneBtn.className = `admin-btn ${req.status === 'done' ? 'done' : ''}`;
                     doneBtn.textContent = 'Erledigt';
                     doneBtn.onclick = () => {
-                        if (!isAdmin()) { alert('Nur m.pak darf loeschen.'); return; }
+                        if (!isAdmin()) { showToast('Nur m.pak darf löschen.', 'error'); return; }
                         const userId = getStoredUser();
                         db.collection('whatsappRequests').doc(req.id).set({
                             status: 'done',
@@ -241,10 +242,11 @@
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'admin-btn';
                     deleteBtn.textContent = 'Löschen';
-                    deleteBtn.onclick = () => {
-                        if (!isAdmin()) { alert('Nur m.pak darf loeschen.'); return; }
-                        if (!confirm('Anfrage wirklich loeschen?')) return;
-                        db.collection('whatsappRequests').doc(req.id).delete();
+                    deleteBtn.onclick = async () => {
+                        if (!isAdmin()) { showToast('Nur m.pak darf löschen.', 'error'); return; }
+                        if (!(await confirmDialog('Anfrage wirklich löschen?', { title: 'Anfrage löschen', danger: true }))) return;
+                        await db.collection('whatsappRequests').doc(req.id).delete();
+                        showToast('Anfrage gelöscht.', 'success');
                     };
                     actions.appendChild(deleteBtn);
                 }
