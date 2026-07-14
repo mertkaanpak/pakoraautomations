@@ -125,7 +125,7 @@
             border-radius: var(--radius); 
             border: 1px solid var(--border); 
             box-shadow: var(--shadow); 
-            flex: 1; /* FÃ¼llt den Rest */
+            flex: 1; /* Füllt den Rest */
             display: flex;
             flex-direction: column;
         }
@@ -294,7 +294,7 @@
 <body>
 
     <div class="mobile-overlay" onclick="toggleSidebar()"></div>
-    <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Menue oeffnen">â˜°</button>
+    <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Menü öffnen">☰</button>
 
     <nav class="sidebar">
         <div class="logo">
@@ -404,7 +404,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title" id="modalTitle">Neuer Artikel</div>
-                <button class="close-btn" onclick="closeModal()">Ã—</button>
+                <button class="close-btn" onclick="closeModal()">×</button>
             </div>
             
             <input type="hidden" id="modalKey">
@@ -429,10 +429,10 @@
             <label>Kategorie</label>
             <select id="modalCat">
                 <option value="compressor">Kompressor</option>
-                <option value="condensing_unit">VerflÃ¼ssigungssatz</option>
-                <option value="cp_box">CP-Box (GehÃ¤use)</option>
+                <option value="condensing_unit">Verflüssigungssatz</option>
+                <option value="cp_box">CP-Box (Gehäuse)</option>
                 <option value="evaporator">Verdampfer</option>
-                <option value="accessory">ZubehÃ¶r</option>
+                <option value="accessory">Zubehör</option>
             </select>
 
             <div class="grid-2">
@@ -482,11 +482,11 @@
 
         function categoryLabel(category) {
             const labels = {
-                condensing_unit: 'Verfluessigungssaetze',
+                condensing_unit: 'Verflüssigungssätze',
                 cp_box: 'CP-Box',
                 evaporator: 'Verdampfer',
                 compressor: 'Kompressoren',
-                accessory: 'Zubehoer'
+                accessory: 'Zubehör'
             };
             return labels[category] || category || 'Sonstiges';
         }
@@ -594,7 +594,7 @@
                         <td>${statusBadge}</td>
                         <td class="action-col">
                             <button class="btn" style="background:#64748b; padding: 5px 10px;" onclick="openModal('${key}')">Bearbeiten</button>
-                            <button class="btn" style="background:#dc2626; padding: 5px 10px;" onclick="deleteProduct('${key}')">Loeschen</button>
+                            <button class="btn" style="background:#dc2626; padding: 5px 10px;" onclick="deleteProduct('${key}')">Löschen</button>
                         </td>
                     `;
                     tbody.appendChild(tr);

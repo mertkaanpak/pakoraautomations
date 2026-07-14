@@ -495,7 +495,7 @@
                     <input id="aiBrandInput" type="text" placeholder="z.B. Copeland">
                 </div>
                 <div>
-                    <label>Kaeltemittel (optional)</label>
+                    <label>Kältemittel (optional)</label>
                     <input id="aiRefrigerantInput" type="text" placeholder="z.B. R404A">
                 </div>
                 <div>
@@ -540,7 +540,7 @@
                             <th>EN12900</th>
                             <th>Te (C)</th>
                             <th>Tc (C)</th>
-                            <th>Kaelteleistung (W)</th>
+                            <th>Kälteleistung (W)</th>
                             <th>Leistungsaufnahme (W)</th>
                             <th>COP</th>
                         </tr>
@@ -894,7 +894,7 @@
 
         async function generateAiPdf() {
             if (!lastAiResult) {
-                setAiStatus('Keine KI Daten fuer PDF vorhanden.', true);
+                setAiStatus('Keine KI-Daten für PDF vorhanden.', true);
                 return;
             }
 
