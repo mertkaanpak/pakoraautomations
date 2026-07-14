@@ -92,6 +92,18 @@
   </header>
 
   <div class="content">
+    <section class="card" id="qrCard" style="display:none;">
+      <strong>Bot verbinden</strong>
+      <div id="qrStatus" style="font-size:13px; color:var(--muted);">Status wird geladen …</div>
+      <div id="qrImageWrap" style="display:none; text-align:center;">
+        <img id="qrImage" alt="WhatsApp QR-Code" style="width:280px; max-width:80%; border-radius:14px; background:#fff; padding:12px; box-shadow:0 6px 20px rgba(8,13,24,.18);">
+        <div style="font-size:12px; color:var(--muted); margin-top:10px; line-height:1.5;">
+          Öffne diese Seite <strong>am PC/Laptop</strong> und scanne mit dem Handy:<br>
+          WhatsApp → Einstellungen → Verknüpfte Geräte → Gerät verknüpfen.
+        </div>
+      </div>
+    </section>
+
     <section class="card">
       <div class="row">
         <div>
@@ -200,6 +212,31 @@
       botStatus.classList.toggle('active', !!enabled);
     }
 
+    function listenBotStatus() {
+      db.collection('systemStatus').doc('whatsappBot').onSnapshot((doc) => {
+        const d = doc.exists ? doc.data() : {};
+        const card = document.getElementById('qrCard');
+        const statusEl = document.getElementById('qrStatus');
+        const wrap = document.getElementById('qrImageWrap');
+        const img = document.getElementById('qrImage');
+        if (!card) return;
+        card.style.display = 'grid';
+        const online = !!d.online;
+        const qrAgeMs = (d.qrAt && d.qrAt.toMillis) ? (Date.now() - d.qrAt.toMillis()) : Infinity;
+        if (online) {
+          statusEl.innerHTML = '✅ <strong>Bot ist verbunden und online.</strong>';
+          wrap.style.display = 'none';
+        } else if (d.qr && qrAgeMs < 90000) {
+          statusEl.textContent = 'Nicht verbunden – bitte diesen QR-Code mit dem Handy scannen:';
+          img.src = d.qr;
+          wrap.style.display = 'block';
+        } else {
+          statusEl.textContent = 'Bot ist offline und wartet auf einen QR-Code. Läuft der Bot-PC?';
+          wrap.style.display = 'none';
+        }
+      }, (err) => { console.error('Bot-Status:', err.message); });
+    }
+
     function loadSettings() {
       db.collection('whatsappBotSettings').doc('global').onSnapshot((doc) => {
         const data = doc.exists ? doc.data() : {};
@@ -268,7 +305,7 @@
             return;
         }
         hideAuth();
-        if (!botSettingsLoaded) { botSettingsLoaded = true; loadSettings(); }
+        if (!botSettingsLoaded) { botSettingsLoaded = true; loadSettings(); listenBotStatus(); }
       } else {
         showAuth();
       }

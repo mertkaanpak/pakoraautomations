@@ -55,6 +55,20 @@ client.on('qr', (qr) => {
             else console.log('QR-Bild gespeichert: whatsapp-qr.png');
         });
     } catch (e) { console.error('qrcode-Modul fehlt:', e.message); }
+
+    // QR zusaetzlich nach Firestore schreiben -> wird live auf der "WhatsApp Bot"-
+    // Seite angezeigt. So kann am PC gescannt werden (ein QR laesst sich nicht mit
+    // demselben Handy scannen, auf dem er angezeigt wird).
+    try {
+        require('qrcode').toDataURL(qr, { width: 320, margin: 1 }, (err, url) => {
+            if (err || !url) return;
+            db.collection('systemStatus').doc('whatsappBot').set({
+                qr: url,
+                qrAt: admin.firestore.FieldValue.serverTimestamp(),
+                online: false
+            }, { merge: true }).catch(e => console.error('QR->Firestore fehlgeschlagen:', e.message));
+        });
+    } catch (e) { /* qrcode optional */ }
 });
 
 let reminderTimer = null;
@@ -845,6 +859,7 @@ async function writeHeartbeat() {
         await db.collection('systemStatus').doc('whatsappBot').set({
             lastHeartbeat: admin.firestore.FieldValue.serverTimestamp(),
             online: true,
+            qr: null, // verbunden -> kein QR mehr noetig
             host: os.hostname(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
